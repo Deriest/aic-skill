@@ -18,6 +18,22 @@ export function OverviewPage() {
         <div className="flex-1 min-h-0 bg-aic-bg-panel border-2 border-aic-border/50 rounded p-1 shadow-lg overflow-hidden">
            <OfficeFloor />
         </div>
+
+        {/* Stats Bar */}
+        <div className="grid grid-cols-3 gap-4 shrink-0 font-pixel h-[100px]">
+          <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-2">
+            <span className="text-3xl text-aic-accent mb-1">{active}</span>
+            <span className="text-px-sm text-aic-text-muted uppercase tracking-widest">ACTIVE</span>
+          </div>
+          <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-2">
+            <span className="text-3xl text-aic-green mb-1">0</span>
+            <span className="text-px-sm text-aic-text-muted uppercase tracking-widest">COMPLETE</span>
+          </div>
+          <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-2">
+            <span className="text-3xl text-aic-text-muted mb-1">{idle}</span>
+            <span className="text-px-sm text-aic-text-muted uppercase tracking-widest">IDLE</span>
+          </div>
+        </div>
       </div>
 
       {/* Right Sidebar */}
