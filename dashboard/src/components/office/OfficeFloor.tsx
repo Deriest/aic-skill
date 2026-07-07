@@ -9,7 +9,7 @@ export function OfficeFloor() {
       </div>
       
       {/* Worker Grid */}
-      <div className="relative z-10 flex-1 px-4 pt-4 pb-6 overflow-y-auto min-h-0">
+      <div className="relative z-10 flex-1 px-2 pt-2 pb-2 min-h-0 flex flex-col justify-center">
         <WorkerGrid />
       </div>
       

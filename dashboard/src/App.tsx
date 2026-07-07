@@ -18,7 +18,7 @@ function DashboardApp() {
       <CRTOverlay />
       
       {/* Top Header Navigation */}
-      <header className="flex justify-between items-center bg-aic-bg-panel border-b-4 border-aic-border px-6 py-4 z-10 relative">
+      <header className="flex justify-between items-center bg-aic-bg-panel border-b-4 border-aic-border px-6 py-2 z-10 relative shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-aic-accent text-px-lg font-pixel">▶</span>
           <h1 className="text-3xl font-pixel text-aic-accent tracking-widest uppercase text-shadow-cyan">
