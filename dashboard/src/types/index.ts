@@ -86,6 +86,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
+  pinned?: boolean;
 }
 
 // === Config Types ===

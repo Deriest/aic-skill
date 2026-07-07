@@ -33,5 +33,13 @@ export function saveMessage(role: string, content: string) {
 }
 
 export function clearHistory() {
-  return fetch('/api/chat/history', { method: 'DELETE' });
+  return fetch('/api/chat/history', { method: 'DELETE' }).then(r => r.json());
+}
+
+export function deleteMessage(id: string) {
+  return fetch(`/api/chat/history/${id}`, { method: 'DELETE' }).then(r => r.json());
+}
+
+export function togglePin(id: string) {
+  return post(`/api/chat/history/${id}/pin`, {});
 }

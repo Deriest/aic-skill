@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
-import { sendMessageSSE, loadHistory, saveMessage, clearHistory } from '../api/chat';
+import { sendMessageSSE, loadHistory, saveMessage, clearHistory, deleteMessage, togglePin } from '../api/chat';
 import { CHAT_MAX_MESSAGES } from '../utils/constants';
 
 interface ChatState {
@@ -15,6 +15,8 @@ type ChatAction =
   | { type: 'APPEND_STREAM_CHUNK'; payload: string }
   | { type: 'SET_STREAMING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'DELETE_MESSAGE'; payload: string }
+  | { type: 'TOGGLE_PIN'; payload: string }
   | { type: 'CLEAR_CONVERSATION' };
 
 const initialState: ChatState = {
@@ -43,6 +45,10 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, isStreaming: action.payload };
     case 'SET_ERROR':
       return { ...state, streamError: action.payload };
+    case 'DELETE_MESSAGE':
+      return { ...state, messages: state.messages.filter(m => m.id !== action.payload) };
+    case 'TOGGLE_PIN':
+      return { ...state, messages: state.messages.map(m => m.id === action.payload ? { ...m, pinned: !m.pinned } : m) };
     case 'CLEAR_CONVERSATION':
       return { ...initialState };
     default:
@@ -54,6 +60,8 @@ interface ChatContextValue {
   state: ChatState;
   send: (message: string) => Promise<void>;
   clear: () => void;
+  remove: (id: string) => void;
+  pin: (id: string) => void;
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -68,11 +76,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     loadHistory()
       .then((msgs) => {
         if (msgs.length > 0) {
-          const mapped: ChatMessage[] = msgs.map((m: { role: string; content: string; timestamp?: string }, i: number) => ({
-            id: `hist-${i}`,
+          const mapped: ChatMessage[] = msgs.map((m: { role: string; content: string; timestamp?: string; pinned?: boolean; id?: string }, i: number) => ({
+            id: m.id || `hist-${i}`,
             role: m.role as ChatMessage['role'],
             content: m.content,
             timestamp: new Date(m.timestamp || Date.now()),
+            pinned: m.pinned || false,
           }));
           dispatch({ type: 'SET_MESSAGES', payload: mapped });
         }
@@ -81,21 +90,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const send = useCallback(async (message: string) => {
-    // Abort any in-flight stream
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
+    if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
 
     const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: message, timestamp: new Date() };
     dispatch({ type: 'ADD_MESSAGE', payload: userMsg });
     dispatch({ type: 'SET_STREAMING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
 
-    // Persist user message
     saveMessage('user', message).catch(() => {});
 
-    // Create placeholder assistant message
     const assistantId = crypto.randomUUID();
     dispatch({ type: 'ADD_MESSAGE', payload: { id: assistantId, role: 'assistant', content: '', timestamp: new Date() } });
 
@@ -131,13 +134,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             } else if (parsed.error) {
               dispatch({ type: 'SET_ERROR', payload: typeof parsed.error === 'string' ? parsed.error : parsed.error.message || JSON.stringify(parsed.error) });
             }
-          } catch {
-            // Not JSON — skip
-          }
+          } catch {}
         }
       }
 
-      // Persist assistant response
       if (fullContent) saveMessage('assistant', fullContent).catch(() => {});
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -155,8 +155,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'CLEAR_CONVERSATION' });
   }, []);
 
+  const remove = useCallback((id: string) => {
+    deleteMessage(id).catch(() => {});
+    dispatch({ type: 'DELETE_MESSAGE', payload: id });
+  }, []);
+
+  const pin = useCallback((id: string) => {
+    togglePin(id).catch(() => {});
+    dispatch({ type: 'TOGGLE_PIN', payload: id });
+  }, []);
+
   return (
-    <ChatContext.Provider value={{ state, send, clear }}>
+    <ChatContext.Provider value={{ state, send, clear, remove, pin }}>
       {children}
     </ChatContext.Provider>
   );
