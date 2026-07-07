@@ -1,16 +1,16 @@
-import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
-import { sendMessage, cancelStream } from '../api/chat';
+import { sendMessageSSE, loadHistory, saveMessage, clearHistory } from '../api/chat';
 import { CHAT_MAX_MESSAGES } from '../utils/constants';
 
 interface ChatState {
   messages: ChatMessage[];
   isStreaming: boolean;
   streamError: string | null;
-  conversationId: string | null;
 }
 
 type ChatAction =
+  | { type: 'SET_MESSAGES'; payload: ChatMessage[] }
   | { type: 'ADD_MESSAGE'; payload: ChatMessage }
   | { type: 'APPEND_STREAM_CHUNK'; payload: string }
   | { type: 'SET_STREAMING'; payload: boolean }
@@ -21,11 +21,12 @@ const initialState: ChatState = {
   messages: [],
   isStreaming: false,
   streamError: null,
-  conversationId: null,
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
+    case 'SET_MESSAGES':
+      return { ...state, messages: action.payload };
     case 'ADD_MESSAGE': {
       const msgs = [...state.messages, action.payload];
       return { ...state, messages: msgs.length > CHAT_MAX_MESSAGES ? msgs.slice(-CHAT_MAX_MESSAGES) : msgs };
@@ -62,6 +63,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Load chat history on mount
+  useEffect(() => {
+    loadHistory()
+      .then((msgs) => {
+        if (msgs.length > 0) {
+          const mapped: ChatMessage[] = msgs.map((m: { role: string; content: string; timestamp?: string }, i: number) => ({
+            id: `hist-${i}`,
+            role: m.role as ChatMessage['role'],
+            content: m.content,
+            timestamp: new Date(m.timestamp || Date.now()),
+          }));
+          dispatch({ type: 'SET_MESSAGES', payload: mapped });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const send = useCallback(async (message: string) => {
     // Abort any in-flight stream
     if (abortRef.current) {
@@ -69,21 +87,27 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       abortRef.current = null;
     }
 
-    dispatch({ type: 'ADD_MESSAGE', payload: { id: crypto.randomUUID(), role: 'user', content: message, timestamp: new Date() } });
+    const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: message, timestamp: new Date() };
+    dispatch({ type: 'ADD_MESSAGE', payload: userMsg });
     dispatch({ type: 'SET_STREAMING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
 
+    // Persist user message
+    saveMessage('user', message).catch(() => {});
+
     // Create placeholder assistant message
-    dispatch({ type: 'ADD_MESSAGE', payload: { id: crypto.randomUUID(), role: 'assistant', content: '', timestamp: new Date() } });
+    const assistantId = crypto.randomUUID();
+    dispatch({ type: 'ADD_MESSAGE', payload: { id: assistantId, role: 'assistant', content: '', timestamp: new Date() } });
 
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
-      const reader = await sendMessage(message, state.conversationId ?? undefined, controller.signal);
+      const reader = await sendMessageSSE(message, controller.signal);
       readerRef.current = reader;
       const decoder = new TextDecoder();
       let buffer = '';
+      let fullContent = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -100,17 +124,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           if (data === '[DONE]') break;
           try {
             const parsed = JSON.parse(data);
-            // OpenAI-compatible SSE: {"choices":[{"delta":{"content":"..."}}]}
             if (parsed.choices?.[0]?.delta?.content) {
-              dispatch({ type: 'APPEND_STREAM_CHUNK', payload: parsed.choices[0].delta.content });
+              const chunk = parsed.choices[0].delta.content;
+              fullContent += chunk;
+              dispatch({ type: 'APPEND_STREAM_CHUNK', payload: chunk });
             } else if (parsed.error) {
               dispatch({ type: 'SET_ERROR', payload: typeof parsed.error === 'string' ? parsed.error : parsed.error.message || JSON.stringify(parsed.error) });
             }
           } catch {
-            // Not JSON — skip (raw SSE frame noise)
+            // Not JSON — skip
           }
         }
       }
+
+      // Persist assistant response
+      if (fullContent) saveMessage('assistant', fullContent).catch(() => {});
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       dispatch({ type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'Stream error' });
@@ -119,10 +147,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       readerRef.current = null;
       abortRef.current = null;
     }
-  }, [state.conversationId]);
+  }, []);
 
   const clear = useCallback(() => {
     if (abortRef.current) abortRef.current.abort();
+    clearHistory().catch(() => {});
     dispatch({ type: 'CLEAR_CONVERSATION' });
   }, []);
 
