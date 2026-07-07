@@ -24,12 +24,45 @@ case "$cmd" in
   dashboard)
     echo "🏢 Starting AIC Dashboard..."
     echo "   API:  http://localhost:$PORT"
-    echo "   Web:  http://localhost:$DASH_PORT"
+    echo ""
+
+    # Always pull latest updates from repo first
+    echo "🔄 Checking for updates from GitHub..."
+    TEMP_DIR=$(mktemp -d)
+    if git clone --depth 1 "$REPO_URL" "$TEMP_DIR/aic-skill" 2>/dev/null; then
+      # Preserve user config
+      ENV_BACKUP=""
+      if [[ -f "$SKILL_DIR/.env" ]]; then
+        ENV_BACKUP=$(mktemp)
+        cp "$SKILL_DIR/.env" "$ENV_BACKUP"
+      fi
+
+      # Apply updates
+      cp "$TEMP_DIR/aic-skill/SKILL.md" "$SKILL_DIR/"
+      cp -r "$TEMP_DIR/aic-skill/references" "$SKILL_DIR/" 2>/dev/null || true
+      cp -r "$TEMP_DIR/aic-skill/templates" "$SKILL_DIR/" 2>/dev/null || true
+      cp -r "$TEMP_DIR/aic-skill/scripts" "$SKILL_DIR/" 2>/dev/null || true
+      chmod +x "$SKILL_DIR/scripts/"*.sh 2>/dev/null || true
+
+      if [[ -f "$TEMP_DIR/aic-skill/dashboard/package.json" ]]; then
+        cp -r "$TEMP_DIR/aic-skill/dashboard" "$SKILL_DIR/"
+        cd "$SKILL_DIR/dashboard" && npm install --silent 2>/dev/null && cd - > /dev/null
+      fi
+
+      if [[ -n "$ENV_BACKUP" && -f "$ENV_BACKUP" ]]; then
+        cp "$ENV_BACKUP" "$SKILL_DIR/.env"
+        rm -f "$ENV_BACKUP"
+      fi
+      
+      echo "✅ Successfully synced with remote repo."
+    else
+      echo "⚠️ Could not reach GitHub or sync failed. Using local version."
+    fi
+    rm -rf "$TEMP_DIR"
     echo ""
 
     # Kill existing processes on those ports
     fuser -k "$PORT/tcp" 2>/dev/null || true
-    fuser -k "$DASH_PORT/tcp" 2>/dev/null || true
     sleep 0.5
 
     # Build dashboard if dist doesn't exist
@@ -46,7 +79,7 @@ case "$cmd" in
 
     # Check if server started
     if curl -s "http://localhost:$PORT/api/status" > /dev/null 2>&1; then
-      echo "✅ API server running"
+      echo "✅ API & Dashboard server running"
     else
       echo "❌ API server failed to start"
       kill $API_PID 2>/dev/null
@@ -56,7 +89,7 @@ case "$cmd" in
     # Check OpenCode status
     echo "🔍 Checking OpenCode configuration..."
     if [[ -f "$HOME/.config/opencode/opencode.jsonc" ]]; then
-      echo "✅ OpenCode is configured"
+      echo "✅ OpenCode is configured and ready"
     else
       echo "⚠️ OpenCode configuration not found!"
     fi
@@ -65,13 +98,15 @@ case "$cmd" in
     echo "═══════════════════════════════════════"
     echo "  🏢 AIC Dashboard is LIVE"
     echo ""
-    echo "  📊 Dashboard & Config: http://localhost:$PORT"
+    echo "  📊 Access Dashboard & Config at:"
+    echo "     http://localhost:$PORT"
     echo ""
     echo "  Press Ctrl+C to stop"
     echo "═══════════════════════════════════════"
     echo ""
-    echo "🤖 Dispatcher: Halo! Saya Dispatcher AIC. Server sudah jalan."
-    echo "              Ketik '/aic' di Hermes untuk mulai diskusi task dengan saya!"
+    echo "🤖 Dispatcher: Halo! Saya Dispatcher AIC."
+    echo "              Server API, Virtual Office, dan OpenCode sudah saya periksa."
+    echo "              Ketik '/aic' di chat Hermes ini untuk mulai task dengan saya!"
     echo ""
 
     # Keep alive for background node process
