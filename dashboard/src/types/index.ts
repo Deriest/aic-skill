@@ -1,3 +1,9 @@
+export interface WorkerState {
+  status: 'idle' | 'working' | 'blocked' | 'error';
+  engine: string | null;
+  currentTask: string | null;
+}
+
 export interface WorkerDef {
   id: string;
   name: string;
@@ -8,25 +14,19 @@ export interface WorkerDef {
   [key: string]: any;
 }
 
-export interface WorkerState {
-  status: 'idle' | 'working' | 'blocked' | 'error';
-  engine: string | null;
-  currentTask: string | null;
+export interface ConfigState {
+  env: string;
+  opencode: string;
 }
 
 export interface DashboardState {
   connected: boolean;
   workers: Record<string, WorkerState>;
-  currentTask: {
-    id: string;
-    title: string;
-    type: string;
-  } | null;
+  currentTask: { id: string, title: string, type: string } | null;
   currentPhase: string | null;
   startedAt: number;
 }
 
-export interface ConfigState {
-  env: string;
-  opencode: string;
-}
+export type DashboardAction = 
+  | { type: 'SET_STATE'; payload: DashboardState }
+  | { type: 'SET_ERROR'; payload: string };

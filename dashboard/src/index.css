@@ -78,9 +78,12 @@
     z-index: 0;
   }
 
-  /* Pixel desk */
+  /* Pixel desk hover */
   .pixel-desk {
-    @apply relative cursor-pointer;
+    @apply relative cursor-pointer transition-transform duration-200;
+  }
+  .pixel-desk:hover {
+    @apply scale-105;
   }
 }
 

@@ -18,7 +18,8 @@ export function ConfigEditor() {
     });
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     setStatus('Saving...');
     try {
       await api.saveConfig({ env, opencode });
@@ -29,42 +30,51 @@ export function ConfigEditor() {
     }
   };
 
-  if (loading) return <div className="text-slate-400 p-4">Loading config...</div>;
-
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 font-mono text-sm shadow-xl flex flex-col h-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-green-400 font-bold uppercase tracking-wider">System Config</h2>
-        <div className="flex items-center gap-4">
-          <span className="text-yellow-400">{status}</span>
-          <button 
-            onClick={handleSave}
-            className="bg-green-600 hover:bg-green-500 text-white px-4 py-1 rounded text-xs font-bold transition-colors"
-          >
-            SAVE CHANGES
-          </button>
-        </div>
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-aic-accent text-px-sm">▶</span>
+        <h3 className="font-pixel text-px-sm text-aic-accent uppercase">CONFIG SETTINGS</h3>
       </div>
+      <div className="bg-aic-bg-panel border border-aic-border/50 rounded p-4">
+        {loading ? (
+          <div className="text-aic-text-muted font-pixel text-px-xs">Loading...</div>
+        ) : (
+          <form onSubmit={handleSave} className="flex flex-col gap-4 font-body text-sm">
+            
+            <div className="flex flex-col gap-1">
+              <label className="font-pixel text-px-xs text-aic-text-bright uppercase">.env variables</label>
+              <textarea 
+                value={env}
+                onChange={e => setEnv(e.target.value)}
+                className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none resize-none h-24 font-mono text-xs"
+                spellCheck="false"
+              />
+            </div>
 
-      <div className="flex-1 grid grid-cols-2 gap-4">
-        <div className="flex flex-col">
-          <label className="text-blue-400 mb-1 text-xs">.env (Provider Config)</label>
-          <textarea 
-            value={env}
-            onChange={e => setEnv(e.target.value)}
-            className="flex-1 bg-slate-950 border border-slate-800 text-slate-300 p-2 rounded focus:border-blue-500 focus:outline-none resize-none"
-            spellCheck="false"
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-blue-400 mb-1 text-xs">opencode.jsonc (Custom Provider)</label>
-          <textarea 
-            value={opencode}
-            onChange={e => setOpencode(e.target.value)}
-            className="flex-1 bg-slate-950 border border-slate-800 text-slate-300 p-2 rounded focus:border-blue-500 focus:outline-none resize-none"
-            spellCheck="false"
-          />
-        </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-pixel text-px-xs text-aic-text-bright uppercase">opencode.jsonc</label>
+              <textarea 
+                value={opencode}
+                onChange={e => setOpencode(e.target.value)}
+                className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none resize-none h-32 font-mono text-xs"
+                spellCheck="false"
+              />
+            </div>
+
+            <div className="flex items-center justify-between mt-2">
+              <span className={`font-pixel text-px-xs ${status.includes('fail') || status.includes('Error') ? 'text-aic-red' : 'text-aic-green'}`}>
+                {status}
+              </span>
+              <button 
+                type="submit"
+                className="font-pixel text-px-xs bg-aic-bg-dark border border-aic-accent text-aic-accent hover:bg-aic-accent hover:text-black px-4 py-2 rounded transition-colors"
+              >
+                SAVE
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

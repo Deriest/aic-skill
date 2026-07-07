@@ -1,58 +1,67 @@
-import { useDashboardState } from '../hooks/useDashboardState';
 import { OfficeFloor } from '../components/office/OfficeFloor';
 import { ConfigEditor } from '../components/new_layout/ConfigEditor';
 import { PipelineTracker } from '../components/new_layout/PipelineTracker';
+import { useDashboardContext } from '../context/DashboardContext';
+import { CRTOverlay } from '../components/layout/CRTOverlay';
 
 export function OverviewPage() {
-  const { state, error } = useDashboardState();
+  const { state } = useDashboardContext();
 
-  if (error) {
-    return (
-      <div className="flex min-h-screen bg-slate-950 text-red-500 p-6 items-center justify-center font-mono">
-        <div className="border border-red-900 bg-red-950/50 p-6 rounded-lg text-center shadow-xl">
-          <h1 className="text-xl font-bold mb-2">CONNECTION LOST</h1>
-          <p>{error}</p>
-          <p className="text-xs text-slate-400 mt-4">Waiting for AIC API on port 6868...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!state) {
-    return (
-      <div className="flex min-h-screen bg-slate-950 text-slate-500 p-6 items-center justify-center font-mono text-xl animate-pulse">
-        CONNECTING TO CONTROL PLANE...
-      </div>
-    );
-  }
+  const active = Object.values(state.workers).filter(w => w.status === 'working').length;
+  const idle = Object.values(state.workers).filter(w => w.status === 'idle').length;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 p-6 gap-6 font-mono overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-aic-bg-dark text-aic-text-bright font-body overflow-hidden">
+      <CRTOverlay />
+      
       {/* Top Header */}
-      <header className="flex justify-between items-end border-b border-slate-800 pb-2 shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold text-green-500 uppercase tracking-widest">AIC Control Plane</h1>
-          <p className="text-xs text-slate-500 uppercase mt-1">Live Virtual Office & Orchestration</p>
+      <header className="flex justify-between items-center bg-aic-bg-panel border-b-4 border-aic-border px-6 py-4 z-10 relative">
+        <div className="flex items-center gap-3">
+          <span className="text-aic-accent text-px-lg font-pixel">▶</span>
+          <h1 className="text-3xl font-pixel text-aic-accent tracking-widest uppercase text-shadow-cyan">
+            AI ENGINEERING COMPANY
+          </h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e] animate-pulse"></div>
-          <span className="text-xs text-green-500 font-bold uppercase tracking-widest">CONNECTED</span>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${state.connected ? 'bg-aic-green shadow-neon-green animate-pulse' : 'bg-red-500'}`}></div>
+            <span className={`text-px-sm font-pixel tracking-widest uppercase ${state.connected ? 'text-aic-green' : 'text-red-500'}`}>
+              {state.connected ? 'ONLINE' : 'OFFLINE'}
+            </span>
+          </div>
         </div>
       </header>
 
-      <div className="flex flex-col gap-6 flex-1 min-h-0">
-        {/* Top Half: Virtual Office (Left) + Pipeline (Right) */}
-        <div className="flex gap-6 h-[50vh] min-h-[400px]">
-          <div className="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-xl relative">
-             <OfficeFloor state={state} />
+      <div className="flex flex-1 overflow-hidden p-6 gap-6 z-10 relative">
+        {/* Main Content (Left) */}
+        <div className="flex-1 flex flex-col min-w-0 gap-4">
+          <h2 className="font-pixel text-aic-accent text-px-md uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">OVERVIEW</h2>
+          
+          {/* Virtual Office Box */}
+          <div className="flex-1 min-h-0 bg-aic-bg-panel border-2 border-aic-border/50 rounded p-1 shadow-lg">
+             <OfficeFloor />
           </div>
-          <div className="w-[450px] shrink-0 flex flex-col justify-start">
-             <PipelineTracker state={state} />
+
+          {/* Stats Bar */}
+          <div className="grid grid-cols-3 gap-4 shrink-0 font-pixel mt-2">
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-4">
+              <span className="text-4xl text-aic-accent mb-2">{active}</span>
+              <span className="text-px-sm text-aic-text-muted uppercase">ACTIVE</span>
+            </div>
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-4">
+              <span className="text-4xl text-aic-green mb-2">0</span>
+              <span className="text-px-sm text-aic-text-muted uppercase">COMPLETE</span>
+            </div>
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-4">
+              <span className="text-4xl text-aic-text-muted mb-2">{idle}</span>
+              <span className="text-px-sm text-aic-text-muted uppercase">IDLE</span>
+            </div>
           </div>
         </div>
 
-        {/* Bottom Half: Config Editor */}
-        <div className="flex-1 min-h-[300px]">
+        {/* Right Sidebar */}
+        <div className="w-[400px] shrink-0 flex flex-col gap-6">
+          <PipelineTracker state={state} />
           <ConfigEditor />
         </div>
       </div>

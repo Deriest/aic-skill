@@ -1,7 +1,11 @@
+import { DashboardProvider } from './context/DashboardContext';
+import { useStatusPolling } from './hooks/useStatusPolling';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { OverviewPage } from './pages/OverviewPage';
 
 function DashboardApp() {
+  useStatusPolling();
+
   return (
     <div className="min-h-screen flex flex-col">
       <ErrorBoundary>
@@ -12,5 +16,9 @@ function DashboardApp() {
 }
 
 export default function App() {
-  return <DashboardApp />;
+  return (
+    <DashboardProvider>
+      <DashboardApp />
+    </DashboardProvider>
+  );
 }

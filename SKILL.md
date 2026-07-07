@@ -701,7 +701,7 @@ curl -s -X POST http://localhost:6868/api/reset
 1. **Virtual Office** is the only UI widget for worker status.
 2. **Pipeline Tracker** traces the exact 5 phases: Investigate, Planning, Execution, Documentation, Verification.
 3. **Config Editor** edits `.env` and `opencode.jsonc`.
-4. NO Activity Log, NO `/api/log`, NO separate Tasks page.
+4. NO Activity Log, NO `/api/log`, NO separate Tasks page. See `references/dashboard-architecture.md` for full principles.
 
 # Reset
 curl -s -X POST http://localhost:6868/api/reset
@@ -921,10 +921,9 @@ The spam has THREE root causes that must ALL be fixed. See `references/dashboard
 Setting `{"agent":"dispatcher","status":"working"}` caused spam. Root cause (verified 2026-07-07): zombie `watchdogd` background process + stale state cache.
 **Fix:** Kill rogue processes (`pkill -9 -f watchdog; pkill -9 curl`), delete `.aic/state.json` and `.aic/audit.json`, restart dashboard. Dispatcher stays `WORKING` during `/aic` session.
 
-### ❌ Dashboard UI not updating
-Shooting `/api/agent-status` alone only updates the avatars. It does NOT update the Pipeline Tracker.
-**Fix:** For the UI to reflect the pipeline state, you must use the official task lifecycle endpoint:
-- Update phase/task: `POST /api/task-status`
+### ❌ Dashboard UI Bloat
+The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never add Chat UIs, Activity Logs, Task Input forms, or stand-alone `/workers` pages to the dashboard. The Dispatcher (Hermes TUI) handles all communication.
+**Fix:** Keep the dashboard focused on visual state polling (via `/api/status`) and basic config editing (via `/api/config`). See `references/dashboard-architecture.md`.
 
 ### ❌ Workers Page is Redundant
 Do not build or maintain a standalone `/workers` page. The Overview page serves as the primary dashboard for viewing all worker states.

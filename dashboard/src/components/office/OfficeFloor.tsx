@@ -1,7 +1,6 @@
 import { WorkerGrid } from './WorkerGrid';
-import { DashboardState } from '../../types';
 
-export function OfficeFloor({ state }: { state: DashboardState }) {
+export function OfficeFloor() {
   return (
     <div className="office-grid-bg bg-aic-bg-floor border-4 border-aic-border rounded relative pt-5 flex flex-col h-full shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
       {/* Label */}
@@ -11,7 +10,11 @@ export function OfficeFloor({ state }: { state: DashboardState }) {
       
       {/* Worker Grid */}
       <div className="relative z-10 flex-1 px-4 pt-4 pb-6 overflow-y-auto min-h-0">
-        <WorkerGrid state={state} />
+        <WorkerGrid />
+      </div>
+      
+      {/* Stats Panel */}
+      <div className="relative z-20 w-full shrink-0">
       </div>
     </div>
   );
