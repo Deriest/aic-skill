@@ -739,6 +739,27 @@ When clipping absolutely-positioned children with negative offsets (e.g., `top-[
 
 **Diagnostic:** If a fix clips things that should stay visible, you put `overflow-hidden` on the wrong ancestor. Move it one level deeper.
 
+### ❌ When syncing from upstream repo, verify cross-platform paths immediately
+When pulling updates from the external repo (e.g., `Deriest/aic-skill`), the upstream may contain Windows-only hardcoded paths (`C:/Users/TVD/...`, `taskkill`, `netstat -ano`, `start http://...`). After rsync, **immediately** run a verification grep and bulk-fix with `sed -i` — do NOT use the `patch` tool for this (it fails on escaped backslashes in Windows paths). Use:
+
+```bash
+# Verify
+grep -rn 'C:/Users\|C:\\Users\|taskkill\|findstr\|netstat -ano\|\.exe' ~/.hermes/skills/workflows/aic/ --include="*.md" --include="*.sh"
+
+# Bulk fix
+sed -i 's|C:/Users/TVD/AppData/Local/hermes/skills/workflows/aic|~/.hermes/skills/workflows/aic|g' SKILL.md
+```
+
+Canonical cross-platform patterns to enforce:
+| Windows-only | Cross-platform |
+|---|---|
+| `C:/Users/TVD/...` | `~/.hermes/...` or `$HOME/.hermes/...` |
+| `taskkill /F /IM opencode.exe` | `pkill opencode` (Linux/macOS) / `taskkill` (Windows) |
+| `netstat -ano \| findstr :PORT` | `lsof -ti:PORT \| xargs kill` (Linux/macOS) |
+| `start http://...` | `xdg-open` (Linux) / `open` (macOS) |
+
+**Upstream repo:** https://github.com/Deriest/aic-skill — sync with `rsync -av --exclude='.git'`
+
 ---
 
 ## Important Rules

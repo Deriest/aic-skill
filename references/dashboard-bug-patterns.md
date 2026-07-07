@@ -1,6 +1,6 @@
 # AIC Dashboard — Known Bugs & Fixes
 
-For the full architecture document with decision matrices, file change summaries, and testing strategies, see `C:\Users\TVD\aic-fix-architecture.md`.
+For the full architecture document with decision matrices, file change summaries, and testing strategies, see `~/aic-fix-architecture.md`.
 
 ## Bug 1: Idle Stuck (agents stay in complete/working) ✅ FIXED
 
