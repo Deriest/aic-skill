@@ -111,37 +111,25 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
             </svg>
           </div>
 
-          {/* Decorative Cyberpunk Server/Plant SVG (Bottom Left Corner) */}
-          <div className="absolute -bottom-4 left-4 opacity-30 pointer-events-none select-none z-0">
-            <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
+          {/* Decorative SVG (Outside Pipeline Card) */}
+          <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 opacity-30 pointer-events-none select-none z-0">
+            <svg width="100" height="100" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
               <g fill="currentColor" shapeRendering="crispEdges">
-                {/* Circuit Board / Chip Doodle */}
-                {/* Main Chip Body */}
                 <rect x="10" y="10" width="12" height="12" className="text-aic-bg-dark" fill="currentColor"/>
                 <rect x="11" y="11" width="10" height="10" className="text-aic-accent" fill="currentColor" fillOpacity="0.8"/>
                 <rect x="13" y="13" width="6" height="6" className="text-aic-bg-panel" fill="currentColor"/>
-                
-                {/* Top Pins */}
                 <rect x="12" y="6" width="2" height="4" />
                 <rect x="15" y="6" width="2" height="4" />
                 <rect x="18" y="6" width="2" height="4" />
-                
-                {/* Bottom Pins */}
                 <rect x="12" y="22" width="2" height="4" />
                 <rect x="15" y="22" width="2" height="4" />
                 <rect x="18" y="22" width="2" height="4" />
-                
-                {/* Left Pins */}
                 <rect x="6" y="12" width="4" height="2" />
                 <rect x="6" y="15" width="4" height="2" />
                 <rect x="6" y="18" width="4" height="2" />
-                
-                {/* Right Pins */}
                 <rect x="22" y="12" width="4" height="2" />
                 <rect x="22" y="15" width="4" height="2" />
                 <rect x="22" y="18" width="4" height="2" />
-                
-                {/* Connecting traces */}
                 <rect x="2" y="15" width="4" height="1" className="text-aic-green" fill="currentColor" />
                 <rect x="2" y="16" width="1" height="4" className="text-aic-green" fill="currentColor" />
                 <rect x="3" y="19" width="3" height="1" className="text-aic-green" fill="currentColor" />
