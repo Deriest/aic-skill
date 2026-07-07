@@ -8,7 +8,7 @@ AIC transforms your Hermes agent into a Dispatcher — a front-facing AI enginee
 
 ---
 
-## 🎯 The 5-Phase Strict Lifecycle ("Harga Mati")
+## 🎯 The 5-Phase Strict Lifecycle 
 
 Every task MUST progress through these 5 phases in exact order. The internal API server blocks any worker from operating out of turn.
 
