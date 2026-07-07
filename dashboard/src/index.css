@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-pixel bg-aic-bg-dark text-aic-text antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* CRT scanline overlay — non-interactive */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15),
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    z-index: 50;
+  }
+
+  /* Pixel-perfect rendering for canvas */
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a1a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a4a;
+  }
+}
+
+@layer components {
+  /* Panel base style */
+  .panel {
+    @apply bg-aic-bg-panel border-3 border-aic-border relative;
+  }
+
+  .panel::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-[3px];
+    background: #00d4ff;
+  }
+
+  /* Office floor grid pattern overlay */
+  .office-grid-bg {
+    position: relative;
+  }
+
+  .office-grid-bg::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+      linear-gradient(rgba(42, 42, 74, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42, 42, 74, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Pixel desk hover */
+  .pixel-desk {
+    @apply relative cursor-pointer transition-transform duration-200;
+  }
+  .pixel-desk:hover {
+    @apply scale-105;
+  }
+}
+
+@layer utilities {
+  .text-glow-accent {
+    text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
+  }
+  .text-glow-green {
+    text-shadow: 0 0 10px #00ff88;
+  }
+}

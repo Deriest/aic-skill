@@ -1,0 +1,21 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Temp
+*.tmp
+*.bak
+
+# Logs
+*.log
+
+# Runtime
+status.json
+.env

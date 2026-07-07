@@ -1,0 +1,122 @@
+import { memo, useRef } from 'react';
+import { motion } from 'framer-motion';
+import type { WorkerDef, WorkerState } from '../../types';
+import { usePixelCanvas } from '../../hooks/usePixelCanvas';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { StatusBubble } from './StatusBubble';
+import { DeskComputer } from './DeskComputer';
+import { useDashboard } from '../../context/DashboardContext';
+
+interface WorkerDeskProps {
+  worker: WorkerDef;
+  status: WorkerState;
+  engine?: 'delegate' | 'opencode';
+}
+
+const characterAnimations = {
+  idle: {
+    y: [0, -3, 0],
+    rotate: 0,
+    transition: { y: { repeat: Infinity, duration: 1, ease: 'easeInOut' as const } },
+  },
+  working: {
+    y: [0, -2, 0],
+    rotate: [-2, 2, -2],
+    transition: {
+      y: { repeat: Infinity, duration: 0.3, ease: 'easeInOut' as const },
+      rotate: { repeat: Infinity, duration: 0.3, ease: 'easeInOut' as const },
+    },
+  },
+  complete: {
+    y: [0, -10, 0],
+    scale: [1, 1.15, 1],
+    rotate: 0,
+    transition: { duration: 0.5, ease: 'easeOut' as const },
+  },
+  error: {
+    x: [0, -4, 4, -4, 0],
+    rotate: 0,
+    transition: { duration: 0.2 },
+  },
+};
+
+const reducedMotion = {
+  idle: { y: 0, rotate: 0 },
+  working: { y: 0, rotate: 0 },
+  complete: { y: 0, scale: 1, rotate: 0 },
+  error: { x: 0, rotate: 0 },
+};
+
+export const WorkerDesk = memo(function WorkerDesk({ worker, status, engine }: WorkerDeskProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReduced = useReducedMotion();
+  const { dispatch } = useDashboard();
+
+  usePixelCanvas(canvasRef, worker, status);
+
+  const handleClick = () => {
+    dispatch({
+      type: 'APPEND_LOG',
+      payload: {
+        id: crypto.randomUUID(),
+        message: `SELECTED: ${worker.name} [${status}]`,
+        type: 'info',
+        timestamp: new Date(),
+      },
+    });
+  };
+
+  return (
+    <div className="pixel-desk flex flex-col items-center" onClick={handleClick}>
+      {/* Desk Computer */}
+      <DeskComputer status={status} />
+
+      {/* Pixel Character */}
+      <motion.div
+        className="relative"
+        animate={status}
+        variants={prefersReduced ? reducedMotion : characterAnimations}
+        style={{ imageRendering: 'pixelated' }}
+      >
+        <canvas ref={canvasRef} width={42} height={45} className="block" />
+      </motion.div>
+
+      {/* Desk Surface — also hosts the on-desk StatusBubble */}
+      <div className="w-full h-[40px] bg-gradient-to-b from-[#4a3728] to-[#3d2d1f] border-3 border-[#2a1f15] relative" style={{ imageRendering: 'pixelated' }}>
+        <div className="absolute top-[3px] left-[5px] right-[5px] h-[3px] bg-[#5a4a38]" />
+        <StatusBubble status={status} />
+      </div>
+
+      {/* Chair */}
+      <div className="w-6 h-4 bg-[#2a2a3a] border-2 border-[#1a1a2a] rounded-t-[3px]" />
+
+      {/* Label */}
+      <div className="text-center mt-2 font-pixel text-px-base text-[#ccc]">
+        {worker.name}
+        <div className="text-px-sm text-[#888] mt-1">{worker.role}</div>
+        <div className="text-px-sm text-aic-accent mt-0.5 font-bold">{worker.model}</div>
+      </div>
+
+      {/* Engine Badge — below desk assembly (below chair & label) */}
+      {engine && status === 'working' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5 }}
+          className={`mt-3 pt-2 px-2 py-0.5 font-pixel text-px-xs border-2 border-t border-x-0 border-b-0 ${
+            engine === 'opencode'
+              ? 'bg-[#1a0033] text-[#aa66ff] border-[#aa66ff]'
+              : 'bg-[#001a1a] text-[#00d4ff] border-[#00d4ff]'
+          }`}
+          style={{
+            boxShadow: engine === 'opencode'
+              ? '0 0 8px rgba(170, 102, 255, 0.6)'
+              : '0 0 8px rgba(0, 212, 255, 0.6)',
+          }}
+        >
+          {engine === 'opencode' ? '⚡ OPENCODE' : '🧠 DELEGATE'}
+        </motion.div>
+      )}
+    </div>
+  );
+});

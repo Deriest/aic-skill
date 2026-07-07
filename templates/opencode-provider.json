@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "YOUR_PROVIDER_ID": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Your Provider Name",
+      "options": {
+        "baseURL": "https://your-api.com/v1",
+        "apiKey": "YOUR_API_KEY_HERE"
+      },
+      "models": {
+        "opus": { "name": "your-opus-model" },
+        "sonnet": { "name": "your-sonnet-model" },
+        "haiku": { "name": "your-haiku-model" }
+      }
+    }
+  }
+}
