@@ -6,41 +6,46 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
   return (
     <div className="flex flex-col gap-6 h-full font-pixel">
       {/* Current Task */}
-      <div className="shrink-0 flex flex-col h-[180px]">
+      <div className="shrink-0 flex flex-col h-[200px]">
         <div className="flex items-center gap-2 mb-3 shrink-0">
           <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
           <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">CURRENT TASK</h3>
         </div>
-        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-5 flex-1 shadow-lg relative overflow-hidden flex flex-col justify-center">
+        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-5 flex-1 shadow-lg relative overflow-hidden flex flex-col">
           {!state.currentTask ? (
-            <span className="text-aic-text-muted font-pixel text-px-sm italic text-center">NO ACTIVE TASK</span>
+            <span className="text-aic-text-muted font-pixel text-px-sm italic m-auto">NO ACTIVE TASK</span>
           ) : (
-            <div className="flex flex-col h-full justify-between">
-              <div className="flex justify-between items-start mb-2">
+            <div className="flex flex-col h-full">
+              <div className="flex justify-between items-start mb-2 shrink-0">
                 <div className="text-aic-yellow font-pixel text-px-md">[{state.currentTask.id}]</div>
-                <div className="text-aic-accent/70 font-pixel text-px-xs uppercase border border-aic-accent/30 px-2 py-1 rounded bg-aic-bg-dark">
+                <div className="text-aic-accent/70 font-pixel text-[10px] uppercase border border-aic-accent/30 px-2 py-1 rounded bg-aic-bg-dark">
                   {state.currentTask.type || 'FEATURE'}
                 </div>
               </div>
-              <div className="text-white text-lg md:text-xl uppercase tracking-wider line-clamp-2 leading-tight">
+              <div className="text-white text-xl md:text-2xl uppercase tracking-wider line-clamp-1 leading-tight mb-2 shrink-0">
                 {state.currentTask.title}
+              </div>
+              {/* Task Description Detail */}
+              <div className="text-aic-text-bright/80 font-pixel text-[11px] leading-relaxed line-clamp-3 overflow-hidden bg-aic-bg-dark/40 p-2 rounded border border-aic-border/20 flex-1">
+                {/* Fallback to a placeholder description if state doesn't have one */}
+                {(state.currentTask as any).description || `Dispatcher has initialized the task orchestration. Currently establishing connection with OpenCode engine and formulating the primary workspace configuration...`}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Pipeline */}
-      <div className="flex-1 flex flex-col min-h-0">
+      {/* Pipeline & Doodle */}
+      <div className="flex-1 flex flex-col min-h-0 relative">
         <div className="flex items-center gap-2 mb-3 shrink-0">
           <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
           <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">PIPELINE</h3>
         </div>
-        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-6 flex-1 shadow-lg flex flex-col justify-center">
+        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-6 flex-1 shadow-lg flex flex-col relative overflow-hidden">
           {!state.currentTask ? (
-            <div className="text-aic-text-muted font-pixel text-px-sm italic text-center">NO PIPELINE</div>
+            <div className="text-aic-text-muted font-pixel text-px-sm italic m-auto z-10">NO PIPELINE</div>
           ) : (
-            <div className="flex flex-col justify-between h-full py-4">
+            <div className="flex flex-col gap-6 py-2 z-10">
               {phases.map((p, idx) => {
                 const isActive = p === state.currentPhase;
                 const currentIndex = phases.indexOf(state.currentPhase || '');
@@ -57,14 +62,24 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
                 }
 
                 return (
-                  <div key={p} className={`flex items-center gap-6 font-pixel text-px-sm md:text-px-base transition-all duration-300 ${textColor} ${isActive ? 'scale-105 ml-2' : ''}`}>
-                    <span className="w-6 text-center">{icon}</span>
+                  <div key={p} className={`flex items-center gap-6 font-pixel text-px-base md:text-px-lg transition-all duration-300 ${textColor} ${isActive ? 'scale-105 ml-4' : ''}`}>
+                    <span className="w-8 text-center">{icon}</span>
                     <span className="uppercase tracking-widest">{p}</span>
                   </div>
                 );
               })}
             </div>
           )}
+
+          {/* Doodle Art ASCII Character (Bottom Right) */}
+          <div className="absolute -bottom-4 -right-4 opacity-20 pointer-events-none select-none font-mono text-[8px] leading-[8px] whitespace-pre text-aic-accent">
+{`   _____
+  /     \\
+ | () () |
+  \\  ^  /
+   |||||
+   |||||`}
+          </div>
         </div>
       </div>
     </div>
