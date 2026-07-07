@@ -2,19 +2,14 @@ import React from 'react';
 
 export function WorkspaceScene() {
   return (
-    <div className="w-full bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-4 shadow-lg flex flex-col items-center">
-      <div className="text-aic-accent font-pixel text-[10px] uppercase mb-3 self-start flex items-center gap-2">
-        <span className="animate-pulse">●</span> WORKSPACE SCENE
-      </div>
-      <div className="w-full max-w-[400px] aspect-[4/3] bg-aic-bg-dark rounded border border-aic-border/30 overflow-hidden relative p-2">
-        <svg
-          viewBox="0 0 128 96"
-          width="100%"
-          height="100%"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          style={{ imageRendering: 'pixelated' }}
-        >
+    <svg
+      viewBox="0 0 128 96"
+      width="100%"
+      height="100%"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ imageRendering: 'pixelated' }}
+    >
           {/* Room Background / Walls & Floor */}
           <g id="background" shapeRendering="crispEdges">
             {/* Dark background already handled by container but let's draw walls */}
@@ -139,7 +134,5 @@ export function WorkspaceScene() {
             <rect x="85" y="54" width="2" height="1" fill="#fee2e2" /> {/* Closed eyes/snout */}
           </g>
         </svg>
-      </div>
-    </div>
   );
 }
