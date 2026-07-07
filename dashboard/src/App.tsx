@@ -1,16 +1,72 @@
+import { useState } from 'react';
 import { DashboardProvider } from './context/DashboardContext';
 import { useStatusPolling } from './hooks/useStatusPolling';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { OverviewPage } from './pages/OverviewPage';
+import { ConfigPage } from './pages/ConfigPage';
+import { CRTOverlay } from './components/layout/CRTOverlay';
+import { useDashboardContext } from './context/DashboardContext';
 
 function DashboardApp() {
+  const [activeTab, setActiveTab] = useState<'overview' | 'config'>('overview');
   useStatusPolling();
+  
+  const { state } = useDashboardContext();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <ErrorBoundary>
-        <OverviewPage />
-      </ErrorBoundary>
+    <div className="flex flex-col min-h-screen bg-aic-bg-dark text-aic-text-bright font-body overflow-hidden">
+      <CRTOverlay />
+      
+      {/* Top Header Navigation */}
+      <header className="flex justify-between items-center bg-aic-bg-panel border-b-4 border-aic-border px-6 py-4 z-10 relative">
+        <div className="flex items-center gap-3">
+          <span className="text-aic-accent text-px-lg font-pixel">▶</span>
+          <h1 className="text-3xl font-pixel text-aic-accent tracking-widest uppercase text-shadow-cyan">
+            AI ENGINEERING COMPANY
+          </h1>
+        </div>
+        
+        {/* Tabs */}
+        <div className="flex items-center gap-6">
+          <div className="flex gap-6 mr-4">
+            <button 
+              onClick={() => setActiveTab('overview')}
+              className={`font-pixel text-px-sm uppercase transition-colors pb-1 ${
+                activeTab === 'overview' 
+                  ? 'text-aic-accent border-b-2 border-aic-accent drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]' 
+                  : 'text-aic-text-muted hover:text-white'
+              }`}
+            >
+              OVERVIEW (1)
+            </button>
+            <button 
+              onClick={() => setActiveTab('config')}
+              className={`font-pixel text-px-sm uppercase transition-colors pb-1 ${
+                activeTab === 'config' 
+                  ? 'text-aic-accent border-b-2 border-aic-accent drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]' 
+                  : 'text-aic-text-muted hover:text-white'
+              }`}
+            >
+              CONFIG (2)
+            </button>
+          </div>
+
+          {/* Status Indicator */}
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${state.connected ? 'bg-aic-green shadow-neon-green animate-pulse' : 'bg-red-500'}`}></div>
+            <span className={`text-px-sm font-pixel tracking-widest uppercase ${state.connected ? 'text-aic-green' : 'text-red-500'}`}>
+              {state.connected ? 'ONLINE' : 'OFFLINE'}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden z-10 relative">
+        <ErrorBoundary>
+          {activeTab === 'overview' ? <OverviewPage /> : <ConfigPage />}
+        </ErrorBoundary>
+      </div>
     </div>
   );
 }

@@ -825,9 +825,16 @@ If the agents map filters idle workers, the frontend loses the explicit idle ref
 ### ❌ Dispatcher role must be STRICTLY a human-facing translator
 Per user correction (2026-07-07): "tugas kamu dispatcher untuk komunikasi dengan user TIDAK DI PERBOLEHKAN MENGERJAKAN CODINGAN ATAU NGEFIX SAMA SEKALI". The Dispatcher must: (1) communicate with the user like a human PM, (2) NEVER write code or run `write_file`/`patch`/`terminal` for code work, (3) NEVER spawn named workers via `delegate_task` — only `opencode run`, (4) set its own status to `working` on `/aic` trigger and leave it there, (5) on `/aic stop`, kill all servers (API + Vite) and return to normal Hermes mode.
 
+### ❌ Vite dev server fallback (index.html index mismatch)
+The root `index.html` of Vite applications strictly assumes standard rendering. When merging React structures with legacy elements, if components like `<FloatingParticles>` or `<CRTOverlay>` are removed from `App.tsx` or `OverviewPage.tsx`, ensure any leftover global CSS hooks in `index.css` or direct DOM manipulations that expect them are also cleared.
+
 ### ❌ `framer-motion` undefined config crashes on unexpected backend strings
-When rendering dynamic styles from a dictionary (`const config = statusConfig[phase.status]`), if the backend returns an unexpected string (e.g. `"active"` instead of `"working"`), `config` becomes `undefined` and causes a fatal `TypeError` in React (`can't access property... config is undefined`), crashing the whole dashboard.
-**Fix:** Always provide a fallback using type casting: `const config = statusConfig[phase.status as keyof typeof statusConfig] || statusConfig.pending;`
+When rendering dynamic styles from a dictionary (`const config = statusConfig[phase.status]`), if the backend returns an unexpected string (e.g. "active" instead of "working"), `config` becomes `undefined` and causes a fatal `TypeError` in React (`can't access property... config is undefined`), crashing the whole dashboard.
+**Fix:** Always provide a fallback using type casting: `const config = statusConfig[phase.status as keyof typeof statusConfig] || statusConfig.idle;`
+
+### ❌ Typescript Type Mismatches in Shared Status (Primitive vs Object)
+When refactoring state from objects `{ status: 'idle', engine: null }` to primitive strings (`'idle'`) across multiple components (e.g., `WorkerDesk.tsx`, `WorkerGrid.tsx`), ensure you extract the primitive value BEFORE passing it down to purely visual components (`DeskComputer.tsx`, `StatusBubble.tsx`).
+**Fix:** Use an interface mapped precisely: `status: WorkerState['status']` in props, or pass the primitive explicitly via `status={workerState.status}` from the parent. Do NOT use regex replace (`sed`) for refactoring Typescript files with complex syntax — use LSP-aware tools or explicit manual file writes to avoid destroying the `import` statements or object syntaxes.
 
 ### ❌ React dashboard `connected` stays false without explicit health polling
 The `DashboardProvider` does NOT auto-detect server connectivity. The `connected` state starts `false` and only updates when something dispatches `SET_CONNECTED`. Without a `useEffect` that polls `/health` every 5s and dispatches the result, the header permanently shows "OFFLINE" even when the API server is running. **Fix:** Add health polling in `DashboardProvider` on mount — `getHealth().then(d => dispatch({type:'SET_CONNECTED', payload:!!d?.ok})).catch(() => dispatch({type:'SET_CONNECTED', payload:false}))`. Also poll `/api/workers`, `/api/cost`, `/api/queue` for live dashboard data. Without polling, every dashboard page shows stale initial state.

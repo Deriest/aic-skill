@@ -8,7 +8,7 @@ export const DeskComputer = memo(function DeskComputer({ status }: DeskComputerP
   const isWorking = status === 'working';
   
   return (
-    <div className="absolute bottom-4 -right-1 flex flex-col items-center">
+    <div className="absolute -top-12 right-2 flex flex-col items-center">
       {/* Monitor */}
       <div className={`
         w-8 h-6 rounded-sm border-2 z-10 transition-colors

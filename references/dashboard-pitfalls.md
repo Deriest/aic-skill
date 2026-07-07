@@ -13,3 +13,13 @@ When maintaining, extending, or debugging the AIC dashboard (React/Vite frontend
 
 ## 3. OpenCode CLI Integration
 - **Model Provider Names:** Custom AI proxies often reject requests if the model string includes a prefix they don't recognize. If `opencode run` fails with `UnknownError: Unexpected server error` or `No active credentials for provider`, verify that the model names in `.env` (e.g., `Sonnet`) perfectly match the proxy's expected IDs, and that `opencode.jsonc` has the correct provider mapping.
+
+## 4. Typescript Prop Drilling and Primitive Refactoring
+When modernizing legacy `DashboardContext` (Context API) into direct props mapping (Polling API):
+*   Do not blindly convert TS Object Interfaces (`{status: string, engine: string}`) into primitive types (`string`) if child leaf nodes (like `StatusBubble`, `DeskComputer`, and `usePixelCanvas`) explicitly expect string types. This mismatch causes `Object is not a string` or `overlap` errors.
+*   **Resolution:** Prefer maintaining the Object Interface definition in the root `types.ts`, and explicitly mapping object primitive fields to child components: `status={workerState?.status ?? 'idle'}` at the point of injection (e.g. inside `WorkerGrid.tsx` map iterators).
+
+## 5. Refactoring Overuse of Regex (Sed) 
+When resolving Typescript Type overlaps inside React functional components, **DO NOT** use `sed` replacements (e.g. `sed -i 's/status ===/status.status ===/g'`).
+*   **Reason:** `sed` operates line-by-line and will inadvertently destroy ES6 component imports, interface brackets (`{}`), and object spread syntax resulting in broken TSX files (e.g. `TS1005: ';' expected`). 
+*   **Fix:** Use explicit `write_file` replacements or `patch` mode for complex React components to maintain structural integrity.

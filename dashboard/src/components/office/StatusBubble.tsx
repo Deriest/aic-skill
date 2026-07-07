@@ -17,11 +17,11 @@ export const StatusBubble = memo(function StatusBubble({ status }: StatusBubbleP
   const config = statusConfig[status] || statusConfig.idle;
   
   return (
-    <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap z-20">
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 whitespace-nowrap z-20">
       <AnimatePresence mode="wait">
         <motion.div
           key={status}
-          initial={{ opacity: 0, y: 5 }}
+          initial={{ opacity: 0, y: 0 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.8 }}
           className={`
