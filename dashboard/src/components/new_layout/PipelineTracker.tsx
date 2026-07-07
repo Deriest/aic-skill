@@ -98,35 +98,6 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
           </div>
         </div>
       </div>
-      
-      {/* Empty Space Below Pipeline Card (Aligns with Stats Bar on the left) */}
-      <div className="h-[100px] shrink-0 relative flex items-center justify-center opacity-50 select-none pointer-events-none">
-        <svg width="80" height="80" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
-          <g fill="currentColor" shapeRendering="crispEdges">
-            {/* Monitor Body */}
-            <rect x="6" y="6" width="20" height="16" className="text-aic-bg-dark" fill="currentColor"/>
-            <rect x="7" y="7" width="18" height="14" className="text-aic-accent" fill="currentColor" fillOpacity="0.8"/>
-            
-            {/* Screen */}
-            <rect x="9" y="9" width="14" height="8" className="text-aic-bg-panel" fill="currentColor"/>
-            
-            {/* Smiley Face on Screen */}
-            <rect x="11" y="11" width="2" height="2" className="text-aic-green" fill="currentColor"/>
-            <rect x="19" y="11" width="2" height="2" className="text-aic-green" fill="currentColor"/>
-            <rect x="13" y="14" width="6" height="1" className="text-aic-green" fill="currentColor"/>
-            <rect x="12" y="13" width="1" height="1" className="text-aic-green" fill="currentColor"/>
-            <rect x="19" y="13" width="1" height="1" className="text-aic-green" fill="currentColor"/>
-            
-            {/* Disk Drive & Power Button */}
-            <rect x="21" y="18" width="3" height="1" className="text-aic-bg-dark" fill="currentColor"/>
-            <rect x="19" y="18" width="1" height="1" className="text-aic-green" fill="currentColor"/>
-            
-            {/* Stand */}
-            <rect x="14" y="22" width="4" height="2" className="text-aic-bg-dark" fill="currentColor"/>
-            <rect x="10" y="24" width="12" height="2" className="text-aic-accent" fill="currentColor" fillOpacity="0.8"/>
-          </g>
-        </svg>
-      </div>
     </div>
   );
 }
