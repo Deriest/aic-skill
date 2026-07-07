@@ -478,6 +478,9 @@ When `VAR` is 0, `((VAR++))` returns 0 (the OLD value via post-increment), which
 ### ❌ POST endpoints return `{success: true}` not `{ok: true}`
 The status API's mutation endpoints (`task-start`, `phase-start`, `agent-status`, `task-complete`, `reset`, `log`) all return `{"success": true}`. Only `GET /health` returns `{"ok": true}`. Test scripts must check both fields: `d.ok === true || d.success === true`.
 
+### ❌ `fuser -k` exit code -9 is expected cleanup, not an error
+When starting servers via `/aic dashboard`, `fuser -k 6868/tcp` kills any existing server process with SIGKILL (exit -9). Hermes will report "Background process exited (exit code -9)" — this is NORMAL cleanup, not a crash. Ignore it and proceed. If the server fails to start AFTER the kill, then investigate (likely the port is still held for a few seconds — add `sleep 0.5` between kill and start).
+
 ### ❌ Drain-on-read must clear BOTH log fields
 When draining logs on GET `/api/status`, you must clear `state.logs` (array) AND `state.log` (backward-compat single entry) AND call `flush()`. Missing any of these causes: (1) `state.log` leaks into grep-based tests, (2) restart re-delivers drained logs from disk. See Bug 11 in `references/dashboard-bug-patterns.md`.
 
@@ -520,5 +523,5 @@ For full historical context on all pitfalls, see **`references/pitfalls-history.
 - **`references/dashboard-bug-patterns.md`** — Known bugs and fixes for the AIC dashboard: idle stuck, log dedup, UI layout. Component quick reference and port mapping (Vite=6969, API=6868).
 - **`references/pitfalls-history.md`** — Full historical anecdotes and detailed troubleshooting stories behind all Pitfalls rules.
 - **`references/opencode-custom-provider.md`** — OpenCode custom provider configuration for OpenAI-compatible proxies.
-- **`scripts/test-api.sh`** — Smoke tests for the Status API (24 assertions, all 8 endpoints). Run: `bash ~/.hermes/skills/workflows/aic/scripts/test-api.sh`. ⚠️ Known issue: step 9 has 2 false failures — step 8 creates task+agents (Concurrent-Test) but doesn't call `task-complete` before step 9 checks for reset state. Fix: add `task-complete` + `reset` after the concurrent test in step 8.
+- **`scripts/test-api.sh`** — Smoke tests for the Status API (25 assertions, all 9 endpoints). Run: `bash scripts/test-api.sh`. Requires server on port 6868.
 - **`scripts/test-status.sh`** — Integration tests for legacy status workflow (task-start, agent-status, phase lifecycle, history append). Run: `bash ~/.hermes/skills/workflows/aic/scripts/test-status.sh`. Requires server on port 6868.

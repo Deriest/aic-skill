@@ -105,6 +105,9 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+# Clean up concurrent test state
+post /api/task-complete '{}'
+post /api/reset '{}'
 # Verify state was reset after task-complete
 echo "9. GET /api/status (verify state reset)"
 STATUS2=$(get /api/status)

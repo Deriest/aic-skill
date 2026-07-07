@@ -242,5 +242,86 @@
         "status": "working"
       }
     }
+  },
+  {
+    "task": {
+      "title": "Test Sprint",
+      "type": "chore",
+      "id": "T-99"
+    },
+    "completedAt": "2026-07-07T05:04:45.177Z",
+    "phases": [
+      {
+        "name": "Implementation",
+        "status": "active"
+      }
+    ],
+    "agents": {
+      "worker-1": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Concurrent-Test",
+      "type": "chore",
+      "id": "T-CONC"
+    },
+    "completedAt": "2026-07-07T05:04:45.232Z",
+    "phases": [],
+    "agents": {
+      "agent-6": {
+        "status": "working"
+      },
+      "agent-7": {
+        "status": "working"
+      },
+      "agent-4": {
+        "status": "working"
+      },
+      "agent-1": {
+        "status": "working"
+      },
+      "agent-8": {
+        "status": "working"
+      },
+      "agent-5": {
+        "status": "working"
+      },
+      "agent-3": {
+        "status": "working"
+      },
+      "agent-2": {
+        "status": "working"
+      },
+      "agent-10": {
+        "status": "working"
+      },
+      "agent-9": {
+        "status": "working"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Test Bash",
+      "type": "feature",
+      "id": "B-1"
+    },
+    "completedAt": "2026-07-07T05:04:48.538Z",
+    "phases": [
+      {
+        "name": "QA",
+        "status": "complete"
+      }
+    ],
+    "agents": {
+      "qa": {
+        "status": "working",
+        "engine": "test"
+      }
+    }
   }
 ]
