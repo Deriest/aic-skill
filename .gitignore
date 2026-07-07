@@ -19,3 +19,4 @@ node_modules/
 # Runtime
 status.json
 .env
+dashboard/dist/
