@@ -47,7 +47,7 @@ curl -s http://localhost:6868/api/history
 
 **Dispatcher helper:** `.env` mirrors the config for Dispatcher spawn commands. Dispatcher reads `.env` to get provider/model names for `--model` flags.
 
-`.env` stores: `PROVIDER_ID`, `MODEL_OPUS`, `MODEL_SONNET`, `MODEL_HAIKU`
+`.env` stores: `PROVIDER_ID`, `MODEL_THINKER`, `MODEL_CRAFTER`, `MODEL_SPRINTER`
 
 On Windows, check BOTH paths (tilde expands differently for bash vs node):
 - `~/.hermes/skills/workflows/aic/.env` (bash/MSYS)
@@ -73,18 +73,18 @@ All 9 workers use **OpenCode** (`opencode run`) as their execution engine. The D
 
 | Worker | Engine | Model | Timeout |
 |---|---|---|---|
-| PM | opencode run | `{provider}/{opus}` | 180s |
-| Researcher | opencode run | `{provider}/{sonnet}` | 300s |
-| Designer | opencode run | `{provider}/{sonnet}` | 300s |
-| Architect | opencode run | `{provider}/{opus}` | 180s |
-| Frontend Engineer | opencode run | `{provider}/{sonnet}` | 600s |
-| Backend Engineer | opencode run | `{provider}/{sonnet}` | 600s |
-| Infrastructure Engineer | opencode run | `{provider}/{sonnet}` | 600s |
-| QA Engineer | opencode run | `{provider}/{sonnet}` | 300s |
-| Governor | opencode run | `{provider}/{sonnet}` | 300s |
+| PM | opencode run | `{provider}/{thinker}` | 180s |
+| Researcher | opencode run | `{provider}/{crafter}` | 300s |
+| Designer | opencode run | `{provider}/{crafter}` | 300s |
+| Architect | opencode run | `{provider}/{thinker}` | 180s |
+| Frontend Engineer | opencode run | `{provider}/{crafter}` | 600s |
+| Backend Engineer | opencode run | `{provider}/{crafter}` | 600s |
+| Infrastructure Engineer | opencode run | `{provider}/{crafter}` | 600s |
+| QA Engineer | opencode run | `{provider}/{crafter}` | 300s |
+| Governor | opencode run | `{provider}/{crafter}` | 300s |
 | Dispatcher (You) | delegate_task | inherited | — |
 
-`{provider}`, `{sonnet}`, `{opus}` are loaded from `.env`.
+`{provider}`, `{crafter}`, `{thinker}` are loaded from `.env`.
 
 ---
 
@@ -471,6 +471,9 @@ The `write_file` tool silently replaces `${API_KEY}`, `sk-...`, etc. with `***`.
 ### ❌ Bash `set -e` + `((VAR++))` kills scripts silently
 When `VAR` is 0, `((VAR++))` returns 0 (the OLD value via post-increment), which bash treats as falsy/failure. With `set -e` active, this silently kills the script with no error message. **Fix:** use `VAR=$((VAR + 1))` instead of `((VAR++))`. Same for `((FAIL++))` etc. This bit test-api.sh live — the script exited after the first passing assertion.
 
+### ❌ POST endpoints return `{success: true}` not `{ok: true}`
+The status API's mutation endpoints (`task-start`, `phase-start`, `agent-status`, `task-complete`, `reset`, `log`) all return `{"success": true}`. Only `GET /health` returns `{"ok": true}`. Test scripts must check both fields: `d.ok === true || d.success === true`.
+
 ### ❌ Drain-on-read must clear BOTH log fields
 When draining logs on GET `/api/status`, you must clear `state.logs` (array) AND `state.log` (backward-compat single entry) AND call `flush()`. Missing any of these causes: (1) `state.log` leaks into grep-based tests, (2) restart re-delivers drained logs from disk. See Bug 11 in `references/dashboard-bug-patterns.md`.
 
@@ -512,4 +515,5 @@ For full historical context on all pitfalls, see **`references/pitfalls-history.
 - **`references/dashboard-bug-patterns.md`** — Known bugs and fixes for the AIC dashboard: idle stuck, log dedup, UI layout. Component quick reference and port mapping (Vite=6969, API=6868).
 - **`references/pitfalls-history.md`** — Full historical anecdotes and detailed troubleshooting stories behind all Pitfalls rules.
 - **`references/opencode-custom-provider.md`** — OpenCode custom provider configuration for OpenAI-compatible proxies.
-- **`scripts/test-api.sh`** — Smoke tests for the Status API (24 assertions, all 8 endpoints). Run: `bash ~/.hermes/skills/workflows/aic/scripts/test-api.sh`. Idempotent — starts with reset, ends clean.
+- **`scripts/test-api.sh`** — Smoke tests for the Status API (24 assertions, all 8 endpoints). Run: `bash ~/.hermes/skills/workflows/aic/scripts/test-api.sh`. ⚠️ Known issue: step 9 has 2 false failures — step 8 creates task+agents (Concurrent-Test) but doesn't call `task-complete` before step 9 checks for reset state. Fix: add `task-complete` + `reset` after the concurrent test in step 8.
+- **`scripts/test-status.sh`** — Integration tests for legacy status workflow (task-start, agent-status, phase lifecycle, history append). Run: `bash ~/.hermes/skills/workflows/aic/scripts/test-status.sh`. Requires server on port 6868.

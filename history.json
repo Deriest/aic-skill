@@ -183,5 +183,64 @@
         "engine": "test"
       }
     }
+  },
+  {
+    "task": {
+      "title": "Test Bash",
+      "type": "feature",
+      "id": "B-1"
+    },
+    "completedAt": "2026-07-07T04:36:26.540Z",
+    "phases": [
+      {
+        "name": "QA",
+        "status": "complete"
+      }
+    ],
+    "agents": {
+      "qa": {
+        "status": "working",
+        "engine": "test"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Test Sprint",
+      "type": "chore",
+      "id": "T-99"
+    },
+    "completedAt": "2026-07-07T04:36:57.727Z",
+    "phases": [
+      {
+        "name": "Implementation",
+        "status": "active"
+      }
+    ],
+    "agents": {
+      "worker-1": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Verify",
+      "type": "feature",
+      "id": "V-1"
+    },
+    "completedAt": "2026-07-07T04:38:55.247Z",
+    "phases": [
+      {
+        "name": "Test",
+        "status": "complete"
+      }
+    ],
+    "agents": {
+      "pm": {
+        "status": "working"
+      }
+    }
   }
 ]

@@ -33,8 +33,8 @@ What is your API key?
 > sk-or-xxx
 
 Choose your model tier:
-  1) Claude (Opus/Sonnet/Haiku) via OpenRouter
-  2) Claude (Opus/Sonnet/Haiku) via Anthropic direct
+  1) Claude (Thinker/Crafter/Sprinter) via OpenRouter
+  2) Claude (Thinker/Crafter/Sprinter) via Anthropic direct
   3) GPT-4o / GPT-4o-mini via OpenAI
   4) Free (deepseek-v4-flash-free)
   5) Custom
@@ -113,9 +113,9 @@ All 9 workers use **OpenCode** (`opencode run`) as their engine. Only the Dispat
 ```
 PROVIDER=openrouter
 API_KEY=sk-or-xxx
-MODEL_OPUS=anthropic/claude-3-opus
-MODEL_SONNET=anthropic/claude-3-sonnet
-MODEL_HAIKU=anthropic/claude-3-haiku
+MODEL_THINKER=anthropic/claude-opus-4
+MODEL_CRAFTER=anthropic/claude-sonnet-4
+MODEL_SPRINTER=anthropic/claude-haiku-3.5
 ```
 
 ## License
