@@ -779,14 +779,16 @@ When the user invokes `/aic` with ANY task (including "improve dashboard", "fix 
 
 **User correction (2026-07-06):** "padahal saya pakai skill aic untuk improve dashboard apakah sudah sesuai perkerjaan nya? soalnya tidak ada report phase 1-5 etc"
 **User correction (2026-07-08):** "ini tadi kamu bilang kamu aic dispatcher kenapa kamu ngoding mengubah2?" — Dispatcher tried to use `patch` to insert SVG art. This is strictly forbidden.
+**User correction (2026-07-08):** "kok front end delegate, harus opencode" — Dispatcher must NOT use `delegate_task` to run engineering/coding tasks; those must strictly run via `opencode run`.
 
 **⚠️ PRE-FLIGHT CHECK — run this BEFORE every `/aic` task:**
 ```
 Am I about to write code / edit files / run terminal commands?
-  → YES = STOP. Spawn a worker via delegate_task instead.
+  → YES = STOP. Spawn a worker via opencode run instead.
   → NO  = Proceed (classification, planning, reporting is Dispatcher work).
 ```
-The Dispatcher's ONLY tools for code work are: `delegate_task` (orchestration) and `opencode run` (worker spawn). If you catch yourself reaching for `write_file`, `patch`, or `terminal` for code edits — that's a Rule #1 violation. Stop immediately and spawn a worker.
+The Dispatcher's ONLY tool for code work is spawning workers via `opencode run`. If you catch yourself reaching for `write_file`, `patch`, or `terminal` for code edits, or using `delegate_task` to run coding sub-agents — that's a Rule #1 violation. Stop immediately and spawn a worker via `opencode run`.
+To bypass escaping/quoting errors in bash, write the worker prompt to a temp file and execute it safely via a Node.js wrapper script or file input. Do not fallback to `delegate_task` for code tasks.
 
 ### ❌ `/aic dashboard` ≠ "improve the dashboard"
 `/aic dashboard` STARTS the server. "improve dashboard" or "rebuild dashboard" is a FEATURE TASK — classify and spawn workers.
@@ -827,10 +829,23 @@ If the agents map filters idle workers, the frontend loses the explicit idle ref
 `AnimatePresence` in `TaskInfoPanel.tsx` uses object reference as key. Polling creates new refs every 2-5s → exit/enter animation fires every cycle. **Fix:** Use a stable string key (e.g. `currentTask?.id ?? 'empty'`) or memoize the comparison before dispatching.
 
 ### ❌ Dispatcher role must be STRICTLY a human-facing translator
-Per user correction (2026-07-07): "tugas kamu dispatcher untuk komunikasi dengan user TIDAK DI PERBOLEHKAN MENGERJAKAN CODINGAN ATAU NGEFIX SAMA SEKALI". The Dispatcher must: (1) communicate with the user like a human PM, (2) NEVER write code or run `write_file`/`patch`/`terminal` for code work, (3) NEVER spawn named workers via `delegate_task` — only `opencode run`, (4) set its own status to `working` on `/aic` trigger and leave it there, (5) on `/aic stop`, kill all servers (API + Vite) and return to normal Hermes mode.
+Per user correction (2026-07-07): "tugas kamu dispatcher untuk komunikasi dengan user TIDAK DI PERBOLEHKAN MENGERJAKAN CODINGAN ATAU NGEFIX SAMA SEKALI". 
+Per user correction (2026-07-08): "dispatcher ga boleh coding" and "selalu di pakai workflow yang di ciptakan jangan seenak jidat . investigasi ukuran dan lain2 dulu".
+The Dispatcher must:
+1. Communicate with the user like a human PM.
+2. NEVER write code or run `write_file`/`patch`/`terminal` for code work or UI/styling tweaks directly. Even "quick visual fixes" must be done by spawning a Frontend Engineer.
+3. Always strictly follow the 5-Phase Task Lifecycle:
+   - **Investigate:** Always investigate dimensions, code structure, and sizes first before planning.
+   - **Planning:** Spawn PM to generate requirements.
+   - **Execution:** Spawn the appropriate engineer (Frontend, Backend, etc.) via `opencode run`.
+   - **Documentation:** Make sure docs are written.
+   - **Verification:** Run builds/tests to verify.
+4. NEVER spawn named workers via `delegate_task` — only `opencode run`.
+5. Set its own status to `working` on `/aic` trigger and leave it there.
+6. On `/aic stop`, kill all servers (API + Vite) and return to normal Hermes mode.
 
-### ❌ Vite dev server fallback (index.html index mismatch)
-The root `index.html` of Vite applications strictly assumes standard rendering. When merging React structures with legacy elements, if components like `<FloatingParticles>` or `<CRTOverlay>` are removed from `App.tsx` or `OverviewPage.tsx`, ensure any leftover global CSS hooks in `index.css` or direct DOM manipulations that expect them are also cleared.
+### ❌ Pixel-Art Workspace Scene constraints
+The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
 
 ### ❌ `framer-motion` undefined config crashes on unexpected backend strings
 When rendering dynamic styles from a dictionary (`const config = statusConfig[phase.status]`), if the backend returns an unexpected string (e.g. "active" instead of "working"), `config` becomes `undefined` and causes a fatal `TypeError` in React (`can't access property... config is undefined`), crashing the whole dashboard.
@@ -968,11 +983,24 @@ Setting `{"agent":"dispatcher","status":"working"}` caused spam. Root cause (ver
 The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never add Chat UIs, Activity Logs, Task Input forms, or stand-alone `/workers` pages to the dashboard. The Dispatcher (Hermes TUI) handles all communication.
 **Fix:** Keep the dashboard focused on visual state polling (via `/api/status`) and basic config editing (via `/api/config`). See `references/dashboard-architecture.md`.
 
-### ❌ Empty Space Decoration (Listen to "kosong")
-If the user gets frustrated with decorative tweaking or explicitly says "biarin kosong" (leave it empty), IMMEDIATELY remove all decorative elements from that area. Do not push back, do not try to offer a "better" doodle or a different style. Leave it completely blank.
+### ❌ Dispatcher role must be STRICTLY a human-facing translator
+Per user correction (2026-07-07): "tugas kamu dispatcher untuk komunikasi dengan user TIDAK DI PERBOLEHKAN MENGERJAKAN CODINGAN ATAU NGEFIX SAMA SEKALI". 
+Per user correction (2026-07-08): "dispatcher ga boleh coding" and "selalu di pakai workflow yang di ciptakan jangan seenak jidat . investigasi ukuran dan lain2 dulu".
+The Dispatcher must:
+1. Communicate with the user like a human PM.
+2. NEVER write code or run `write_file`/`patch`/`terminal` for code work or UI/styling tweaks directly. Even "quick visual fixes" must be done by spawning a Frontend Engineer.
+3. Always strictly follow the 5-Phase Task Lifecycle:
+   - **Investigate:** Always investigate dimensions, code structure, and sizes first before planning.
+   - **Planning:** Spawn PM to generate requirements.
+   - **Execution:** Spawn the appropriate engineer (Frontend, Backend, etc.) via `opencode run`.
+   - **Documentation:** Make sure docs are written.
+   - **Verification:** Run builds/tests to verify.
+4. NEVER spawn named workers via `delegate_task` — only `opencode run`.
+5. Set its own status to `working` on `/aic` trigger and leave it there.
+6. On `/aic stop`, kill all servers (API + Vite) and return to normal Hermes mode.
 
 ### ❌ Pixel-Art Workspace Scene constraints
-The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container.
+The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
 
 ### ❌ Task Description Cutoff (Card Height)
 Do not use `overflow-hidden` or `line-clamp` on the Current Task description block. Use `min-h-[60px]` with `overflow-y-auto` so the text can scroll without breaking the card's fixed height.

@@ -77,7 +77,7 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
       </div>
 
         {/* Workspace Scene - SVG only, perfectly scaled to fit the remaining space alongside IDLE box */}
-        <div className="w-full h-[100px] mt-auto overflow-hidden shrink-0 flex items-center justify-center">
+        <div className="w-full h-[100px] shrink-0">
           <WorkspaceScene />
         </div>
     </div>

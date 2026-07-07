@@ -7,14 +7,14 @@ export function WorkerGrid() {
   const sections = groupWorkersBySection();
 
   return (
-    <div className="flex-1 h-full flex flex-col items-center py-2 justify-center">
-      <div className="w-full flex flex-col justify-between h-full max-h-full">
+    <div className="flex-1 h-full flex flex-col items-center py-2 justify-center min-h-0">
+      <div className="w-full flex flex-col justify-between h-full max-h-full overflow-y-auto">
         {sections.map(([section, workers]) => (
-          <div key={section} className="w-full flex flex-col items-center">
+          <div key={section} className="w-full flex flex-col items-center shrink-0">
             <div className="font-pixel text-[10px] text-aic-text-muted/60 uppercase tracking-widest mb-1 text-center border-b border-aic-border/30 pb-1 w-1/3 max-w-sm">
               {section}
             </div>
-            <div className="flex justify-center gap-2 md:gap-4 overflow-hidden w-full max-w-full">
+            <div className="flex flex-wrap justify-center gap-2 md:gap-4 w-full max-w-full py-1">
               {workers.map((worker) => {
                 const workerState = state.workers[worker.id];
                 return (
