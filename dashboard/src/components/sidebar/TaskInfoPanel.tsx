@@ -7,9 +7,11 @@ export function TaskInfoPanel() {
   const elapsed = useElapsedTime(state.taskStartTimestamp);
 
   return (
-    <div className="panel p-3 flex-1">
-      <div className="font-pixel text-px-base text-aic-accent mb-2.5 uppercase tracking-wide" style={{ textShadow: '0 0 5px rgba(0, 212, 255, 0.5)' }}>
-        ▸ CURRENT TASK
+    <div className="panel p-4 flex-1 h-full border border-aic-border/50 bg-black/40 backdrop-blur-sm relative z-10">
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-aic-accent/50 to-transparent opacity-50" />
+      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-aic-accent/20 to-transparent opacity-30" />
+      <div className="font-pixel text-px-base text-aic-accent mb-4 uppercase tracking-wider flex items-center gap-2" style={{ textShadow: '0 0 8px rgba(0, 212, 255, 0.6)' }}>
+        <span className="animate-pulse">▶</span> CURRENT TASK
       </div>
       <AnimatePresence mode="wait">
         {state.currentTask ? (

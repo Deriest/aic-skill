@@ -36,7 +36,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         .then((workers) => {
           const agents: Record<string, import('../types').AgentStatus> = {};
           for (const w of workers) {
-            agents[w.id] = { status: w.status as import('../types').WorkerState };
+            agents[w.id] = { 
+              status: w.status as import('../types').WorkerState,
+              engine: w.engine
+            };
           }
           dispatch({ type: 'MERGE_STATUS', payload: { agents, phases: [], currentTask: null } });
         })

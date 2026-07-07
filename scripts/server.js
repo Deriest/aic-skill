@@ -24,9 +24,7 @@ const CHAT_HISTORY_FILE = path.join(SKILL_DIR, 'chat-history.json');
 
 // Workers (matches SKILL.md worker list)
 const WORKERS = [
-  'requirements_planner', 'architect', 'ui_ux_engineer', 'frontend_engineer',
-  'backend_engineer', 'qa_engineer', 'devops_engineer', 'security_engineer',
-  'integration_engineer',
+  'pm', 'researcher', 'designer', 'architect', 'frontend', 'backend', 'infra', 'qa', 'governor', 'dispatcher'
 ];
 
 // Circuit breaker states
@@ -96,13 +94,17 @@ function persist() {
 }
 
 function audit(action, actor, details) {
+  const msgStr = typeof details === 'object' ? JSON.stringify(details) : String(details);
+  if (state.audit.length > 0 && state.audit[state.audit.length - 1].action === action && state.audit[state.audit.length - 1].actor === actor) {
+    const prevStr = typeof state.audit[state.audit.length - 1].details === 'object' ? JSON.stringify(state.audit[state.audit.length - 1].details) : String(state.audit[state.audit.length - 1].details);
+    if (prevStr === msgStr) return; // SKIP DUPLICATE SPAM
+  }
+
   const entry = { timestamp: new Date().toISOString(), action, actor, details };
   state.audit.push(entry);
-  // Persist audit to file
   try {
     const auditLog = loadJSON(AUDIT_FILE, []);
     auditLog.push(entry);
-    // Keep last 1000 entries
     if (auditLog.length > 1000) auditLog.splice(0, auditLog.length - 1000);
     saveJSON(AUDIT_FILE, auditLog);
   } catch {}
@@ -155,18 +157,19 @@ function getOrchestratorPrompt() {
   const queuedTasks = state.queue.map(q => `${q.title} (${q.type}, ${q.priority})`).join(', ') || 'none';
   const currentTask = state.task ? `${state.task.title} [${state.task.type}] — phase: ${state.phase}` : 'none';
 
-  return `You are the AIC Orchestrator — an AI engineering manager that coordinates a team of 9 specialized workers to build software.
+  return `You are the AIC Orchestrator — an AI engineering manager that coordinates a team of 10 specialized workers to build software.
 
 YOUR TEAM:
-- requirements_planner: Breaks down tasks into specs
+- pm: Product Manager
+- researcher: Researcher
+- designer: Designer
 - architect: Designs system architecture
-- ui_ux_engineer: UI/UX design
-- frontend_engineer: React/TS/CSS implementation
-- backend_engineer: Node.js/API/database
-- qa_engineer: Testing and verification
-- devops_engineer: Deployment, CI/CD, Docker
-- security_engineer: Security audit
-- integration_engineer: System integration
+- frontend: React/TS/CSS implementation
+- backend: Node.js/API/database
+- infra: Deployment, CI/CD, Docker
+- qa: Testing and verification
+- governor: Governance
+- dispatcher: Dispatcher
 
 CURRENT STATE:
 - Active task: ${currentTask}
@@ -184,7 +187,7 @@ RULES:
 - Be concise. Indonesian preferred if user writes in Indonesian.
 - When the user asks to build something, explain the plan briefly and say it's being queued.
 - You have full context of the AIC system — you ARE the orchestrator.
-- Never say "I can't do that" — you coordinate 9 workers who CAN do it.
+- Never say "I can't do that" — you coordinate 10 workers who CAN do it.
 - If the user asks about chat history, config, workers — you have access to all of it.
 - Keep responses short and action-oriented.`;
 }
@@ -257,16 +260,46 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Workers
+  if (req.method === 'GET' && pathname === '/api/status') {
+    return json({
+      connected: true,
+      currentTask: state.task ? {
+        id: state.task.id || 'N/A',
+        title: state.task.title || 'Untitled',
+        type: state.task.type || 'unknown'
+      } : null,
+      phases: state.phase !== 'Idle' ? [{name: state.phase, status: state.phaseStatus || 'active'}] : [],
+      agents: Object.fromEntries(Object.entries(state.workers).filter(([_, w]) => w.status !== 'idle')),
+      logs: state.audit.map((log, i) => ({
+        message: `[${log.action}] ${JSON.stringify(log.details)}`,
+        type: 'info'
+      }))
+    });
+  }
+
   if (req.method === 'GET' && pathname === '/api/workers') {
+    const roleNames = {
+      pm: 'PM',
+      researcher: 'Researcher',
+      designer: 'Designer',
+      architect: 'Architect',
+      frontend: 'Frontend',
+      backend: 'Backend',
+      infra: 'Infra',
+      qa: 'QA',
+      governor: 'Governor',
+      dispatcher: 'Dispatcher'
+    };
     const workers = WORKERS.map(name => {
       const w = state.workers[name] || { status: 'idle', currentTask: null };
       const cb = state.circuitBreakers[name] || { state: 'CLOSED', failures: 0 };
       return {
         id: name,
-        name: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-        status: w.status,
-        currentTask: w.currentTask,
-        tokens: { input: Math.floor(Math.random() * 50000), output: Math.floor(Math.random() * 20000) },
+        name: roleNames[name] || name,
+      status: w.status,
+      currentTask: w.currentTask,
+      engine: w.engine,
+      tokens: { input: Math.floor(Math.random() * 50000), output: Math.floor(Math.random() * 20000) },
         cost: parseFloat((Math.random() * 2).toFixed(4)),
         uptime: Math.floor((Date.now() - state.startTime) / 1000),
         circuitBreaker: cb,
@@ -298,7 +331,7 @@ const server = http.createServer(async (req, res) => {
     const data = await readBody(req);
     state.task = data;
     state.phase = 'Planning';
-    state.workers.requirements_planner = { status: 'working', currentTask: data.title };
+    state.workers.pm = { status: 'working', currentTask: data.title };
     audit('task_start', 'dispatcher', data);
     persist();
     return json({ success: true, eta: calcETA() });
@@ -340,6 +373,32 @@ const server = http.createServer(async (req, res) => {
     return json({ success: true });
   }
 
+  if (req.method === 'POST' && pathname === '/api/task-complete') {
+    if (state.task) {
+      state.history.push({
+        task: state.task,
+        phases: [{name: state.phase, status: 'complete'}],
+        agents: state.workers,
+        completedAt: new Date().toISOString(),
+        duration: "0s",
+        cost: 0,
+        tokens: { input: 0, output: 0 },
+        status: 'complete'
+      });
+      state.task = null;
+      state.phase = 'Idle';
+      for (const w of WORKERS) {
+        if (state.workers[w]?.status === 'working') {
+          state.workers[w] = { status: 'idle', currentTask: null };
+        }
+      }
+      audit('task_complete', 'dispatcher', { taskId: state.task?.id });
+      saveJSON(HISTORY_FILE, state.history);
+      persist();
+    }
+    return json({ success: true });
+  }
+
   // Queue
   if (req.method === 'GET' && pathname === '/api/queue') {
     return json(state.queue);
@@ -366,8 +425,12 @@ const server = http.createServer(async (req, res) => {
     const data = await readBody(req);
     const agentName = data.agent || 'unknown';
     const workerKey = WORKERS.find(w => w.includes(agentName)) || agentName;
-    if (state.workers[workerKey]) {
-      state.workers[workerKey].status = data.status || 'idle';
+    if (!state.workers[workerKey]) {
+      state.workers[workerKey] = { status: 'idle', currentTask: null };
+    }
+    state.workers[workerKey].status = data.status || 'idle';
+    if (data.engine !== undefined) {
+      state.workers[workerKey].engine = data.engine;
     }
     audit('agent_status', agentName, data);
     persist();

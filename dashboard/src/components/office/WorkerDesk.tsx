@@ -67,7 +67,14 @@ export const WorkerDesk = memo(function WorkerDesk({ worker, status, engine }: W
   };
 
   return (
-    <div className="pixel-desk flex flex-col items-center" onClick={handleClick}>
+    <div
+      className={`pixel-desk flex flex-col items-center p-2 rounded-lg border-2 transition-all duration-300 ${
+        status === 'working'
+          ? 'border-aic-yellow shadow-neon-yellow bg-aic-bg-panel/40 animate-pulse'
+          : 'border-transparent'
+      }`}
+      onClick={handleClick}
+    >
       {/* Desk Computer */}
       <DeskComputer status={status} />
 

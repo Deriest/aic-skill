@@ -29,7 +29,8 @@ const bubbleVariants = {
 };
 
 export function StatusBubble({ status }: StatusBubbleProps) {
-  if (status === 'idle') return null;
+  // We no longer return null for idle, we render it as WAITING FOR TASK
+  const displayText = status === 'idle' ? 'WAITING FOR TASK' : status.toUpperCase();
 
   return (
     <AnimatePresence mode="wait">
@@ -45,7 +46,7 @@ export function StatusBubble({ status }: StatusBubbleProps) {
           boxShadow: status === 'working' ? '0 0 10px rgba(255, 204, 0, 0.5)' : 'none',
         }}
       >
-        {status.toUpperCase()}
+        {displayText}
       </motion.div>
     </AnimatePresence>
   );

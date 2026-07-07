@@ -7,11 +7,11 @@ export function OverviewPage() {
   return (
     <PageShell title="OVERVIEW">
       <div className="flex flex-col min-h-0">
-        <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
-          <main className="flex-1 min-w-0">
+        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+          <main className="flex-[3] min-w-0">
             <OfficeFloor />
           </main>
-          <aside className="w-full lg:w-[320px] lg:shrink-0">
+          <aside className="w-full lg:flex-[1] lg:shrink-0 flex flex-col min-w-[280px]">
             <Sidebar />
           </aside>
         </div>

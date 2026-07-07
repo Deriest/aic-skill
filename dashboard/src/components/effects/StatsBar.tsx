@@ -12,10 +12,16 @@ export function StatsBar() {
   const idle = total - active - complete;
 
   return (
-    <div className="grid grid-cols-3 gap-2 py-2 px-1">
-      <StatBox value={active} label="ACTIVE" color="#00d4ff" glowColor="rgba(0, 212, 255, 0.5)" />
-      <StatBox value={complete} label="COMPLETE" color="#00ff88" glowColor="rgba(0, 255, 136, 0.5)" />
-      <StatBox value={idle} label="IDLE" color="#6b7280" glowColor="rgba(107, 114, 128, 0.3)" />
+    <div className="grid grid-cols-3 divide-x divide-aic-accent/20 bg-aic-bg-dark border-t-2 border-aic-accent shadow-[0_-5px_15px_rgba(0,0,0,0.5)]">
+      <div className="p-3">
+        <StatBox value={active} label="ACTIVE" color="#00d4ff" glowColor="rgba(0, 212, 255, 0.5)" />
+      </div>
+      <div className="p-3">
+        <StatBox value={complete} label="COMPLETE" color="#00ff88" glowColor="rgba(0, 255, 136, 0.5)" />
+      </div>
+      <div className="p-3">
+        <StatBox value={idle} label="IDLE" color="#6b7280" glowColor="rgba(107, 114, 128, 0.3)" />
+      </div>
     </div>
   );
 }

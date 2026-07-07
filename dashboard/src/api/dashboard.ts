@@ -25,6 +25,7 @@ interface WorkerInfo {
   cost: number;
   uptime: number;
   circuitBreaker: { state: string; failures: number };
+  engine?: 'delegate' | 'opencode';
 }
 
 export interface QueueTask {

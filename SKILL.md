@@ -56,11 +56,9 @@ User (non-coder): "saya mau bikin website jualan online"
 
 **Special commands:**
 - `/aic` — activate Dispatcher mode for this session (stays active until `/aic stop` or session ends)
-- `/aic dashboard` — start dashboard server and open browser at http://localhost:6969
 - `/aic status` — show current pipeline status in chat
 - `/aic stop` — deactivate Dispatcher mode, return to normal Hermes behavior
-
-**YOLO mode:** Type `/yolo` to enable no-permission-prompt mode. Workers run with `--yolo` flag — no approval gates, everything executes immediately. Reversible with `/yolo` again.
+*(Command `/aic dashboard` and `/yolo` have been removed to focus entirely on strict Dispatcher flow.)*
 
 **Once per session:** `/aic` activates Dispatcher mode for the entire session. You do NOT need to type `/aic` before every task. Just type your task directly after the first `/aic`. Dispatcher stays active until `/aic stop` or the session ends.
 
@@ -592,14 +590,28 @@ Phase 3: QA ⏳
 
 ---
 
-## Dashboard Monitoring
+## Dashboard Monitoring (Control Plane)
 
-The dashboard is a **React + Vite + Framer Motion** app in `~/.hermes/skills/workflows/aic/dashboard/`. It runs as two services:
+The dashboard is a **full Control Plane** — React 18 + Vite 5 + TailwindCSS 3 + Framer Motion app in `~/.hermes/skills/workflows/aic/dashboard/`. Dark CRT theme. 8 pages accessible via sidebar nav.
 
 | Service | Port | Purpose |
 |---------|------|---------|
 | **Vite dev server** | **6969** | Serves the React UI |
-| **Status API** (Node) | 6868 | Serves `/api/status` JSON |
+| **Status API** (Node) | 6868 | Serves all API endpoints |
+
+### Pages
+
+| Page | Route | Description |
+|------|-------|-------------|
+| 🏠 Overview | `/` (default) | Live office view with worker desks. Serves as the main worker monitor. |
+| 📋 Tasks | `/tasks` | **Read-only** queue view + current task status. NO form — all tasks created natively via Hermes CLI/Desktop. |
+| 📊 History & Audit | `/history` | Past tasks table + Recharts analytics + Filterable audit log |
+| ⚙️ Config | `/config` | 2 tabs: **Env** (.env form editor) and **Opencode** (opencode.jsonc form editor). No raw textareas. |
+| 🔧 System | `/system` | Health, token usage framework (UI only), factory reset |
+
+### `./aic` CLI
+
+**Standalone usage (no Hermes desktop):** `./aic dashboard` starts both the API server (6868) and Vite dev server (6969), auto-builds if `dist/` doesn't exist, shows live URLs, and cleans up both processes on Ctrl+C.
 
 ### `/aic dashboard` startup
 
@@ -613,6 +625,8 @@ terminal(command='sleep 3 && (xdg-open http://localhost:6969 2>/dev/null || open
 ```
 
 Dashboard: **http://localhost:6969** | API: http://localhost:6868/api/status
+
+**Orchestrator Chat:** The web chat has been removed per user preference. All task orchestration, planning, and task generation MUST occur inside the native Hermes CLI/TUI desktop app. Do NOT direct users to use the dashboard for chatting or creating tasks. The dashboard is strictly a read-only Control Plane monitor.
 
 ### Update Dashboard Status
 
@@ -689,6 +703,19 @@ terminal(command='curl -s -X POST http://localhost:6868/api/phase-complete')
 
 ## Pitfalls
 
+### ❌ "UnknownError: Unexpected server error" from OpenCode CLI
+This often means the proxy server rejected the model name or lacked credentials. Ensure the `.env` model variables (like `MODEL_CRAFTER`) exactly match the model IDs the proxy expects, and that `opencode.jsonc` provider configuration matches the `.env`. Never fallback to `delegate_task` if this happens — fix the configuration by curling the proxy's models endpoint to read the raw HTTP response.
+
+### ❌ Dashboard UI not updating after worker changes
+Dashboard assets are served statically from `/dist` by `server.js` (port 6868). The Vite dev server is not active in production monitoring. If a worker modifies React components, the worker MUST run `npm run build` in the `dashboard` directory to update `/dist`. The Operator must hard-refresh their browser (Ctrl+Shift+R or Cmd+Shift+R) to bypass cache and see the new UI. Never assume Vite HMR is running.
+
+### ❌ Dashboard Data Parsing (`engine` or visual state missing)
+If UI fields (like `engine`) don't render despite backend updates, check if the React Context (`DashboardContext.tsx`) actually extracts and merges the field from the API response payload into the typed state interface.
+
+### ❌ UI Status Updates fail if server IDs don't match frontend IDs exactly
+When fixing or modifying dashboard code, if the backend `state.workers` initialization or `WORKERS` array (`server.js`) uses different IDs (e.g., `frontend_engineer`) than the frontend UI list (e.g., `frontend`), the status updates will silently drop into 'unknown' and the UI avatars won't animate.
+**Fix:** Always ensure a 1:1 ID string match between backend state initialization and frontend component mapping. Also beware that stale disk caches (`.aic/state.json`) can override fresh backend code changes upon server restart. If backend IDs change, delete the state cache file before restarting the server: `rm -f .aic/state.json`.
+
 ### ❌ Analysis requests → single worker, no pipeline
 If user says "coba kasih saran", "how to", "what are the options", "give me analysis" → spawn ONE thinking worker for analysis. Do NOT proceed to implementation phases unless explicitly asked.
 
@@ -717,8 +744,40 @@ Reports must be concise — phase name + status emoji + time only. NEVER show: r
 ### ❌ OpenCode config: model key ≠ API model name
 In `opencode.jsonc`, the model key (used in `--model provider/KEY`) is NOT the API model name. OpenCode sends the `name` field, NOT the key. Use generic keys (`thinker`, `crafter`, `sprinter`) with `name` set to the actual API model name. See `references/pitfalls-history.md` for full details.
 
-### ❌ OpenCode `run` mode may fail with custom providers
-`opencode run --model provider/model` can fail with "No active credentials for provider: openai" even when `opencode.jsonc` is correctly configured. This happens because `run` mode has a known issue resolving custom provider credentials for non-interactive use. **Workaround:** If `opencode run` fails but `curl` to the same API works, fall back to `delegate_task` for thinking workers and report the issue to Operator for coding workers. See `references/pitfalls-history.md` for details.
+### ❌ OpenCode config: Model variables and Model Names Must Match the Proxy 1:1
+When you configure an OpenAI-compatible proxy (like TVD's custom proxy) in `opencode.jsonc`, the `name` field for the model AND the variables stored in `.env` MUST exactly match what the proxy's `/v1/models` endpoint reports.
+If the proxy returns `"id": "Sonnet"`, your `.env` must say `MODEL_CRAFTER=Sonnet` (not `TVD/Sonnet`). If you pass a prefixed or incorrect name, the proxy will return `404 model_not_found` or `"No active credentials for provider"`, and the OpenCode CLI will crash with an opaque `UnknownError`.
+**Fix:** Run `curl http://[proxy]/v1/models | grep id`, read the exact strings, and map them exactly into `.env` and `opencode.jsonc`.
+
+### ❌ Vite dev proxy must cover ALL backend routes, not just `/api`
+The Vite dev server proxy in `vite.config.ts` only forwards `/api` by default. The `/health` endpoint is NOT under `/api` — the System page's health check silently fails (shows "DOWN") because the request goes to Vite (6969) instead of the API server (6868). **Fix:** add `/health` to the proxy config alongside `/api`. Same applies to any future top-level endpoints. Always verify proxy coverage when adding new server routes.
+
+### ❌ Hard-coded `status === 'idle'` hides UI labels
+When implementing dynamic status badges on the worker avatars (e.g. `StatusBubble.tsx`), do NOT write logic like `if (status === 'idle') return null;` if the user explicitly wants to see all states including 'idle' or 'waiting'. Ensure 'idle' renders as something visible like `[ WAITING FOR TASK ]`.
+
+### ❌ `framer-motion` undefined config crashes on unexpected backend strings
+When rendering dynamic styles from a dictionary (`const config = statusConfig[phase.status]`), if the backend returns an unexpected string (e.g. `"active"` instead of `"working"`), `config` becomes `undefined` and causes a fatal `TypeError` in React (`can't access property... config is undefined`), crashing the whole dashboard.
+**Fix:** Always provide a fallback using type casting: `const config = statusConfig[phase.status as keyof typeof statusConfig] || statusConfig.pending;`
+
+### ❌ React dashboard `connected` stays false without explicit health polling
+The `DashboardProvider` does NOT auto-detect server connectivity. The `connected` state starts `false` and only updates when something dispatches `SET_CONNECTED`. Without a `useEffect` that polls `/health` every 5s and dispatches the result, the header permanently shows "OFFLINE" even when the API server is running. **Fix:** Add health polling in `DashboardProvider` on mount — `getHealth().then(d => dispatch({type:'SET_CONNECTED', payload:!!d?.ok})).catch(() => dispatch({type:'SET_CONNECTED', payload:false}))`. Also poll `/api/workers`, `/api/cost`, `/api/queue` for live dashboard data. Without polling, every dashboard page shows stale initial state.
+
+### ❌ `post()` helper breaks SSE streaming — use raw `fetch()`
+The `src/api/client.ts` `post()` helper does `res.json()` which consumes the response body and breaks Server-Sent Events. For streaming endpoints like `/api/chat`, always use raw `fetch()` with `res.body.getReader()` to get the `ReadableStreamDefaultReader`. Create a dedicated `sendMessageSSE()` function separate from the regular `post()` path. The SSE format from OpenAI-compatible providers is `data: {"choices":[{"delta":{"content":"..."}}]}`, not a custom format.
+
+### ❌ Dashboard frontend types must match actual server.js API response shapes
+When building/modifying the React dashboard, the TypeScript interfaces in `src/types/index.ts` often drift from the actual server.js API responses. **Verified mismatches (2026-07-08):**
+- **Audit API** returns `{timestamp, action, actor, details}` — NO `id` or `level` field. `details` is an object, not a string.
+- **History API** returns `{task: {title, type, id}, completedAt, phases, agents, tokens, cost, duration}` — nested `task` object, `duration` is a string like "45s", `cost` may be undefined.
+- **Analytics API** returns `{type: {count, avgTime, avgSeconds, successRate}}` — NOT `{tasksByDay, tokensByDay, costByDay}`.
+- **Chat SSE** returns OpenAI format `data: {"choices":[{"delta":{"content":"..."}}]}` — NOT `{type:"token", content:"..."}`.
+- **Health endpoint** is at `/health` — NOT `/api/health`. Must be added to Vite proxy config.
+- **StatusBadge/ChatBubble** use `toUpperCase()` on status/role — always null-check with `?? 'fallback'`.
+
+**Fix pattern:** When building new dashboard pages, curl the actual API endpoint first and compare with TypeScript types. Use `any` in API client files when shapes don't match, then define page-local interfaces that match reality. See `references/control-plane-api.md` for verified response shapes.
+
+### ❌ OpenCode auto-rejects reads of sensitive files (.env, credentials, API keys)
+When spawning workers via `opencode run`, OpenCode's permission system auto-rejects reads of files containing secrets (`.env`, files with `API_KEY`, etc.). The worker gets a permission error and may fail to produce its artifact or stall. **Observed (2026-07-07):** PM worker tried to read `.env` → got `! permission requested: read ... auto-rejecting` → never produced `requirements.json`. **Workaround:** Include all non-secret context the worker needs (provider URL, model names, tech stack) directly in the CONTEXT field of the task handoff. Never expect workers to read `.env` or credential files. For config-dependent workers (Backend Engineer building config endpoints), pass the full config structure description in the prompt instead of asking them to read the file.
 
 ### ❌ `write_file` redacts secret-like patterns
 The `write_file` tool silently replaces `${API_KEY}`, `sk-...`, etc. with `***`. Verify written files with `grep`; use `patch` to restore redacted lines. See `references/pitfalls-history.md` for workaround.
@@ -762,6 +821,37 @@ The snapshot MUST be taken BEFORE Engineers start modifying files. If you forget
 ### ❌ Circuit breaker doesn't reset on task change
 The circuit breaker state persists across tasks. If QA fails 3x on task A, the circuit stays open for task B too. Don't assume a new task fixes the worker. Check `circuitBreakers` in status and report to Operator.
 
+### ❌ UI Chat duplicated from Native Hermes Web
+The AIC dashboard is strictly a *Monitoring Control Plane* (Config, Tasks, History, System, Overview). All chat interactions, orchestrator planning, and task generation MUST happen natively in the Hermes Desktop App. There is no web chat UI in the dashboard. If the user asks where to chat or how to create tasks, point them to the native Hermes TUI/CLI they are already using. Do not attempt to route chat through web proxies or the kernel server.
+
+### ❌ Worker ID mismatch in API calls
+When the Dispatcher sends API updates (e.g., `curl -X POST /api/agent-status`), the `agent` field MUST be fully lowercase and match the IDs in `workers.ts` exactly (e.g. `pm`, `frontend`, `backend`, `researcher`). Do not send 'Frontend' or 'PM' — this breaks the visual indicators on the dashboard (the worker will not show as 'working'). Always send the proper ID and the proper `engine` field.
+
+### ❌ Raw JSON textareas for configuration
+Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (tabs, specific inputs for Base URL, API Key, Model Tiers) that parse the raw files into state, let the user edit visually, and re-serialize back to the files.
+
+### ❌ Dispatcher Auto-Idle (Activity sync) & [reset] Spam Bug
+The Dispatcher (Hermes) normally reflects its own activity on the Dashboard. However, there is a known bug where setting `status: "working"` for the `dispatcher` agent triggers an infinite `[reset] {}` log spam loop in the API/Frontend.
+**Fix:** If the user reports `[reset]` spam or an infinitely scrolling activity log, it is caused by the Dispatcher being in the `working` state. Immediately send `POST /api/agent-status {"agent":"dispatcher", "status":"idle", "engine":"delegate"}` to stop the spam loop. Avoid keeping the Dispatcher in the `working` state if this bug is actively occurring. Do NOT use background watchdog scripts.
+
+### ❌ Activity Log Infinite Spam / React `APPEND_LOG` Bug
+When updating the dashboard's Activity Log via polling (`GET /api/status`), if the frontend React code uses an `APPEND_LOG` reducer action inside the `setInterval` loop, it will duplicate the same server logs infinitely every 5 seconds.
+**Fix:** 
+1. **Frontend:** Change the polling logic to dispatch a `SET_LOGS` action (replacing the entire array) instead of appending blindly. Ensure `SET_LOGS` is added to the reducer types.
+2. **Backend:** Add a deduplicator in `server.js`'s `audit()` function: `if (state.audit.length > 0 && state.audit[0].event === event && state.audit[0].actor === actor && prevDetails === newDetails) return;` to silently drop consecutive duplicate status pings.
+
+### ❌ Pipeline, Activity Log, and Current Task not updating
+Shooting `/api/agent-status` alone only updates the avatars. It does NOT update the Right Panels (Current Task / Pipeline) or the Activity Log at the bottom.
+**Fix:** For the UI to reflect the full company state, you must use the official task lifecycle endpoints:
+- Start task: `POST /api/task-start` (updates Current Task)
+- Enqueue task: `POST /api/task-enqueue` (updates Pipeline)
+- Start phase: `POST /api/phase-start`
+- Log activity: `POST /api/log`
+- Complete task: `POST /api/task-complete`
+
+### ❌ Workers Page is Redundant
+Do not build or maintain a standalone `/workers` page. The Overview page serves as the primary dashboard for viewing all worker states.
+
 For full historical context on all pitfalls, see **`references/pitfalls-history.md`**.
 For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 
@@ -770,12 +860,20 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 ## Important Rules
 
 1. **You are the Dispatcher** — you do NOT write code, design, research, or make product decisions
-2. **All workers use OpenCode** — every worker spawns via `opencode run` in project directory. Only the Dispatcher uses `delegate_task` for parallel orchestration.
-3. **Model assignments are mandatory** — load from `.env`:
+- **NEVER use `delegate_task` to spawn named workers.** Every single worker (PM, Frontend, Backend, etc) MUST be spawned via `opencode run` in the terminal. `delegate_task` is strictly reserved ONLY for the Dispatcher to parallelize its own orchestration tasks, NEVER for doing the actual work.
+- **Dispatcher Role on /aic Trigger:** 
+  - When `/aic` is called, you MUST run a pre-flight check: (1) `opencode --version` (Opencode Ready), (2) hit `http://localhost:6868/health` (API Ready), (3) hit `http://localhost:6969` (Dashboard Ready).
+  - Upon success, immediately hit `POST /api/agent-status` to set `{"agent":"dispatcher","status":"working","engine":"delegate"}` and leave it there.
+  - You must NEVER code or fix anything directly. You act like a human PM talking to the user, converting their text into tasks, and delegating EVERYTHING via `opencode run`.
+3. **Model assignments are mandatory** — load from `.env` using standard names (e.g. `$MODEL_THINKER`, `$MODEL_CRAFTER`, `$MODEL_SPRINTER`):
    - **Thinker** (complex): PM, Architect
    - **Crafter** (standard): Researcher, Designer, Frontend, Backend, Infra, QA, Governor
-   - **Sprinter** (fast): QA (optional lightweight tasks)
-4. **Multi-phase = sequential spawning** — spawn one phase at a time, pass results forward
+   - **Session** (coordinator): Dispatcher
+4. **Agent Status API** — Before running a worker, the Dispatcher MUST hit the `/api/agent-status` endpoint (e.g. `curl -X POST http://localhost:6868/api/agent-status -d '{"agent":"frontend","status":"working","engine":"opencode"}'`) using the exact lowercase worker ID. After the worker completes, hit it again with `status:"idle"`.
+5. **Dashboard Updates** — Dashboard assets are served statically from `/dist` by `server.js`. If a worker modifies React components, the worker MUST run `npm run build` in the `dashboard` directory. The Operator must hard-refresh the browser to see the changes.
+
+## Pitfalls & Error Handling
+- **"UnknownError: Unexpected server error" from OpenCode CLI:** This often means the proxy server rejected the model name or lacked credentials. Ensure the `.env` model variables (like `MODEL_CRAFTER`) exactly match the model IDs the proxy expects, and that `opencode.jsonc` provider configuration matches the `.env`.
 5. **Parallel = batch** — Frontend + Backend OpenCode sessions can run simultaneously via `background=true`
 6. **Always use Task IDs** — track work across phases with consistent IDs
 7. **Report everything** — Operator sees every dispatch, completion, and escalation
@@ -804,6 +902,8 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 
 ## Related References & Templates
 
+- **`references/dashboard-pitfalls.md`** — State sync, UI crash prevention, and API polling constraints for the React/Node dashboard.
+- **`references/dashboard-pitfalls.md`** — State sync, UI crash prevention, and API polling constraints for the React/Node dashboard.
 - **`references/dashboard-bug-patterns.md`** — Known bugs and fixes for the AIC dashboard: idle stuck, log dedup, UI layout. Component quick reference and port mapping (Vite=6969, API=6868).
 - **`references/pitfalls-history.md`** — Full historical anecdotes and detailed troubleshooting stories behind all Pitfalls rules.
 - **`references/opencode-custom-provider.md`** — OpenCode custom provider configuration for OpenAI-compatible proxies.
@@ -813,4 +913,6 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 - **`scripts/rollback.sh`** — File snapshot/restore for pipeline safety. Run: `rollback.sh snapshot <task_id> <files...>`, `rollback.sh restore <task_id>`, `rollback.sh cleanup <task_id>`.
 - **`scripts/cache-context.sh`** — Cached version of context-gather.sh. Invalidates on git commit. Run: `cache-context.sh <project_dir> <tier>`.
 - **`scripts/changelog.sh`** — Auto-generate changelog entry after task completion. Run: `changelog.sh <title> <type> <duration> <files_changed>`.
-- **`references/aic-roadmap.md`** — Full improvement roadmap: 26 tasks across 5 phases (Engine → Intelligence → DX → Dashboard → Hardening). Phase 1-3 + 5 implemented (2026-07-07). Phase 4 dashboard UI (WebSocket, Gantt, Worker Stats) deferred — React component work.
+- **`references/aic-roadmap.md`** — Full improvement roadmap: 26 tasks across 5 phases. All implemented (2026-07-07/08). Phase 4 dashboard UI completed as full Control Plane (8 pages).
+- **`references/control-plane-api.md`** — Control Plane API endpoints: /api/chat (SSE), /api/config, /api/workers, /api/self-test, /api/chat/history.
+- **`scripts/detect-context.sh`** — Auto-detect context window from model (API query + known-model table). Calculates proportional limits (80%/60%/40%). Outputs JSON to stdout, human info to stderr.

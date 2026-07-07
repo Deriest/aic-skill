@@ -55,6 +55,8 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
       };
 
     case 'APPEND_LOG': {
+      // Anti-spam loop
+      if (state.logEntries.length > 0 && state.logEntries[state.logEntries.length - 1].message === action.payload.message) return state;
       const newEntries = [action.payload, ...state.logEntries];
       return {
         ...state,

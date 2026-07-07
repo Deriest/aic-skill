@@ -1,267 +1,111 @@
 [
   {
     "task": {
-      "title": "Test Task",
-      "type": "feature",
-      "id": "T-1"
+      "title": "Test Sprint",
+      "type": "chore",
+      "id": "T-99"
     },
-    "completedAt": "2026-07-07T03:59:26.301Z",
     "phases": [
       {
-        "name": "Build",
+        "name": "Implementation",
         "status": "complete"
       }
     ],
     "agents": {
-      "dev": {
-        "status": "working",
-        "engine": "opencode"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Unknown",
-      "type": "feature",
-      "id": ""
-    },
-    "completedAt": "2026-07-07T04:13:03.984Z",
-    "phases": [
-      {
-        "name": "Unknown",
-        "status": "pending"
-      }
-    ],
-    "agents": {
-      "worker-1": {
-        "status": "running"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Sprint",
-      "type": "chore",
-      "id": "T-99"
-    },
-    "completedAt": "2026-07-07T04:15:33.058Z",
-    "phases": [
-      {
-        "name": "Implementation",
-        "status": "active"
-      }
-    ],
-    "agents": {
-      "worker-1": {
-        "status": "working",
-        "engine": "opencode"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Sprint",
-      "type": "chore",
-      "id": "T-99"
-    },
-    "completedAt": "2026-07-07T04:15:52.432Z",
-    "phases": [
-      {
-        "name": "Implementation",
-        "status": "active"
-      }
-    ],
-    "agents": {
-      "worker-1": {
-        "status": "working",
-        "engine": "opencode"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Sprint",
-      "type": "chore",
-      "id": "T-99"
-    },
-    "completedAt": "2026-07-07T04:16:30.484Z",
-    "phases": [
-      {
-        "name": "Implementation",
-        "status": "active"
-      }
-    ],
-    "agents": {
-      "worker-1": {
-        "status": "working",
-        "engine": "opencode"
-      }
-    }
-  },
-  {
-    "task": null,
-    "completedAt": "2026-07-07T04:20:28.805Z",
-    "phases": [],
-    "agents": {}
-  },
-  {
-    "task": {
-      "title": "Batch2-Test",
-      "type": "feature",
-      "id": "T-B2"
-    },
-    "completedAt": "2026-07-07T04:25:39.012Z",
-    "phases": [],
-    "agents": {
       "pm": {
-        "status": "working"
+        "status": "idle",
+        "currentTask": null
+      },
+      "researcher": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "designer": {
+        "status": "idle",
+        "currentTask": null
       },
       "architect": {
-        "status": "complete"
+        "status": "idle",
+        "currentTask": null
       },
       "frontend": {
-        "status": "complete"
+        "status": "idle",
+        "currentTask": null
       },
       "backend": {
-        "status": "complete"
+        "status": "idle",
+        "currentTask": null
+      },
+      "infra": {
+        "status": "idle",
+        "currentTask": null
       },
       "qa": {
-        "status": "complete"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Batch2-Test",
-      "type": "feature",
-      "id": "T-B2"
-    },
-    "completedAt": "2026-07-07T04:26:07.026Z",
-    "phases": [],
-    "agents": {
-      "pm": {
-        "status": "working"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Task",
-      "type": "feature",
-      "id": "T-1"
-    },
-    "completedAt": "2026-07-07T04:27:44.227Z",
-    "phases": [
-      {
-        "name": "Build",
-        "status": "complete"
-      }
-    ],
-    "agents": {
-      "dev": {
-        "status": "working",
-        "engine": "opencode"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Bash",
-      "type": "feature",
-      "id": "B-1"
-    },
-    "completedAt": "2026-07-07T04:33:03.053Z",
-    "phases": [
-      {
-        "name": "QA",
-        "status": "complete"
-      }
-    ],
-    "agents": {
-      "qa": {
-        "status": "working",
-        "engine": "test"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Bash",
-      "type": "feature",
-      "id": "B-1"
-    },
-    "completedAt": "2026-07-07T04:36:26.540Z",
-    "phases": [
-      {
-        "name": "QA",
-        "status": "complete"
-      }
-    ],
-    "agents": {
-      "qa": {
-        "status": "working",
-        "engine": "test"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Sprint",
-      "type": "chore",
-      "id": "T-99"
-    },
-    "completedAt": "2026-07-07T04:36:57.727Z",
-    "phases": [
-      {
-        "name": "Implementation",
-        "status": "active"
-      }
-    ],
-    "agents": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "governor": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "dispatcher": {
+        "status": "idle",
+        "currentTask": null
+      },
       "worker-1": {
         "status": "working",
+        "currentTask": null,
         "engine": "opencode"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Verify",
-      "type": "feature",
-      "id": "V-1"
-    },
-    "completedAt": "2026-07-07T04:38:55.247Z",
-    "phases": [
-      {
-        "name": "Test",
-        "status": "complete"
-      }
-    ],
-    "agents": {
-      "pm": {
-        "status": "working"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Sprint",
-      "type": "chore",
-      "id": "T-99"
-    },
-    "completedAt": "2026-07-07T05:04:45.177Z",
-    "phases": [
-      {
-        "name": "Implementation",
-        "status": "active"
-      }
-    ],
-    "agents": {
-      "worker-1": {
+      },
+      "agent-9": {
         "status": "working",
-        "engine": "opencode"
+        "currentTask": null
+      },
+      "agent-3": {
+        "status": "working",
+        "currentTask": null
+      },
+      "agent-6": {
+        "status": "working",
+        "currentTask": null
+      },
+      "agent-5": {
+        "status": "working",
+        "currentTask": null
+      },
+      "agent-1": {
+        "status": "working",
+        "currentTask": null
+      },
+      "agent-2": {
+        "status": "working",
+        "currentTask": null
+      },
+      "agent-7": {
+        "status": "working",
+        "currentTask": null
+      },
+      "agent-4": {
+        "status": "working",
+        "currentTask": null
+      },
+      "agent-10": {
+        "status": "working",
+        "currentTask": null
+      },
+      "agent-8": {
+        "status": "working",
+        "currentTask": null
       }
-    }
+    },
+    "completedAt": "2026-07-07T09:54:14.327Z",
+    "duration": "0s",
+    "cost": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "status": "complete"
   },
   {
     "task": {
@@ -269,263 +113,106 @@
       "type": "chore",
       "id": "T-CONC"
     },
-    "completedAt": "2026-07-07T05:04:45.232Z",
-    "phases": [],
-    "agents": {
-      "agent-6": {
-        "status": "working"
-      },
-      "agent-7": {
-        "status": "working"
-      },
-      "agent-4": {
-        "status": "working"
-      },
-      "agent-1": {
-        "status": "working"
-      },
-      "agent-8": {
-        "status": "working"
-      },
-      "agent-5": {
-        "status": "working"
-      },
-      "agent-3": {
-        "status": "working"
-      },
-      "agent-2": {
-        "status": "working"
-      },
-      "agent-10": {
-        "status": "working"
-      },
-      "agent-9": {
-        "status": "working"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Bash",
-      "type": "feature",
-      "id": "B-1"
-    },
-    "completedAt": "2026-07-07T05:04:48.538Z",
     "phases": [
       {
-        "name": "QA",
+        "name": "Planning",
         "status": "complete"
       }
     ],
     "agents": {
+      "pm": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "researcher": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "designer": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "architect": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "frontend": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "backend": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "infra": {
+        "status": "idle",
+        "currentTask": null
+      },
       "qa": {
-        "status": "working",
-        "engine": "test"
-      }
-    }
-  },
-  {
-    "task": {
-      "title": "Test Sprint",
-      "type": "chore",
-      "id": "T-99",
-      "priority": "MEDIUM",
-      "startedAt": "2026-07-07T05:39:28.038Z"
-    },
-    "completedAt": "2026-07-07T05:39:28.094Z",
-    "status": "complete",
-    "duration": "0s",
-    "phases": [
-      {
-        "name": "Implementation",
-        "status": "active",
-        "startedAt": "2026-07-07T05:39:28.046Z"
-      }
-    ],
-    "agents": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "governor": {
+        "status": "idle",
+        "currentTask": null
+      },
+      "dispatcher": {
+        "status": "idle",
+        "currentTask": null
+      },
       "worker-1": {
         "status": "working",
+        "currentTask": null,
         "engine": "opencode"
-      }
-    },
-    "tokens": {
-      "input": 0,
-      "output": 0
-    },
-    "cost": 0
-  },
-  {
-    "task": {
-      "title": "Concurrent-Test",
-      "type": "chore",
-      "id": "T-CONC",
-      "priority": "MEDIUM",
-      "startedAt": "2026-07-07T05:39:28.126Z"
-    },
-    "completedAt": "2026-07-07T05:39:28.151Z",
-    "status": "complete",
-    "duration": "0s",
-    "phases": [],
-    "agents": {
-      "agent-7": {
-        "status": "working"
       },
       "agent-9": {
-        "status": "working"
-      },
-      "agent-2": {
-        "status": "working"
-      },
-      "agent-8": {
-        "status": "working"
+        "status": "working",
+        "currentTask": null
       },
       "agent-3": {
-        "status": "working"
-      },
-      "agent-4": {
-        "status": "working"
-      },
-      "agent-1": {
-        "status": "working"
-      },
-      "agent-5": {
-        "status": "working"
+        "status": "working",
+        "currentTask": null
       },
       "agent-6": {
-        "status": "working"
+        "status": "working",
+        "currentTask": null
       },
-      "agent-10": {
-        "status": "working"
-      }
-    },
-    "tokens": {
-      "input": 0,
-      "output": 0
-    },
-    "cost": 0
-  },
-  {
-    "task": {
-      "title": "Test Bash",
-      "type": "feature",
-      "id": "B-1",
-      "priority": "MEDIUM",
-      "startedAt": "2026-07-07T05:39:48.225Z"
-    },
-    "completedAt": "2026-07-07T05:39:48.263Z",
-    "status": "complete",
-    "duration": "0s",
-    "phases": [
-      {
-        "name": "QA",
-        "status": "complete",
-        "startedAt": "2026-07-07T05:39:48.247Z",
-        "completedAt": "2026-07-07T05:39:48.252Z"
-      }
-    ],
-    "agents": {
-      "qa": {
-        "status": "working",
-        "engine": "test"
-      }
-    },
-    "tokens": {
-      "input": 0,
-      "output": 0
-    },
-    "cost": 0
-  },
-  {
-    "task": {
-      "title": "Test Sprint",
-      "type": "chore",
-      "id": "T-99",
-      "priority": "MEDIUM",
-      "startedAt": "2026-07-07T05:39:54.991Z"
-    },
-    "completedAt": "2026-07-07T05:39:55.041Z",
-    "status": "complete",
-    "duration": "0s",
-    "phases": [
-      {
-        "name": "Implementation",
-        "status": "active",
-        "startedAt": "2026-07-07T05:39:54.999Z"
-      }
-    ],
-    "agents": {
-      "worker-1": {
-        "status": "working",
-        "engine": "opencode"
-      }
-    },
-    "tokens": {
-      "input": 0,
-      "output": 0
-    },
-    "cost": 0
-  },
-  {
-    "task": {
-      "title": "Concurrent-Test",
-      "type": "chore",
-      "id": "T-CONC",
-      "priority": "MEDIUM",
-      "startedAt": "2026-07-07T05:39:55.070Z"
-    },
-    "completedAt": "2026-07-07T05:39:55.093Z",
-    "status": "complete",
-    "duration": "0s",
-    "phases": [],
-    "agents": {
       "agent-5": {
-        "status": "working"
+        "status": "working",
+        "currentTask": null
       },
-      "agent-9": {
-        "status": "working"
-      },
-      "agent-4": {
-        "status": "working"
+      "agent-1": {
+        "status": "working",
+        "currentTask": null
       },
       "agent-2": {
-        "status": "working"
-      },
-      "agent-1": {
-        "status": "working"
-      },
-      "agent-6": {
-        "status": "working"
+        "status": "working",
+        "currentTask": null
       },
       "agent-7": {
-        "status": "working"
+        "status": "working",
+        "currentTask": null
       },
-      "agent-3": {
-        "status": "working"
+      "agent-4": {
+        "status": "working",
+        "currentTask": null
       },
       "agent-10": {
-        "status": "working"
+        "status": "working",
+        "currentTask": null
       },
       "agent-8": {
-        "status": "working"
+        "status": "working",
+        "currentTask": null
       }
     },
+    "completedAt": "2026-07-07T09:54:14.382Z",
+    "duration": "0s",
+    "cost": 0,
     "tokens": {
       "input": 0,
       "output": 0
     },
-    "cost": 0
-  },
-  {
-    "task": {
-      "title": "CancelTest",
-      "type": "bug",
-      "id": "C1",
-      "priority": "MEDIUM",
-      "startedAt": "2026-07-07T05:42:42.641Z"
-    },
-    "completedAt": "2026-07-07T05:42:42.648Z",
-    "status": "cancelled",
-    "phases": [],
-    "agents": {}
+    "status": "complete"
   }
 ]

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # aic — AIC Engineering Company CLI
 # Usage:
+#   ./aic dashboard — Start full dashboard (API + web UI)
+#   ./aic server    — Start API server only
 #   ./aic setup     — First-time setup (provider, models, git, multi-repo)
 #   ./aic update    — Update AIC to latest version
 #   ./aic uninstall — Remove AIC completely
@@ -15,8 +17,60 @@ SKILL_DIR="${HOME}/.hermes/skills/workflows/aic"
 REPO_URL="https://github.com/Deriest/aic-skill.git"
 
 cmd="${1:-help}"
+PORT="${2:-6868}"
+DASH_PORT="${3:-6969}"
 
 case "$cmd" in
+  dashboard)
+    echo "🏢 Starting AIC Dashboard..."
+    echo "   API:  http://localhost:$PORT"
+    echo "   Web:  http://localhost:$DASH_PORT"
+    echo ""
+
+    # Kill existing processes on those ports
+    fuser -k "$PORT/tcp" 2>/dev/null || true
+    fuser -k "$DASH_PORT/tcp" 2>/dev/null || true
+    sleep 0.5
+
+    # Build dashboard if dist doesn't exist
+    if [[ ! -d "$SKILL_DIR/dashboard/dist" ]]; then
+      echo "📦 Building dashboard..."
+      cd "$SKILL_DIR/dashboard" && npx vite build 2>/dev/null && cd - > /dev/null
+    fi
+
+    # Start API server in background
+    echo "🚀 Starting API server on port $PORT..."
+    node "$SKILL_DIR/scripts/server.js" "$PORT" &
+    API_PID=$!
+    sleep 1
+
+    # Check if server started
+    if curl -s "http://localhost:$PORT/health" > /dev/null 2>&1; then
+      echo "✅ API server running"
+    else
+      echo "❌ API server failed to start"
+      kill $API_PID 2>/dev/null
+      exit 1
+    fi
+
+    echo ""
+    echo "═══════════════════════════════════════"
+    echo "  🏢 AIC Dashboard is LIVE"
+    echo ""
+    echo "  📊 Dashboard:  http://localhost:$DASH_PORT"
+    echo "  🔌 API:        http://localhost:$PORT"
+    echo "  💬 Chat:       http://localhost:$DASH_PORT/chat"
+    echo "  ⚙️  Config:     http://localhost:$DASH_PORT/config"
+    echo ""
+    echo "  Press Ctrl+C to stop"
+    echo "═══════════════════════════════════════"
+    echo ""
+
+    # Start Vite dev server in foreground
+    cd "$SKILL_DIR/dashboard"
+    trap "kill $API_PID 2>/dev/null; echo ''; echo '👋 AIC stopped.'" EXIT
+    npx vite --port "$DASH_PORT" --host
+    ;;
   setup)
     bash "$SKILL_DIR/scripts/setup.sh"
     ;;
@@ -117,6 +171,7 @@ case "$cmd" in
     echo "  uninstall  Remove AIC completely"
     echo "  test       Run self-test validation"
     echo "  server     Start API server (default port: 6868)"
+    echo "  dashboard  Start full dashboard — API + web UI (no Hermes needed)"
     echo "  help       Show this help"
     echo ""
     echo "In Hermes, type /aic to activate Dispatcher mode."

@@ -13,7 +13,7 @@ const statusConfig = {
 };
 
 export function PipelinePhase({ phase, index }: PipelinePhaseProps) {
-  const config = statusConfig[phase.status];
+  const config = statusConfig[phase.status as keyof typeof statusConfig] || statusConfig.pending;
 
   return (
     <motion.div
