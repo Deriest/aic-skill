@@ -66,19 +66,27 @@ Works with **any** OpenAI-compatible API: OpenRouter, Anthropic, OpenAI, local p
 ## Usage
 
 ```
-/aic                                    # load the skill
-build a REST API for user auth          # Dispatcher classifies → spawns workers
-fix the login bug on mobile             # routes to bug pipeline
-research best practices for rate limiting # routes to Researcher
+hermes                  # start Hermes
+/aic                    # activate Dispatcher mode (once per session)
+build a REST API with JWT auth   # Dispatcher classifies → spawns workers
+fix the login bug on mobile      # routes to bug pipeline
+research rate limiting best practices  # routes to Researcher
+/aic stop               # deactivate, return to normal Hermes
 ```
+
+> `/yolo` — enable no-permission mode. Workers run without approval gates. Toggle off with `/yolo` again.
 
 ### Commands
 
 | Command | What it does |
 |---------|-------------|
-| `/aic` | Load skill, start Dispatcher |
+| `/aic` | Activate Dispatcher mode (stays active for the session) |
 | `/aic dashboard` | Start dashboard + API server |
 | `/aic status` | Show current task progress |
+| `/aic stop` | Deactivate Dispatcher mode |
+| `/yolo` | Toggle YOLO mode (no permission prompts) |
+
+**Once per session:** `/aic` stays active until `/aic stop` or session ends. No need to repeat it before every task.
 
 ## Dashboard
 
