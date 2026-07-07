@@ -6,7 +6,7 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
   return (
     <div className="flex flex-col gap-6 h-full font-pixel">
       {/* Current Task */}
-      <div className="shrink-0 flex flex-col h-[200px]">
+      <div className="shrink-0 flex flex-col min-h-[220px]">
         <div className="flex items-center gap-2 mb-3 shrink-0">
           <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
           <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">CURRENT TASK</h3>
@@ -22,11 +22,11 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
                   {state.currentTask.type || 'FEATURE'}
                 </div>
               </div>
-              <div className="text-white text-xl md:text-2xl uppercase tracking-wider line-clamp-1 leading-tight mb-2 shrink-0">
+              <div className="text-white text-xl md:text-2xl uppercase tracking-wider line-clamp-1 leading-tight mb-3 shrink-0">
                 {state.currentTask.title}
               </div>
               {/* Task Description Detail */}
-              <div className="text-aic-text-bright/80 font-pixel text-[11px] leading-relaxed line-clamp-3 overflow-hidden bg-aic-bg-dark/40 p-2 rounded border border-aic-border/20 flex-1">
+              <div className="text-aic-text-bright/90 font-pixel text-[11px] leading-relaxed overflow-y-auto bg-aic-bg-dark/40 p-3 rounded border border-aic-border/20 flex-1 min-h-[60px]">
                 {/* Fallback to a placeholder description if state doesn't have one */}
                 {(state.currentTask as any).description || `Dispatcher has initialized the task orchestration. Currently establishing connection with OpenCode engine and formulating the primary workspace configuration...`}
               </div>
@@ -112,28 +112,39 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
           </div>
 
           {/* Decorative Cyberpunk Server/Plant SVG (Bottom Left Corner) */}
-          <div className="absolute -bottom-6 -left-6 opacity-30 pointer-events-none select-none z-0">
-            <svg width="120" height="120" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
+          <div className="absolute -bottom-4 left-4 opacity-30 pointer-events-none select-none z-0">
+            <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
               <g fill="currentColor" shapeRendering="crispEdges">
-                {/* Server Rack / Base */}
-                <rect x="8" y="24" width="16" height="8" className="text-aic-bg-dark" fill="currentColor"/>
-                <rect x="10" y="26" width="4" height="1" className="text-aic-accent" fill="currentColor"/>
-                <rect x="10" y="28" width="12" height="1" className="text-aic-text-muted" fill="currentColor"/>
-                <rect x="18" y="26" width="2" height="1" className="text-aic-green" fill="currentColor"/>
-                <rect x="21" y="26" width="1" height="1" className="text-red-500" fill="currentColor"/>
+                {/* Circuit Board / Chip Doodle */}
+                {/* Main Chip Body */}
+                <rect x="10" y="10" width="12" height="12" className="text-aic-bg-dark" fill="currentColor"/>
+                <rect x="11" y="11" width="10" height="10" className="text-aic-accent" fill="currentColor" fillOpacity="0.8"/>
+                <rect x="13" y="13" width="6" height="6" className="text-aic-bg-panel" fill="currentColor"/>
                 
-                {/* Holographic Plant / Tree */}
-                <rect x="15" y="18" width="2" height="6" className="text-aic-text-muted" fill="currentColor"/>
-                <rect x="15" y="10" width="2" height="8" />
-                <rect x="11" y="14" width="4" height="2" />
-                <rect x="17" y="12" width="5" height="2" />
-                <rect x="19" y="8" width="2" height="4" />
-                <rect x="11" y="10" width="2" height="4" />
-                <rect x="14" y="6" width="4" height="4" />
-                {/* Floating Pixels */}
-                <rect x="12" y="7" width="1" height="1" />
-                <rect x="19" y="5" width="1" height="1" />
-                <rect x="16" y="4" width="2" height="1" />
+                {/* Top Pins */}
+                <rect x="12" y="6" width="2" height="4" />
+                <rect x="15" y="6" width="2" height="4" />
+                <rect x="18" y="6" width="2" height="4" />
+                
+                {/* Bottom Pins */}
+                <rect x="12" y="22" width="2" height="4" />
+                <rect x="15" y="22" width="2" height="4" />
+                <rect x="18" y="22" width="2" height="4" />
+                
+                {/* Left Pins */}
+                <rect x="6" y="12" width="4" height="2" />
+                <rect x="6" y="15" width="4" height="2" />
+                <rect x="6" y="18" width="4" height="2" />
+                
+                {/* Right Pins */}
+                <rect x="22" y="12" width="4" height="2" />
+                <rect x="22" y="15" width="4" height="2" />
+                <rect x="22" y="18" width="4" height="2" />
+                
+                {/* Connecting traces */}
+                <rect x="2" y="15" width="4" height="1" className="text-aic-green" fill="currentColor" />
+                <rect x="2" y="16" width="1" height="4" className="text-aic-green" fill="currentColor" />
+                <rect x="3" y="19" width="3" height="1" className="text-aic-green" fill="currentColor" />
               </g>
             </svg>
           </div>

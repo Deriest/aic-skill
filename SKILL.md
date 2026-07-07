@@ -848,8 +848,8 @@ If a worker (like the Dispatcher) disappears from the `WorkerGrid` after a refac
 The user explicitly desires a clean, un-cramped, scroll-free dashboard layout.
 **Fix:** 
 - **No Scrollbars:** Use `flex-1` with `min-h-0` on children to ensure the container scales down instead of overflowing. Remove `overflow-y-auto` from `OfficeFloor.tsx`.
-- **Worker Spacing:** Desks must be centered (`justify-center`), not left-aligned. Ensure `WorkerDesk` containers are wide enough (`w-[150px]` or `w-[190px]`) so avatars are not cramped.
-- **Pipeline Alignment:** The right sidebar containing Current Task and Pipeline must use `flex-1` and stretch the full height (`h-full`) to match the vertical height of the main Virtual Office card.
+- **Worker Spacing:** Desks must be centered (`justify-center`), not left-aligned. Ensure `WorkerDesk` containers are wide enough (`w-[150px]` or `w-[200px]`) so avatars are not cramped. DO NOT USE `flex-wrap` inside the WorkerGrid; forcing `w-full max-w-full justify-center` ensures characters like QA do not drop to a new line and ruin the alignment.
+- **Pipeline Alignment:** The right sidebar containing Current Task and Pipeline must use `flex-1` and stretch the full height (`h-full`) to match the vertical height of the main Virtual Office card. Ensure SVG/ASCII arts added dynamically fit securely within absolute overlays.
 - **Stats Bar:** Ensure the 3-panel stats bar (Active/Complete/Idle) sits directly under the Virtual Office box, inside the left main content column.
 
 ### ❌ React dashboard `connected` stays false without explicit health polling
@@ -944,9 +944,16 @@ The spam has THREE root causes that must ALL be fixed. See `references/dashboard
 Setting `{"agent":"dispatcher","status":"working"}` caused spam. Root cause (verified 2026-07-07): zombie `watchdogd` background process + stale state cache.
 **Fix:** Kill rogue processes (`pkill -9 -f watchdog; pkill -9 curl`), delete `.aic/state.json` and `.aic/audit.json`, restart dashboard. Dispatcher stays `WORKING` during `/aic` session.
 
-### ❌ Dashboard UI Bloat
+### ❌ Dashboard UI Bloat (Fixed Pipeline/Grid Overflow)
 The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never add Chat UIs, Activity Logs, Task Input forms, or stand-alone `/workers` pages to the dashboard. The Dispatcher (Hermes TUI) handles all communication.
 **Fix:** Keep the dashboard focused on visual state polling (via `/api/status`) and basic config editing (via `/api/config`). See `references/dashboard-architecture.md`.
+
+### ❌ Pixel-Art UI Positioning Anomalies (Fixed Layouts, No Scroll)
+When converting standard web components to pixel-art equivalents, spacing and grid wrappings easily break on smaller viewports if `flex-wrap` drops an item to a new line, or if the container relies on `overflow-y-auto`.
+**Fix:** 
+1. Always enforce `flex-1 h-full min-h-0` for parent containers to enforce a strict full-height, no-scroll screen view. 
+2. For WorkerGrids, disable `flex-wrap` by substituting `flex justify-center w-full max-w-full` explicitly so items like 'QA' stay uniformly aligned inside their parent tier rather than falling to a new line.
+3. Use absolute positioning appropriately anchored to desk layers when placing dynamic floating SVGs or ASCII art, tracking dimensions relative to `h-[200px]` containers.
 
 ### ❌ Workers Page is Redundant
 Do not build or maintain a standalone `/workers` page. The Overview page serves as the primary dashboard for viewing all worker states.
