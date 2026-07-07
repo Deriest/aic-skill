@@ -293,3 +293,22 @@ bash ~/.hermes/skills/workflows/aic/scripts/context-gather.sh <project_dir> --ti
 **Right:** `context-gather.sh . --tier thinker` → 128KB, depth 4, catches nested modules.
 
 **Lesson:** The --tier flag isn't optional decoration — it's the mechanism that matches context gathering to the worker's actual context window (800K/512K/256K). Without it, Thinker workers get Sprinter-level context and miss the deep analysis they're designed for.
+
+---
+
+## ❌ Dispatcher skipping workflow to fire workers directly
+
+When the user invokes `/aic` and a new task starts, the Dispatcher historically jumped straight to spawning engineers (e.g. `agent-status backend: working` while `phase: "PM (Translation)"`), bypassing the PM/Architect spec phases entirely. The user reported: "tolong di fix ini workflow aic, suka langsung di tembak ke front end padahal workflow sudah di buat".
+
+**Root cause:** `state.phase` was a free-form string — any caller could write `phase: "PM (Translation)"` and then immediately set `backend: working` with no server-side check. The state machine existed in docs only, not in code.
+
+**Fix (2026-07-07):** Added a 5-phase **outer task lifecycle** state machine in `scripts/server.js` that wraps (does not replace) the 6-phase worker workflow:
+- `Investigate` → `Planning` → `Implementation` → `Documentation` → `Closeout`
+- `LIFECYCLE_PHASES` + `LIFECYCLE_ALLOWED_WORKERS` constant at top of `server.js`
+- `POST /api/task-start` now ALWAYS sets `state.workflow.current = "Investigate"` and resets ALL workers to idle (no auto-spawn)
+- `POST /api/agent-status` with `status: "working"` returns HTTP 403 if the worker is not in the allowed set for the current lifecycle phase (engineers forbidden in Investigate/Planning; governor only in Closeout)
+- `POST /api/phase-start` with `lifecyclePhase` rejects backwards transitions
+- `POST /api/phase-advance` stops at Closeout (no wrap-around)
+- `reconcileLifecycle()` runs at boot to handle legacy `state.json` with workers already working
+
+The 6-phase **worker workflow** (PM → Architect → Engineers → QA → Governor) in `SKILL.md` is preserved unchanged. The lifecycle is a separate orthogonal axis: it governs which workers may be `working` at a given moment, while the workflow describes the typical sequence for a given task type. Both can coexist because the lifecycle's allowed-set table is a superset of the workflow's typical sequence (e.g. PM works in Planning, Engineers work in Implementation, Governor works in Closeout).

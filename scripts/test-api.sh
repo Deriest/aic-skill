@@ -113,7 +113,7 @@ echo "9. GET /api/status (verify state reset)"
 STATUS2=$(get /api/status)
 assert "currentTask is null after complete" "$STATUS2" '.currentTask == null'
 assert "phases is empty after complete"     "$STATUS2" '.phases | length == 0'
-assert "agents is empty after complete"     "$STATUS2" '.agents | length == 0'
+  assert "agents is idle after complete"       "$STATUS2" '.agents | to_entries | all(.value.status == "idle")'
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

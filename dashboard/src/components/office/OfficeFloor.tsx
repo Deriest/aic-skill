@@ -1,5 +1,4 @@
 import { WorkerGrid } from './WorkerGrid';
-import { StatsBar } from '../effects/StatsBar';
 
 export function OfficeFloor() {
   return (
@@ -12,11 +11,6 @@ export function OfficeFloor() {
       {/* Worker Grid */}
       <div className="relative z-10 flex-1 px-4 pt-4 pb-6 overflow-y-auto min-h-0">
         <WorkerGrid />
-      </div>
-      
-      {/* Stats Panel */}
-      <div className="relative z-20 w-full shrink-0">
-        <StatsBar />
       </div>
     </div>
   );

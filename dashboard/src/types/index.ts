@@ -8,11 +8,15 @@ export interface ServerStatus {
     id: string;
   } | null;
   phases: ServerPhase[];
-  agents: Record<string, ServerAgentStatus>;
+  workers: Record<string, ServerAgentStatus>;
   logs: Array<{
     message: string;
     type: 'info' | 'success' | 'warning' | 'error';
   }>;
+  workflow?: {
+    current: string;
+    history: string[];
+  };
 }
 
 export interface ServerPhase {
@@ -56,13 +60,17 @@ export interface DashboardState {
   connected: boolean;
   currentTask: TaskInfo | null;
   phases: Phase[];
-  agents: Record<string, AgentStatus>;
-  logEntries: LogEntry[];
+  workers: Record<string, AgentStatus>;
+  logs: LogEntry[];
   taskStartTimestamp: number | null;
   error: string | null;
   taskQueue: TaskQueueEntry[];
   tokens: { input: number; output: number };
   cost: number;
+  workflow?: {
+    current: string;
+    history: string[];
+  };
 }
 
 // === Worker Definition ===
@@ -164,11 +172,12 @@ export interface TaskQueueEntry {
 // === Reducer Actions ===
 
 export type DashboardAction =
-  | { type: 'UPDATE_STATUS'; payload: Partial<Pick<DashboardState, 'agents' | 'phases' | 'currentTask'>> }
-  | { type: 'MERGE_STATUS'; payload: { agents: Record<string, AgentStatus>; phases?: Phase[]; currentTask?: TaskInfo | null } }
+  | { type: 'UPDATE_STATUS'; payload: Partial<Pick<DashboardState, 'workers' | 'phases' | 'currentTask' | 'workflow'>> }
+  | { type: 'MERGE_STATUS'; payload: { workers: Record<string, AgentStatus>; phases?: Phase[]; currentTask?: TaskInfo | null; workflow?: { current: string; history: string[] } } }
   | { type: 'SET_CONNECTED'; payload: boolean }
   | { type: 'SET_TASK_START'; payload: number }
   | { type: 'APPEND_LOG'; payload: LogEntry }
+  | { type: 'SET_LOGS'; payload: LogEntry[] }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_TASK_QUEUE'; payload: TaskQueueEntry[] }
   | { type: 'UPDATE_COST'; payload: { tokens: { input: number; output: number }; cost: number } }

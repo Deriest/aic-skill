@@ -21,6 +21,8 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
         manualChunks: {
           'framer': ['framer-motion'],
           'recharts': ['recharts'],

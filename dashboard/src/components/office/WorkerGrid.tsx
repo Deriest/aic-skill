@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { WORKERS } from '../../data/workers';
 import { WorkerDesk } from './WorkerDesk';
 import { useDashboard } from '../../context/DashboardContext';
+import { DispatcherAvatar } from './DispatcherAvatar';
 
 export function WorkerGrid() {
   const { state } = useDashboard();
@@ -19,6 +20,7 @@ export function WorkerGrid() {
 
   return (
     <div className="space-y-4">
+      <DispatcherAvatar />
       {sections.map(([section, workers]) => (
         <div key={section}>
           <div className="font-pixel text-px-xs text-aic-text-muted uppercase tracking-widest mb-4 ml-1 mt-1">
@@ -29,8 +31,8 @@ export function WorkerGrid() {
               <WorkerDesk
                 key={worker.id}
                 worker={worker}
-                status={state.agents[worker.id]?.status ?? 'idle'}
-                engine={state.agents[worker.id]?.engine}
+                status={state.workers[worker.id]?.status ?? 'idle'}
+                engine={state.workers[worker.id]?.engine}
               />
             ))}
           </div>

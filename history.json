@@ -1,13 +1,13 @@
 [
   {
     "task": {
-      "title": "Test Sprint",
-      "type": "chore",
-      "id": "T-99"
+      "title": "verify-1",
+      "type": "feature",
+      "id": "T-V1"
     },
     "phases": [
       {
-        "name": "Implementation",
+        "name": "Closeout",
         "status": "complete"
       }
     ],
@@ -51,162 +51,9 @@
       "dispatcher": {
         "status": "idle",
         "currentTask": null
-      },
-      "worker-1": {
-        "status": "working",
-        "currentTask": null,
-        "engine": "opencode"
-      },
-      "agent-9": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-3": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-6": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-5": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-1": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-2": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-7": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-4": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-10": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-8": {
-        "status": "working",
-        "currentTask": null
       }
     },
-    "completedAt": "2026-07-07T09:54:14.327Z",
-    "duration": "0s",
-    "cost": 0,
-    "tokens": {
-      "input": 0,
-      "output": 0
-    },
-    "status": "complete"
-  },
-  {
-    "task": {
-      "title": "Concurrent-Test",
-      "type": "chore",
-      "id": "T-CONC"
-    },
-    "phases": [
-      {
-        "name": "Planning",
-        "status": "complete"
-      }
-    ],
-    "agents": {
-      "pm": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "researcher": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "designer": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "architect": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "frontend": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "backend": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "infra": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "qa": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "governor": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "dispatcher": {
-        "status": "idle",
-        "currentTask": null
-      },
-      "worker-1": {
-        "status": "working",
-        "currentTask": null,
-        "engine": "opencode"
-      },
-      "agent-9": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-3": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-6": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-5": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-1": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-2": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-7": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-4": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-10": {
-        "status": "working",
-        "currentTask": null
-      },
-      "agent-8": {
-        "status": "working",
-        "currentTask": null
-      }
-    },
-    "completedAt": "2026-07-07T09:54:14.382Z",
+    "completedAt": "2026-07-07T11:58:38.464Z",
     "duration": "0s",
     "cost": 0,
     "tokens": {

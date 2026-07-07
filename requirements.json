@@ -1,0 +1,23 @@
+{
+  "user_stories": [
+    "as a user I want to see dispatcher always ON when /aic active",
+    "as a user I want current task and pipeline to be stable (no flicker)",
+    "as a user I want activity log to display entries",
+    "as a user I want every task to go through 5-phase workflow (Investigate→Plan→Implement→Doc→Closeout)"
+  ],
+  "acceptance_criteria": [
+    "Dispatcher status indicates ON/active when `/aic` is active",
+    "Task and pipeline list does not flicker or repeatedly disappear/reappear",
+    "Activity log lists historical and new actions/entries correctly",
+    "Task workflow state strictly transitions through: Investigate -> Planning -> Implementation -> Documentation -> Closeout"
+  ],
+  "priority_order": [
+    "dispatcher stability first",
+    "flicker",
+    "log",
+    "workflow enforcement"
+  ],
+  "tech_suggestions": [
+    "nothing new, use existing stack"
+  ]
+}

@@ -1,5 +1,7 @@
 import type { WorkerDef } from '../types';
 
+export const DISPATCHER_WORKER: WorkerDef = { id: 'dispatcher',  name: 'DISPATCH',  role: 'Dispatcher',         model: 'session', skinColor: '#d4a574', shirtColor: '#dc143c', pantsColor: '#1a1a1a', hairColor: '#2a2a2a', section: 'Governance' };
+
 export const WORKERS: WorkerDef[] = [
   { id: 'pm',          name: 'PM',        role: 'Product Manager',    model: 'thinker',    skinColor: '#ffcc99', shirtColor: '#3366cc', pantsColor: '#333366', hairColor: '#4a3728', section: 'Product' },
   { id: 'researcher',  name: 'RESEARCH',  role: 'Researcher',         model: 'crafter',  skinColor: '#e6c8b0', shirtColor: '#228b22', pantsColor: '#1a1a2a', hairColor: '#1a1a1a', section: 'Product' },
@@ -10,5 +12,4 @@ export const WORKERS: WorkerDef[] = [
   { id: 'infra',       name: 'INFRA',     role: 'Infrastructure Eng', model: 'crafter',  skinColor: '#ffcc99', shirtColor: '#ff4500', pantsColor: '#2a2a1a', hairColor: '#8b4513', section: 'Engineering' },
   { id: 'qa',          name: 'QA',        role: 'QA Engineer',        model: 'sprinter',   skinColor: '#e6c8b0', shirtColor: '#00ced1', pantsColor: '#1a2a1a', hairColor: '#654321', section: 'Engineering' },
   { id: 'governor',    name: 'GOV',       role: 'Governor',           model: 'crafter',  skinColor: '#ffdbac', shirtColor: '#ffd700', pantsColor: '#2a2a2a', hairColor: '#1a1a1a', section: 'Governance' },
-  { id: 'dispatcher',  name: 'DISPATCH',  role: 'Dispatcher',         model: 'session', skinColor: '#d4a574', shirtColor: '#dc143c', pantsColor: '#1a1a1a', hairColor: '#2a2a2a', section: 'Governance' },
 ];
