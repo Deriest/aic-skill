@@ -573,7 +573,7 @@ Phase 3: QA ⏳
 
 ## Dashboard Monitoring
 
-The dashboard is a **React + Vite + Framer Motion** app at `C:\Users\TVD\aic-dashboard`. It runs as two services:
+The dashboard is a **React + Vite + Framer Motion** app in `~/.hermes/skills/workflows/aic/dashboard/`. It runs as two services:
 
 | Service | Port | Purpose |
 |---------|------|---------|
@@ -604,7 +604,7 @@ terminal(
 )
 
 # 4. Wait for servers to be ready, then open browser
-terminal(command='sleep 3 && start http://localhost:6969')
+terminal(command='sleep 3 && (xdg-open http://localhost:6969 2>/dev/null || open http://localhost:6969 2>/dev/null || echo "Open http://localhost:6969 in your browser")')
 ```
 
 Dashboard URL: **http://localhost:6969**
@@ -627,15 +627,15 @@ The Dispatcher updates the dashboard via the status file (Python script):
 **Cross-platform note:** Use `~/.hermes/skills/workflows/aic/scripts/...` — tilde expands on Linux/macOS. On Windows MSYS/Git Bash, tilde also works. If not, use `$HOME` instead.
 
 ```bash
-# Start task (Windows path)
+# Start task
 python ~/.hermes/skills/workflows/aic/scripts/update-status.py task-start '{"title":"Build API","type":"feature","id":"TASK-001"}'
 
 # Start phase
 python ~/.hermes/skills/workflows/aic/scripts/update-status.py phase-start '{"name":"PM + Architect","status":"working"}'
 
 # Update agent (with engine indicator)
-python "C:/Users/TVD/AppData/Local/hermes/skills/workflows/aic/scripts/update-status.py" agent-status '{"agent":"pm","status":"working","engine":"opencode"}'
-python "C:/Users/TVD/AppData/Local/hermes/skills/workflows/aic/scripts/update-status.py" agent-status '{"agent":"frontend","status":"working","engine":"opencode"}'
+python "~/.hermes/skills/workflows/aic/scripts/update-status.py" agent-status '{"agent":"pm","status":"working","engine":"opencode"}'
+python "~/.hermes/skills/workflows/aic/scripts/update-status.py" agent-status '{"agent":"frontend","status":"working","engine":"opencode"}'
 
 # Complete phase
 python ~/.hermes/skills/workflows/aic/scripts/update-status.py phase-complete
