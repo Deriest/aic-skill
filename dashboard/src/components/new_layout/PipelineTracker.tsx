@@ -71,13 +71,44 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
             </div>
           )}
 
-          {/* Doodle Art ASCII Character (Bottom Right) */}
-          <div className="absolute bottom-2 right-4 opacity-30 pointer-events-none select-none font-mono text-[9px] leading-[10px] whitespace-pre text-aic-accent text-right">
-{` HAPPY CODING!
-     \\
-    [>_<]
-   /|AIC|\\
-    _|_|_`}
+          {/* Doodle Art SVG (Bottom Right) */}
+          <div className="absolute bottom-0 right-2 opacity-30 pointer-events-none select-none flex flex-col items-end">
+            <span className="font-pixel text-[8px] text-aic-accent mb-1 mr-2">HAPPY CODING!</span>
+            <svg width="100" height="100" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
+              <g fill="currentColor" shapeRendering="crispEdges">
+                {/* Desk */}
+                <rect x="2" y="24" width="28" height="2" />
+                <rect x="4" y="26" width="2" height="6" />
+                <rect x="26" y="26" width="2" height="6" />
+                
+                {/* Monitor */}
+                <rect x="4" y="12" width="12" height="10" />
+                <rect x="5" y="13" width="10" height="8" className="text-aic-bg-dark" fill="currentColor" />
+                <rect x="6" y="14" width="8" height="6" className="text-aic-accent" fill="currentColor" fillOpacity="0.3"/>
+                {/* Stand */}
+                <rect x="9" y="22" width="2" height="2" />
+                
+                {/* Keyboard */}
+                <rect x="6" y="23" width="8" height="1" />
+                
+                {/* Character Head */}
+                <rect x="18" y="10" width="8" height="8" />
+                {/* Glowing Glasses */}
+                <rect x="18" y="13" width="3" height="2" className="text-aic-bg-dark" fill="currentColor" />
+                <rect x="23" y="13" width="3" height="2" className="text-aic-bg-dark" fill="currentColor" />
+                <rect x="19" y="13" width="1" height="2" className="text-aic-accent" fill="currentColor" />
+                <rect x="24" y="13" width="1" height="2" className="text-aic-accent" fill="currentColor" />
+                
+                {/* Character Body */}
+                <rect x="17" y="18" width="10" height="6" />
+                {/* Arm typing */}
+                <rect x="15" y="20" width="5" height="2" />
+                
+                {/* Coffee Mug */}
+                <rect x="27" y="21" width="3" height="3" />
+                <rect x="30" y="21" width="1" height="2" />
+              </g>
+            </svg>
           </div>
         </div>
       </div>
