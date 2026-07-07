@@ -21,7 +21,7 @@
       "currentTask": null
     },
     "frontend": {
-      "status": "working",
+      "status": "idle",
       "engine": "opencode",
       "currentTask": null
     },
@@ -52,10 +52,10 @@
     }
   },
   "currentTask": {
-    "id": "T1",
-    "title": "Test",
-    "type": "feat"
+    "id": "TASK-20260707-002",
+    "title": "Insert Workspace Scene SVG",
+    "type": "feature-visual"
   },
-  "currentPhase": "Investigate",
+  "currentPhase": "Verification",
   "startedAt": 1783425803212
 }

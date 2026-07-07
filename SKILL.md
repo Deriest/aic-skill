@@ -518,8 +518,10 @@ hermes kanban block [task_id] --reason "[blocker]"
 
 ### Spawn Template (all workers)
 ```python
+# CRITICAL: Always write the prompt to a temp file first to avoid bash quote-escaping crashes!
+terminal(command='cat << \'EOF\' > /tmp/aic-prompt.txt\nYou are the [Worker Role]. [SOUL].\n\n=== TASK HANDOFF ===\n[Task with full handoff format]\nEOF')
 terminal(
-    command='opencode run "You are the [Worker Role]. [SOUL]. [Task with full handoff format]" --model {provider}/{model_tier}',
+    command='opencode run "$(cat /tmp/aic-prompt.txt)" --model {provider}/{model_tier} --auto',
     workdir="[project directory]",
     timeout=[per timeout table above]
 )
@@ -870,6 +872,10 @@ When building/modifying the React dashboard, the TypeScript interfaces in `src/t
 
 **Fix pattern:** When building new dashboard pages, curl the actual API endpoint first and compare with TypeScript types. Use `any` in API client files when shapes don't match, then define page-local interfaces that match reality. See `references/control-plane-api.md` for verified response shapes.
 
+### ❌ OpenCode CLI string escape crashes (`Unexpected server error`)
+When the `opencode run "..."` command is passed a massive, multi-line prompt containing single/double quotes, bash parser and OpenCode can crash abruptly (often returning `Unexpected server error` or throwing the help menu).
+**Fix:** Never pass the raw prompt directly in `opencode run "prompt"`. Always write the prompt to a temp text file using `cat << 'EOF' > /tmp/prompt.txt`, then run `opencode run "$(cat /tmp/prompt.txt)"`.
+
 ### ❌ OpenCode auto-rejects reads of sensitive files (.env, credentials, API keys)
 When spawning workers via `opencode run`, OpenCode's permission system auto-rejects reads of files containing secrets (`.env`, files with `API_KEY`, etc.). The worker gets a permission error and may fail to produce its artifact or stall. **Observed (2026-07-07):** PM worker tried to read `.env` → got `! permission requested: read ... auto-rejecting` → never produced `requirements.json`. **Workaround:** Include all non-secret context the worker needs (provider URL, model names, tech stack) directly in the CONTEXT field of the task handoff. Never expect workers to read `.env` or credential files. For config-dependent workers (Backend Engineer building config endpoints), pass the full config structure description in the prompt instead of asking them to read the file.
 
@@ -952,6 +958,12 @@ Setting `{"agent":"dispatcher","status":"working"}` caused spam. Root cause (ver
 ### ❌ Dashboard UI Bloat (Fixed Pipeline/Grid Overflow)
 The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never add Chat UIs, Activity Logs, Task Input forms, or stand-alone `/workers` pages to the dashboard. The Dispatcher (Hermes TUI) handles all communication.
 **Fix:** Keep the dashboard focused on visual state polling (via `/api/status`) and basic config editing (via `/api/config`). See `references/dashboard-architecture.md`.
+
+### ❌ Empty Space Decoration (Listen to "kosong")
+If the user gets frustrated with decorative tweaking or explicitly says "biarin kosong" (leave it empty), IMMEDIATELY remove all decorative elements from that area. Do not push back, do not try to offer a "better" doodle or a different style. Leave it completely blank.
+
+### ❌ Task Description Cutoff (Card Height)
+Do not use `overflow-hidden` or `line-clamp` on the Current Task description block. Use `min-h-[60px]` with `overflow-y-auto` so the text can scroll without breaking the card's fixed height.
 
 ### ❌ Pixel-Art UI Positioning Anomalies (Fixed Layouts, No Scroll)
 When converting standard web components to pixel-art equivalents, spacing and grid wrappings easily break on smaller viewports if `flex-wrap` drops an item to a new line, or if the container relies on `overflow-y-auto`.
