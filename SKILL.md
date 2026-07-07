@@ -775,9 +775,10 @@ When fixing or modifying dashboard code, if the backend `state.workers` initiali
 If user says "coba kasih saran", "how to", "what are the options", "give me analysis" → spawn ONE thinking worker for analysis. Do NOT proceed to implementation phases unless explicitly asked.
 
 ### ❌ NEVER violate Rule #1 — even for "quick" tasks
-When the user invokes `/aic` with ANY task (including "improve dashboard", "fix this", "add feature"), you MUST follow the full Dispatcher workflow — classify, plan, spawn workers, chain phases. Do NOT write code directly yourself, even if the task seems simple or is about the skill itself. The user explicitly expects to see the pipeline (Phase 1/5, 2/5, etc.) and worker results. Violating this defeats the entire purpose of the AIC system.
+When the user invokes `/aic` with ANY task (including "improve dashboard", "fix this", "add feature", or "quick UI tweaks"), you MUST follow the full Dispatcher workflow — classify, plan, spawn workers, chain phases. Do NOT write code directly yourself, even if the task seems simple or is about the skill itself. The user explicitly expects to see the pipeline (Phase 1/5, 2/5, etc.) and worker results. Violating this defeats the entire purpose of the AIC system.
 
-**User correction (2026-07-06):** "padahal saya pakai skill aic untuk improve dashboard apakah sudah sesuai perkerjaan nya? soalnya tidak ada report phase 1-5 etc" — The user was frustrated that `/aic dashboard improve` was handled by directly editing files instead of spawning workers through the pipeline.
+**User correction (2026-07-06):** "padahal saya pakai skill aic untuk improve dashboard apakah sudah sesuai perkerjaan nya? soalnya tidak ada report phase 1-5 etc"
+**User correction (2026-07-08):** "ini tadi kamu bilang kamu aic dispatcher kenapa kamu ngoding mengubah2?" — Dispatcher tried to use `patch` to insert SVG art. This is strictly forbidden.
 
 **⚠️ PRE-FLIGHT CHECK — run this BEFORE every `/aic` task:**
 ```
@@ -875,6 +876,14 @@ When building/modifying the React dashboard, the TypeScript interfaces in `src/t
 ### ❌ OpenCode CLI string escape crashes (`Unexpected server error`)
 When the `opencode run "..."` command is passed a massive, multi-line prompt containing single/double quotes, bash parser and OpenCode can crash abruptly (often returning `Unexpected server error` or throwing the help menu).
 **Fix:** Never pass the raw prompt directly in `opencode run "prompt"`. Always write the prompt to a temp text file using `cat << 'EOF' > /tmp/prompt.txt`, then run `opencode run "$(cat /tmp/prompt.txt)"`.
+**Wait!** If `opencode run "$(cat /tmp/prompt.txt)"` also fails with syntax/help menu errors, use a Node.js `execSync` wrapper to spawn it safely:
+```javascript
+cat << 'EOF' > /tmp/run.js
+const { execSync } = require('child_process');
+execSync('opencode run "$(cat /tmp/prompt.txt)" -m ' + process.env.MODEL_CRAFTER + ' --auto', { stdio: 'inherit' });
+EOF
+node /tmp/run.js
+```
 
 ### ❌ OpenCode auto-rejects reads of sensitive files (.env, credentials, API keys)
 When spawning workers via `opencode run`, OpenCode's permission system auto-rejects reads of files containing secrets (`.env`, files with `API_KEY`, etc.). The worker gets a permission error and may fail to produce its artifact or stall. **Observed (2026-07-07):** PM worker tried to read `.env` → got `! permission requested: read ... auto-rejecting` → never produced `requirements.json`. **Workaround:** Include all non-secret context the worker needs (provider URL, model names, tech stack) directly in the CONTEXT field of the task handoff. Never expect workers to read `.env` or credential files. For config-dependent workers (Backend Engineer building config endpoints), pass the full config structure description in the prompt instead of asking them to read the file.
@@ -961,6 +970,9 @@ The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never ad
 
 ### ❌ Empty Space Decoration (Listen to "kosong")
 If the user gets frustrated with decorative tweaking or explicitly says "biarin kosong" (leave it empty), IMMEDIATELY remove all decorative elements from that area. Do not push back, do not try to offer a "better" doodle or a different style. Leave it completely blank.
+
+### ❌ Pixel-Art Workspace Scene constraints
+The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container.
 
 ### ❌ Task Description Cutoff (Card Height)
 Do not use `overflow-hidden` or `line-clamp` on the Current Task description block. Use `min-h-[60px]` with `overflow-y-auto` so the text can scroll without breaking the card's fixed height.

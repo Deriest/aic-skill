@@ -6,6 +6,7 @@ export function WorkspaceScene() {
       viewBox="0 0 128 96"
       width="100%"
       height="100%"
+      preserveAspectRatio="xMidYMid slice"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       style={{ imageRendering: 'pixelated' }}

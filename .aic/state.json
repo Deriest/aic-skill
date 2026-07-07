@@ -46,7 +46,7 @@
       "currentTask": null
     },
     "dispatcher": {
-      "status": "working",
+      "status": "idle",
       "engine": "delegate",
       "currentTask": null
     }
