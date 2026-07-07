@@ -846,6 +846,7 @@ The Dispatcher must:
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
+**Fix (2026-07-08):** To force the responsive SVG to stretch fully horizontally across the right column without vertical distortion, set `viewBox="0 0 400 96"` (or a similarly wide aspect ratio like `viewBox="0 0 240 96"`), draw a wide room background (e.g. `width="400"`), spread the room items horizontally inside the SVG (window on the far left, desk in the center, server rack/diagrams on the far right), and render the SVG with `preserveAspectRatio="xMidYMid meet"` (or slice) inside a wrapper containing `w-full h-[100px] mt-auto overflow-hidden shrink-0`. This guarantees a pixel-perfect, wide room visual that spans the full column width without clipping the left window or getting cut off.
 
 ### ❌ `framer-motion` undefined config crashes on unexpected backend strings
 When rendering dynamic styles from a dictionary (`const config = statusConfig[phase.status]`), if the backend returns an unexpected string (e.g. "active" instead of "working"), `config` becomes `undefined` and causes a fatal `TypeError` in React (`can't access property... config is undefined`), crashing the whole dashboard.
@@ -1001,6 +1002,7 @@ The Dispatcher must:
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
+**Fix (2026-07-08):** To force the responsive SVG to stretch fully horizontally across the right column without vertical distortion, set `viewBox="0 0 400 96"` (or a similarly wide aspect ratio like `viewBox="0 0 240 96"`), draw a wide room background (e.g. `width="400"`), spread the room items horizontally inside the SVG (window on the far left, desk in the center, server rack/diagrams on the far right), and render the SVG with `preserveAspectRatio="xMidYMid meet"` (or slice) inside a wrapper containing `w-full h-[100px] mt-auto overflow-hidden shrink-0`. This guarantees a pixel-perfect, wide room visual that spans the full column width without clipping the left window or getting cut off.
 
 ### ❌ Task Description Cutoff (Card Height)
 Do not use `overflow-hidden` or `line-clamp` on the Current Task description block. Use `min-h-[60px]` with `overflow-y-auto` so the text can scroll without breaking the card's fixed height.
