@@ -687,23 +687,21 @@ Dashboard: **http://localhost:6969** | API: http://localhost:6868/api/status
 The Dispatcher updates the dashboard via POST endpoints on the status server (port 6868). The server holds state in memory and flushes to `status.json` after every mutation.
 
 ```bash
-# Start task
-curl -s -X POST http://localhost:6868/api/task-start -H 'Content-Type: application/json' -d '{"title":"Build API","type":"feature","id":"TASK-001"}'
-
-# Start phase
-curl -s -X POST http://localhost:6868/api/phase-start -H 'Content-Type: application/json' -d '{"name":"PM + Architect","status":"working"}'
+# Set Current Task and Phase
+curl -s -X POST http://localhost:6868/api/task-status -H 'Content-Type: application/json' -d '{"currentTask":{"id":"TASK-001","title":"Build API","type":"feature"}, "currentPhase":"Investigate"}'
 
 # Update agent (with engine indicator)
 curl -s -X POST http://localhost:6868/api/agent-status -H 'Content-Type: application/json' -d '{"agent":"pm","status":"working","engine":"opencode"}'
 
-# Complete phase
-curl -s -X POST http://localhost:6868/api/phase-complete
+# Reset everything
+curl -s -X POST http://localhost:6868/api/reset
+```
 
-# Complete task (appends to history.json, then resets currentTask + phases + agents)
-curl -s -X POST http://localhost:6868/api/task-complete
-
-# Add log
-curl -s -X POST http://localhost:6868/api/log -H 'Content-Type: application/json' -d '{"message":"Requirements defined","type":"success"}'
+### Dashboard Layout Rules
+1. **Virtual Office** is the only UI widget for worker status.
+2. **Pipeline Tracker** traces the exact 5 phases: Investigate, Planning, Execution, Documentation, Verification.
+3. **Config Editor** edits `.env` and `opencode.jsonc`.
+4. NO Activity Log, NO `/api/log`, NO separate Tasks page.
 
 # Reset
 curl -s -X POST http://localhost:6868/api/reset
@@ -923,14 +921,10 @@ The spam has THREE root causes that must ALL be fixed. See `references/dashboard
 Setting `{"agent":"dispatcher","status":"working"}` caused spam. Root cause (verified 2026-07-07): zombie `watchdogd` background process + stale state cache.
 **Fix:** Kill rogue processes (`pkill -9 -f watchdog; pkill -9 curl`), delete `.aic/state.json` and `.aic/audit.json`, restart dashboard. Dispatcher stays `WORKING` during `/aic` session.
 
-### ❌ Pipeline, Activity Log, and Current Task not updating
-Shooting `/api/agent-status` alone only updates the avatars. It does NOT update the Right Panels (Current Task / Pipeline) or the Activity Log at the bottom.
-**Fix:** For the UI to reflect the full company state, you must use the official task lifecycle endpoints:
-- Start task: `POST /api/task-start` (updates Current Task)
-- Enqueue task: `POST /api/task-enqueue` (updates Pipeline)
-- Start phase: `POST /api/phase-start`
-- Log activity: `POST /api/log`
-- Complete task: `POST /api/task-complete`
+### ❌ Dashboard UI not updating
+Shooting `/api/agent-status` alone only updates the avatars. It does NOT update the Pipeline Tracker.
+**Fix:** For the UI to reflect the pipeline state, you must use the official task lifecycle endpoint:
+- Update phase/task: `POST /api/task-status`
 
 ### ❌ Workers Page is Redundant
 Do not build or maintain a standalone `/workers` page. The Overview page serves as the primary dashboard for viewing all worker states.
