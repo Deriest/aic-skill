@@ -842,7 +842,15 @@ When converting standard web components to pixel-art equivalents, `absolute` pos
 
 ### ❌ Worker Sorting & Missing Avatars
 If a worker (like the Dispatcher) disappears from the `WorkerGrid` after a refactor, it's often because the hardcoded array or grouping function lost its section map.
-**Fix:** Define an explicit array of strings for desired ordering `['Dispatcher', 'Governance', 'Product', 'Engineering']` inside the grouping utility (`groupWorkersBySection`), and return a sorted tuple `[string, WorkerDef[]][]` so the frontend grid inherently respects the hierarchy.
+**Fix:** Define an explicit array of strings for desired ordering `['Leadership', 'Product', 'Engineering']` inside the grouping utility (`groupWorkersBySection`), group Dispatcher and Governor under `section: 'Leadership'`, and return a sorted tuple `[string, WorkerDef[]][]` so the frontend grid inherently respects the hierarchy.
+
+### ❌ Dashboard Layout Clutter and Alignment (Fixed Viewport)
+The user explicitly desires a clean, un-cramped, scroll-free dashboard layout.
+**Fix:** 
+- **No Scrollbars:** Use `flex-1` with `min-h-0` on children to ensure the container scales down instead of overflowing. Remove `overflow-y-auto` from `OfficeFloor.tsx`.
+- **Worker Spacing:** Desks must be centered (`justify-center`), not left-aligned. Ensure `WorkerDesk` containers are wide enough (`w-[150px]` or `w-[190px]`) so avatars are not cramped.
+- **Pipeline Alignment:** The right sidebar containing Current Task and Pipeline must use `flex-1` and stretch the full height (`h-full`) to match the vertical height of the main Virtual Office card.
+- **Stats Bar:** Ensure the 3-panel stats bar (Active/Complete/Idle) sits directly under the Virtual Office box, inside the left main content column.
 
 ### ❌ React dashboard `connected` stays false without explicit health polling
 The `DashboardProvider` does NOT auto-detect server connectivity. The `connected` state starts `false` and only updates when something dispatches `SET_CONNECTED`. Without a `useEffect` that polls `/health` every 5s and dispatches the result, the header permanently shows "OFFLINE" even when the API server is running. **Fix:** Add health polling in `DashboardProvider` on mount — `getHealth().then(d => dispatch({type:'SET_CONNECTED', payload:!!d?.ok})).catch(() => dispatch({type:'SET_CONNECTED', payload:false}))`. Also poll `/api/workers`, `/api/cost`, `/api/queue` for live dashboard data. Without polling, every dashboard page shows stale initial state.

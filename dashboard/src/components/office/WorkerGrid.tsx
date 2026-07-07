@@ -18,7 +18,7 @@ export function WorkerGrid() {
               {workers.map((worker) => {
                 const workerState = state.workers[worker.id];
                 return (
-                  <div key={worker.id} className="w-[180px] md:w-[190px] flex-shrink-0">
+                  <div key={worker.id} className="w-[200px] flex-shrink-0">
                     <WorkerDesk
                       worker={worker}
                       status={workerState?.status ?? 'idle'}

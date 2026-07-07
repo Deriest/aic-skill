@@ -18,22 +18,22 @@ function DashboardApp() {
       <CRTOverlay />
       
       {/* Top Header Navigation */}
-      <header className="flex justify-between items-center bg-aic-bg-panel border-b-4 border-aic-border px-6 py-2 z-10 relative shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="text-aic-accent text-px-lg font-pixel">▶</span>
+      <header className="flex justify-between items-center bg-aic-bg-panel border-b-4 border-aic-border px-6 py-4 z-10 relative shrink-0">
+        <div className="flex items-center gap-3 flex-1">
+          <span className="text-aic-accent text-px-lg font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
           <h1 className="text-3xl font-pixel text-aic-accent tracking-widest uppercase text-shadow-cyan">
             AI ENGINEERING COMPANY
           </h1>
         </div>
         
-        {/* Tabs */}
-        <div className="flex items-center gap-6">
-          <div className="flex gap-6 mr-4">
+        {/* Tabs - Centered */}
+        <div className="flex items-center justify-center flex-1">
+          <div className="flex gap-12">
             <button 
               onClick={() => setActiveTab('overview')}
-              className={`font-pixel text-px-sm uppercase transition-colors pb-1 ${
+              className={`font-pixel text-px-base uppercase transition-colors pb-1 ${
                 activeTab === 'overview' 
-                  ? 'text-aic-accent border-b-2 border-aic-accent drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]' 
+                  ? 'text-aic-accent border-b-2 border-aic-accent drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' 
                   : 'text-aic-text-muted hover:text-white'
               }`}
             >
@@ -41,23 +41,23 @@ function DashboardApp() {
             </button>
             <button 
               onClick={() => setActiveTab('config')}
-              className={`font-pixel text-px-sm uppercase transition-colors pb-1 ${
+              className={`font-pixel text-px-base uppercase transition-colors pb-1 ${
                 activeTab === 'config' 
-                  ? 'text-aic-accent border-b-2 border-aic-accent drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]' 
+                  ? 'text-aic-accent border-b-2 border-aic-accent drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' 
                   : 'text-aic-text-muted hover:text-white'
               }`}
             >
               CONFIG (2)
             </button>
           </div>
+        </div>
 
-          {/* Status Indicator */}
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${state.connected ? 'bg-aic-green shadow-neon-green animate-pulse' : 'bg-red-500'}`}></div>
-            <span className={`text-px-sm font-pixel tracking-widest uppercase ${state.connected ? 'text-aic-green' : 'text-red-500'}`}>
-              {state.connected ? 'ONLINE' : 'OFFLINE'}
-            </span>
-          </div>
+        {/* Status Indicator */}
+        <div className="flex items-center justify-end gap-2 flex-1">
+          <div className={`w-3 h-3 rounded-full ${state.connected ? 'bg-aic-green shadow-[0_0_8px_rgba(0,255,0,0.8)] animate-pulse' : 'bg-red-500'}`}></div>
+          <span className={`text-px-sm font-pixel tracking-widest uppercase ${state.connected ? 'text-aic-green' : 'text-red-500'}`}>
+            {state.connected ? 'ONLINE' : 'OFFLINE'}
+          </span>
         </div>
       </header>
 

@@ -6,18 +6,25 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
   return (
     <div className="flex flex-col gap-6 h-full font-pixel">
       {/* Current Task */}
-      <div className="shrink-0">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="shrink-0 h-[140px] flex flex-col">
+        <div className="flex items-center gap-2 mb-3 shrink-0">
           <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
           <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">CURRENT TASK</h3>
         </div>
-        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-6 min-h-[100px] flex flex-col justify-center shadow-lg">
+        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-5 flex-1 flex flex-col justify-center shadow-lg relative overflow-hidden">
           {!state.currentTask ? (
             <span className="text-aic-text-muted font-pixel text-px-sm italic text-center">NO ACTIVE TASK</span>
           ) : (
-            <div>
-              <div className="text-aic-yellow font-pixel text-px-md mb-3">[{state.currentTask.id}]</div>
-              <div className="text-white text-xl uppercase tracking-wider">{state.currentTask.title}</div>
+            <div className="flex flex-col h-full justify-between">
+              <div className="flex justify-between items-start mb-2">
+                <div className="text-aic-yellow font-pixel text-px-md">[{state.currentTask.id}]</div>
+                <div className="text-aic-accent/70 font-pixel text-px-xs uppercase border border-aic-accent/30 px-2 py-1 rounded bg-aic-bg-dark">
+                  {state.currentTask.type || 'FEATURE'}
+                </div>
+              </div>
+              <div className="text-white text-lg md:text-xl uppercase tracking-wider line-clamp-2 leading-tight">
+                {state.currentTask.title}
+              </div>
             </div>
           )}
         </div>
