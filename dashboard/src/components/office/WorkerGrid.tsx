@@ -1,21 +1,10 @@
-import { useMemo } from 'react';
-import { WORKERS } from '../../data/workers';
+import { groupWorkersBySection } from '../../data/workers';
 import { WorkerDesk } from './WorkerDesk';
 import { useDashboardContext } from '../../context/DashboardContext';
 
 export function WorkerGrid() {
   const { state } = useDashboardContext();
-
-  const sections = useMemo(() => {
-    const grouped: Record<string, typeof WORKERS> = {};
-    for (const worker of WORKERS) {
-      if (!grouped[worker.section]) {
-        grouped[worker.section] = [];
-      }
-      grouped[worker.section].push(worker);
-    }
-    return Object.entries(grouped);
-  }, []);
+  const sections = groupWorkersBySection();
 
   return (
     <div className="space-y-4">
