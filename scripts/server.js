@@ -16,12 +16,17 @@ const WORKERS = [
   'frontend', 'backend', 'infra', 'qa', 'governor', 'dispatcher'
 ];
 
-const defaultState = () => ({
-  workers: Object.fromEntries(
-    WORKERS.map(id => [id, { status: 'idle', engine: null, currentTask: null }])
-  ),
-  startedAt: Date.now(),
-});
+const defaultState = () => {
+  const s = {
+    workers: Object.fromEntries(
+      WORKERS.map(id => [id, { status: id === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null }])
+    ),
+    currentTask: null,
+    currentPhase: null,
+    startedAt: Date.now(),
+  };
+  return s;
+};
 
 let state = defaultState();
 
@@ -32,8 +37,9 @@ function loadState() {
     state = { ...defaultState(), ...saved, startedAt: saved.startedAt || Date.now() };
     // Ensure all workers exist
     for (const w of WORKERS) {
-      if (!state.workers[w]) state.workers[w] = { status: 'idle', engine: null, currentTask: null };
+      if (!state.workers[w]) state.workers[w] = { status: w === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null };
     }
+    state.workers.dispatcher.status = 'working'; // Force dispatcher to always be working
   } catch {
     state = defaultState();
   }
@@ -92,8 +98,44 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {
       connected: true,
       workers: state.workers,
+      currentTask: state.currentTask,
+      currentPhase: state.currentPhase,
       startedAt: state.startedAt,
     });
+  }
+
+  // POST /api/task-status — set current task and pipeline phase
+  if (req.method === 'POST' && pathname === '/api/task-status') {
+    const data = await readBody(req);
+    if (data.currentTask !== undefined) state.currentTask = data.currentTask;
+    if (data.currentPhase !== undefined) state.currentPhase = data.currentPhase;
+    saveState();
+    return send(res, 200, { success: true });
+  }
+
+  // GET /api/config
+  if (req.method === 'GET' && pathname === '/api/config') {
+    const envPath = path.join(SKILL_DIR, '.env');
+    const openCodePath = path.join(SKILL_DIR, 'templates', 'opencode-provider.json');
+    const config = {
+      env: fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '',
+      opencode: fs.existsSync(openCodePath) ? fs.readFileSync(openCodePath, 'utf8') : ''
+    };
+    return send(res, 200, config);
+  }
+
+  // POST /api/config
+  if (req.method === 'POST' && pathname === '/api/config') {
+    const data = await readBody(req);
+    const envPath = path.join(SKILL_DIR, '.env');
+    const openCodePath = path.join(SKILL_DIR, 'templates', 'opencode-provider.json');
+    try {
+      if (data.env !== undefined) fs.writeFileSync(envPath, data.env);
+      if (data.opencode !== undefined) fs.writeFileSync(openCodePath, data.opencode);
+      return send(res, 200, { success: true });
+    } catch (err) {
+      return send(res, 500, { error: err.message });
+    }
   }
 
   // POST /api/agent-status — set a worker's state

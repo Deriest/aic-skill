@@ -51,5 +51,11 @@
       "currentTask": null
     }
   },
+  "currentTask": {
+    "id": "T1",
+    "title": "Test",
+    "type": "feat"
+  },
+  "currentPhase": "Investigate",
   "startedAt": 1783425803212
 }

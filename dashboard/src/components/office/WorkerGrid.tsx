@@ -1,12 +1,9 @@
 import { useMemo } from 'react';
 import { WORKERS } from '../../data/workers';
 import { WorkerDesk } from './WorkerDesk';
-import { useDashboard } from '../../context/DashboardContext';
 import { DispatcherAvatar } from './DispatcherAvatar';
-
-export function WorkerGrid() {
-  const { state } = useDashboard();
-
+import { DashboardState } from '../../types';
+export function WorkerGrid({ state }: { state: DashboardState }) {
   const sections = useMemo(() => {
     const grouped: Record<string, typeof WORKERS> = {};
     for (const worker of WORKERS) {

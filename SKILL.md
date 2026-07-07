@@ -417,24 +417,23 @@ Investigate → Planning → Execution → Documentation → Verification
 
 ### Enforcement points (`scripts/server.js`)
 
-1. **`POST /api/task-start`** — Always sets `state.workflow.current = "Investigate"`. **Does NOT** auto-spawn any worker (PM stays idle). This is the core fix for "dispatcher langsung tembak ke front end".
+1. **`POST /api/task-status`** — Always sets `state.currentPhase = "Investigate"`. **Does NOT** auto-spawn any worker (PM stays idle). This is the core fix for "dispatcher langsung tembak ke front end".
 2. **`POST /api/agent-status`** with `status:"working"` — Rejects (HTTP 403) if the worker is not in the allowed set for the current lifecycle phase. Response includes `allowedWorkers` and a `hint` with the next advance call.
-3. **`POST /api/phase-start`** with `lifecyclePhase` — Advances lifecycle. **Rejects backwards transitions** (HTTP 400). Same-phase re-set is allowed (idempotent).
-4. **`POST /api/phase-advance`** — Auto-advances to the next phase. **Stops at Verification** (HTTP 400 if already there) — Dispatcher must call `/api/task-complete` to finalize, not loop.
-5. **Startup reconciliation** — On boot, if `state.workflow.current` is `"Investigate"` but non-dispatcher workers are already `working` (legacy state.json from before this fix), the server auto-advances to the lowest lifecycle phase that admits ALL working workers. This preserves in-flight tasks across restarts.
+3. **`POST /api/task-status`** with `currentPhase` — Advances lifecycle. Same-phase re-set is allowed (idempotent).
+4. **Startup reconciliation** — On boot, the server forces the dispatcher to `working` status.
 
-### Dispatcher protocol (updated 2026-07-07)
+### Dispatcher protocol (updated)
 
 ```
 1. User triggers task (e.g. /aic add feature X)
-2. Dispatcher: POST /api/task-start {title,type,id}   → lifecycle: Investigate, all workers idle
+2. Dispatcher: POST /api/task-status {currentTask: {id, title, type}, currentPhase: "Investigate"}
 3. Dispatcher (you, NOT a worker): investigate the codebase
-4. POST /api/phase-start {"lifecyclePhase":"Planning"}  → pm/researcher/designer/architect now allowed
+4. POST /api/task-status {currentPhase: "Planning"}  → pm/researcher/designer/architect now allowed
 5. Spawn PM via opencode run. PM produces requirements.json
-6. POST /api/phase-start {"lifecyclePhase":"Execution"}  → frontend/backend/infra/qa now allowed
+6. POST /api/task-status {currentPhase: "Execution"}  → frontend/backend/infra/qa now allowed
 7. Spawn Architect, then Engineers (parallel if independent)
-8. POST /api/phase-start {"lifecyclePhase":"Documentation"}  → engineers may finalize docs/changelog
-9. POST /api/phase-start {"lifecyclePhase":"Verification"}  → governor now allowed
+8. POST /api/task-status {currentPhase: "Documentation"}  → engineers may finalize docs/changelog
+9. POST /api/task-status {currentPhase: "Verification"}  → governor now allowed
 10. Spawn QA/Governor
 11. POST /api/task-complete   → resets workers + queue, writes history
 ```

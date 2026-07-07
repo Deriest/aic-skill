@@ -45,7 +45,7 @@ case "$cmd" in
     sleep 1
 
     # Check if server started
-    if curl -s "http://localhost:$PORT/health" > /dev/null 2>&1; then
+    if curl -s "http://localhost:$PORT/api/status" > /dev/null 2>&1; then
       echo "✅ API server running"
     else
       echo "❌ API server failed to start"
@@ -53,23 +53,29 @@ case "$cmd" in
       exit 1
     fi
 
+    # Check OpenCode status
+    echo "🔍 Checking OpenCode configuration..."
+    if [[ -f "$HOME/.config/opencode/opencode.jsonc" ]]; then
+      echo "✅ OpenCode is configured"
+    else
+      echo "⚠️ OpenCode configuration not found!"
+    fi
+
     echo ""
     echo "═══════════════════════════════════════"
     echo "  🏢 AIC Dashboard is LIVE"
     echo ""
-    echo "  📊 Dashboard:  http://localhost:$DASH_PORT"
-    echo "  🔌 API:        http://localhost:$PORT"
-    echo "  💬 Chat:       http://localhost:$DASH_PORT/chat"
-    echo "  ⚙️  Config:     http://localhost:$DASH_PORT/config"
+    echo "  📊 Dashboard & Config: http://localhost:$PORT"
     echo ""
     echo "  Press Ctrl+C to stop"
     echo "═══════════════════════════════════════"
     echo ""
+    echo "🤖 Dispatcher: Halo! Saya Dispatcher AIC. Server sudah jalan."
+    echo "              Ketik '/aic' di Hermes untuk mulai diskusi task dengan saya!"
+    echo ""
 
-    # Start Vite dev server in foreground
-    cd "$SKILL_DIR/dashboard"
-    trap "kill $API_PID 2>/dev/null; echo ''; echo '👋 AIC stopped.'" EXIT
-    npx vite --port "$DASH_PORT" --host
+    # Keep alive for background node process
+    wait $API_PID
     ;;
   setup)
     bash "$SKILL_DIR/scripts/setup.sh"
