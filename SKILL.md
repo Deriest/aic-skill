@@ -261,7 +261,7 @@ CONTEXT: [previous phase outputs]
 PRIORITY: [HIGH/MEDIUM/LOW]
 ====================
 
-Implement the code. Write tests. Report STATUS: COMPLETE with FILES list when done." --model [provider]/[sonnet]',
+Implement the code. Write tests. Report STATUS: COMPLETE with FILES list when done." --model [provider]/[crafter]',
     workdir="[project dir]",
     timeout=600
 )
@@ -460,7 +460,7 @@ When an OpenCode worker fails, retry up to 5 times with exponential backoff (5s 
 Reports must be concise — phase name + status emoji + time only. NEVER show: rule numbers, model names, engine types, context sizes, worker IDs.
 
 ### ❌ OpenCode config: model key ≠ API model name
-In `opencode.jsonc`, the model key (used in `--model provider/KEY`) is NOT the API model name. OpenCode sends the `name` field, NOT the key. Use generic keys (`opus`, `sonnet`, `haiku`) with `name` set to the actual API model name. See `references/pitfalls-history.md` for full details.
+In `opencode.jsonc`, the model key (used in `--model provider/KEY`) is NOT the API model name. OpenCode sends the `name` field, NOT the key. Use generic keys (`thinker`, `crafter`, `sprinter`) with `name` set to the actual API model name. See `references/pitfalls-history.md` for full details.
 
 ### ❌ OpenCode `run` mode may fail with custom providers
 `opencode run --model provider/model` can fail with "No active credentials for provider: openai" even when `opencode.jsonc` is correctly configured. This happens because `run` mode has a known issue resolving custom provider credentials for non-interactive use. **Workaround:** If `opencode run` fails but `curl` to the same API works, fall back to `delegate_task` for thinking workers and report the issue to Operator for coding workers. See `references/pitfalls-history.md` for details.
@@ -486,8 +486,9 @@ For full historical context on all pitfalls, see **`references/pitfalls-history.
 1. **You are the Dispatcher** — you do NOT write code, design, research, or make product decisions
 2. **All workers use OpenCode** — every worker spawns via `opencode run` in project directory. Only the Dispatcher uses `delegate_task` for parallel orchestration.
 3. **Model assignments are mandatory** — load from `.env`:
-   - **opus**: PM, Architect
-   - **sonnet**: Researcher, Designer, Frontend, Backend, Infra, QA, Governor
+   - **Thinker** (complex): PM, Architect
+   - **Crafter** (standard): Researcher, Designer, Frontend, Backend, Infra, QA, Governor
+   - **Sprinter** (fast): QA (optional lightweight tasks)
 4. **Multi-phase = sequential spawning** — spawn one phase at a time, pass results forward
 5. **Parallel = batch** — Frontend + Backend OpenCode sessions can run simultaneously via `background=true`
 6. **Always use Task IDs** — track work across phases with consistent IDs
