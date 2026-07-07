@@ -14,7 +14,7 @@ export function WorkerGrid() {
             <div className="font-pixel text-[10px] text-aic-text-muted/60 uppercase tracking-widest mb-1 text-center border-b border-aic-border/30 pb-1 w-1/3 max-w-sm">
               {section}
             </div>
-            <div className="flex flex-wrap justify-center gap-2 md:gap-4 overflow-hidden max-w-5xl">
+            <div className="flex justify-center gap-2 md:gap-4 overflow-hidden w-full max-w-full">
               {workers.map((worker) => {
                 const workerState = state.workers[worker.id];
                 return (

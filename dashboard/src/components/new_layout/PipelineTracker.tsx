@@ -6,12 +6,12 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
   return (
     <div className="flex flex-col gap-6 h-full font-pixel">
       {/* Current Task */}
-      <div className="shrink-0 h-[140px] flex flex-col">
+      <div className="shrink-0 flex flex-col h-[180px]">
         <div className="flex items-center gap-2 mb-3 shrink-0">
           <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
           <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">CURRENT TASK</h3>
         </div>
-        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-5 flex-1 flex flex-col justify-center shadow-lg relative overflow-hidden">
+        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-5 flex-1 shadow-lg relative overflow-hidden flex flex-col justify-center">
           {!state.currentTask ? (
             <span className="text-aic-text-muted font-pixel text-px-sm italic text-center">NO ACTIVE TASK</span>
           ) : (

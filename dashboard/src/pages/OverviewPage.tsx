@@ -16,7 +16,7 @@ export function OverviewPage() {
         {/* Main Content (Left) */}
         <div className="flex-[2] flex flex-col min-w-0 gap-4 h-full">
           {/* Virtual Office Box */}
-          <div className="flex-1 min-h-0 bg-aic-bg-panel border-2 border-aic-border/50 rounded p-1 shadow-lg overflow-hidden">
+          <div className="flex-1 bg-aic-bg-panel border-2 border-aic-border/50 rounded p-1 shadow-lg overflow-hidden flex flex-col min-h-0">
              <OfficeFloor />
           </div>
 
