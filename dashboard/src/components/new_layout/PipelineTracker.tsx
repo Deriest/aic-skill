@@ -71,72 +71,58 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
             </div>
           )}
 
-          {/* Doodle Art SVG (Bottom Right) */}
-          <div className="absolute bottom-0 right-2 opacity-30 pointer-events-none select-none flex flex-col items-end z-0">
+          {/* Decorative SVG (Inside Pipeline Card - Bottom Right) */}
+          <div className="absolute bottom-2 right-2 opacity-30 pointer-events-none select-none flex flex-col items-end z-0">
             <span className="font-pixel text-[8px] text-aic-accent mb-1 mr-2">HAPPY CODING!</span>
             <svg width="100" height="100" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
               <g fill="currentColor" shapeRendering="crispEdges">
-                {/* Desk */}
                 <rect x="2" y="24" width="28" height="2" />
                 <rect x="4" y="26" width="2" height="6" />
                 <rect x="26" y="26" width="2" height="6" />
-                
-                {/* Monitor */}
                 <rect x="4" y="12" width="12" height="10" />
                 <rect x="5" y="13" width="10" height="8" className="text-aic-bg-dark" fill="currentColor" />
                 <rect x="6" y="14" width="8" height="6" className="text-aic-accent" fill="currentColor" fillOpacity="0.3"/>
-                {/* Stand */}
                 <rect x="9" y="22" width="2" height="2" />
-                
-                {/* Keyboard */}
                 <rect x="6" y="23" width="8" height="1" />
-                
-                {/* Character Head */}
                 <rect x="18" y="10" width="8" height="8" />
-                {/* Glowing Glasses */}
                 <rect x="18" y="13" width="3" height="2" className="text-aic-bg-dark" fill="currentColor" />
                 <rect x="23" y="13" width="3" height="2" className="text-aic-bg-dark" fill="currentColor" />
                 <rect x="19" y="13" width="1" height="2" className="text-aic-accent" fill="currentColor" />
                 <rect x="24" y="13" width="1" height="2" className="text-aic-accent" fill="currentColor" />
-                
-                {/* Character Body */}
                 <rect x="17" y="18" width="10" height="6" />
-                {/* Arm typing */}
                 <rect x="15" y="20" width="5" height="2" />
-                
-                {/* Coffee Mug */}
                 <rect x="27" y="21" width="3" height="3" />
                 <rect x="30" y="21" width="1" height="2" />
               </g>
             </svg>
           </div>
-
-          {/* Decorative SVG (Outside Pipeline Card) */}
-          <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 opacity-30 pointer-events-none select-none z-0">
-            <svg width="100" height="100" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
-              <g fill="currentColor" shapeRendering="crispEdges">
-                <rect x="10" y="10" width="12" height="12" className="text-aic-bg-dark" fill="currentColor"/>
-                <rect x="11" y="11" width="10" height="10" className="text-aic-accent" fill="currentColor" fillOpacity="0.8"/>
-                <rect x="13" y="13" width="6" height="6" className="text-aic-bg-panel" fill="currentColor"/>
-                <rect x="12" y="6" width="2" height="4" />
-                <rect x="15" y="6" width="2" height="4" />
-                <rect x="18" y="6" width="2" height="4" />
-                <rect x="12" y="22" width="2" height="4" />
-                <rect x="15" y="22" width="2" height="4" />
-                <rect x="18" y="22" width="2" height="4" />
-                <rect x="6" y="12" width="4" height="2" />
-                <rect x="6" y="15" width="4" height="2" />
-                <rect x="6" y="18" width="4" height="2" />
-                <rect x="22" y="12" width="4" height="2" />
-                <rect x="22" y="15" width="4" height="2" />
-                <rect x="22" y="18" width="4" height="2" />
-                <rect x="2" y="15" width="4" height="1" className="text-aic-green" fill="currentColor" />
-                <rect x="2" y="16" width="1" height="4" className="text-aic-green" fill="currentColor" />
-                <rect x="3" y="19" width="3" height="1" className="text-aic-green" fill="currentColor" />
-              </g>
-            </svg>
-          </div>
         </div>
+      </div>
+      
+      {/* Empty Space Below Pipeline Card (Aligns with Stats Bar on the left) */}
+      <div className="h-[100px] shrink-0 relative flex items-center justify-center opacity-40 select-none pointer-events-none">
+        <svg width="80" height="80" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-aic-accent">
+          <g fill="currentColor" shapeRendering="crispEdges">
+            <rect x="10" y="10" width="12" height="12" className="text-aic-bg-dark" fill="currentColor"/>
+            <rect x="11" y="11" width="10" height="10" className="text-aic-accent" fill="currentColor" fillOpacity="0.8"/>
+            <rect x="13" y="13" width="6" height="6" className="text-aic-bg-panel" fill="currentColor"/>
+            <rect x="12" y="6" width="2" height="4" />
+            <rect x="15" y="6" width="2" height="4" />
+            <rect x="18" y="6" width="2" height="4" />
+            <rect x="12" y="22" width="2" height="4" />
+            <rect x="15" y="22" width="2" height="4" />
+            <rect x="18" y="22" width="2" height="4" />
+            <rect x="6" y="12" width="4" height="2" />
+            <rect x="6" y="15" width="4" height="2" />
+            <rect x="6" y="18" width="4" height="2" />
+            <rect x="22" y="12" width="4" height="2" />
+            <rect x="22" y="15" width="4" height="2" />
+            <rect x="22" y="18" width="4" height="2" />
+            <rect x="2" y="15" width="4" height="1" className="text-aic-green" fill="currentColor" />
+            <rect x="2" y="16" width="1" height="4" className="text-aic-green" fill="currentColor" />
+            <rect x="3" y="19" width="3" height="1" className="text-aic-green" fill="currentColor" />
+          </g>
+        </svg>
       </div>
     </div>
   );

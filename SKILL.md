@@ -673,8 +673,9 @@ The dashboard is a **full Control Plane** — React 18 + Vite 5 + TailwindCSS 3 
 # 1. Kill existing servers, install deps, start both, open browser
 terminal(command='fuser -k 6868/tcp 2>/dev/null; fuser -k 6969/tcp 2>/dev/null; echo "ports cleared"')
 terminal(command='cd ~/.hermes/skills/workflows/aic/dashboard && [ -d node_modules ] || npm install')
-terminal(command='node ~/.hermes/skills/workflows/aic/scripts/server.js', background=True)
-terminal(command='cd ~/.hermes/skills/workflows/aic/dashboard && npx vite --port 6969', background=True)
+# CRITICAL: Use nohup to prevent background processes from being killed by SIGHUP/SIGTERM when shell resets
+terminal(command='nohup node ~/.hermes/skills/workflows/aic/scripts/server.js > /tmp/aic-api.log 2>&1 &', background=True)
+terminal(command='nohup npx vite --port 6969 > /tmp/aic-vite.log 2>&1 &', workdir='~/.hermes/skills/workflows/aic/dashboard', background=True)
 terminal(command='sleep 3 && (xdg-open http://localhost:6969 2>/dev/null || open http://localhost:6969 2>/dev/null || echo "Open http://localhost:6969")')
 ```
 
@@ -883,6 +884,10 @@ The status API's mutation endpoints (`task-start`, `phase-start`, `agent-status`
 
 ### ❌ `fuser -k` exit code -9 is expected cleanup, not an error
 When starting servers via `/aic dashboard`, `fuser -k 6868/tcp` kills any existing server process with SIGKILL (exit -9). Hermes will report "Background process exited (exit code -9)" — this is NORMAL cleanup, not a crash. Ignore it and proceed. If the server fails to start AFTER the kill, then investigate (likely the port is still held for a few seconds — add `sleep 0.5` between kill and start).
+
+### ❌ Background processes killed by SIGTERM (-15) on terminal reset
+When executing long-running background tasks via `terminal(..., background=True)`, especially servers, the environment shell may kill them with SIGTERM (-15) when evaluating or closing internal I/O.
+**Fix:** Always wrap long-running server processes in `nohup <command> > /path/to/log 2>&1 &` inside the terminal tool payload to detach them from the immediate shell session.
 
 ### ❌ `pkill` only accepts ONE pattern per invocation
 On this Linux environment, `pkill -9 node vite` will fail with "only one pattern can be provided". Use separate commands: `pkill -9 node; pkill -9 vite; pkill -9 esbuild`. Or use `killall -9 node vite esbuild` (which accepts multiple names). When using `execute_code` or `terminal`, always split `pkill` calls or use `killall` as an alternative.
