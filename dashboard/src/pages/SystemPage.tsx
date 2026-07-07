@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
 import { PageShell } from '../components/shared/PageShell';
 import { MetricCard } from '../components/shared/MetricCard';
-import { getHealth, getCost, resetState } from '../api/system';
-import type { SystemHealth, CostData } from '../types';
+import { getHealth, resetState } from '../api/system';
+import type { SystemHealth } from '../types';
 
 export function SystemPage() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
-  const [cost, setCost] = useState<CostData | null>(null);
   const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     getHealth().then(setHealth).catch(() => {});
-    getCost().then(setCost).catch(() => {});
   }, []);
 
   const handleReset = async () => {
@@ -27,33 +25,18 @@ export function SystemPage() {
 
   return (
     <PageShell title="SYSTEM">
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="flex flex-col h-full gap-4">
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricCard
-            label="Health"
+            label="System Status"
             value={health?.ok ? 'OK' : 'DOWN'}
-            color={health?.ok ? '#00ff88' : '#ff4444'}
-            sub={`Port ${health?.port ?? '?'}`}
-          />
-          <MetricCard
-            label="Uptime"
-            value={health ? `${Math.floor((health.uptime ?? 0) / 60)}m` : '?'}
-            color="#00d4ff"
-          />
-          <MetricCard
-            label="Total Tokens"
-            value={cost ? (cost.totalTokens.input + cost.totalTokens.output).toLocaleString() : '?'}
-            color="#00d4ff"
-            sub={cost ? `In: ${cost.totalTokens.input.toLocaleString()} / Out: ${cost.totalTokens.output.toLocaleString()}` : ''}
-          />
-          <MetricCard
-            label="Total Cost"
-            value={cost ? `$${cost.totalCost.toFixed(4)}` : '?'}
-            color="#ff8800"
+            color={health?.ok ? '#4caf50' : '#f44336'}
+            sub={health ? `Uptime: ${(health.uptime / 60).toFixed(1)} min` : ''}
           />
         </div>
 
-        <div className="panel p-4">
+        <div className="panel p-4 flex-1">
           <div className="font-pixel text-px-xs text-aic-text-dim mb-3 uppercase">Environment</div>
           <div className="font-pixel text-px-xs text-aic-text space-y-1">
             <div><span className="text-aic-text-dim">API:</span> localhost:6868</div>
@@ -64,13 +47,16 @@ export function SystemPage() {
 
         <div className="panel p-4">
           <div className="font-pixel text-px-xs text-aic-text-dim mb-3 uppercase">Danger Zone</div>
-          <button
-            onClick={handleReset}
-            disabled={resetting}
-            className="font-pixel text-px-xs px-4 py-2 border-2 border-aic-red text-aic-red hover:bg-aic-red hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            {resetting ? 'RESETTING...' : 'RESET ALL STATE'}
-          </button>
+          <div className="flex items-center justify-between">
+            <span className="font-pixel text-px-xs text-aic-text">Clear all tasks, history, and status</span>
+            <button 
+              onClick={handleReset}
+              disabled={resetting}
+              className="font-pixel text-px-xs px-4 py-2 border-2 border-aic-red text-aic-red hover:bg-aic-red hover:text-white transition-colors disabled:opacity-50"
+            >
+              {resetting ? 'RESETTING...' : 'FACTORY RESET'}
+            </button>
+          </div>
         </div>
       </div>
     </PageShell>

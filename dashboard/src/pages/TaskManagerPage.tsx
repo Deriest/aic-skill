@@ -20,11 +20,10 @@ export function TaskManagerPage() {
           <div className="flex items-start gap-3">
             <span className="text-aic-yellow text-xl">(!)</span>
             <div>
-              <div className="font-pixel text-px-sm text-aic-yellow mb-1">CREATE TASKS VIA CHAT</div>
+              <div className="font-pixel text-px-sm text-aic-yellow mb-1">CREATE TASKS VIA HERMES DESKTOP</div>
               <div className="font-mono text-sm text-aic-text-muted">
-                All tasks are created through the Orchestrator in the{' '}
-                <Link to="/chat" className="text-aic-accent underline hover:text-aic-green">Chat page</Link>.
-                Just describe what you want to build — the Orchestrator will plan, queue, and dispatch workers automatically.
+                Tasks are dispatched directly from the Hermes Desktop window.
+                Type your request there (e.g. <code>build a REST API with JWT auth</code>) — Hermes will automatically plan, queue, and dispatch workers to this dashboard.
               </div>
             </div>
           </div>

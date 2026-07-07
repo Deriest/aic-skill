@@ -10,11 +10,6 @@ export default defineConfig({
         target: 'http://localhost:6868',
         changeOrigin: true
       },
-      '/api/chat/completions': {
-        target: 'http://localhost:9119',
-        changeOrigin: true,
-        ws: true
-      },
       '/api': {
         target: 'http://localhost:6868',
         changeOrigin: true,
