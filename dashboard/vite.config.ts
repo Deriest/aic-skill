@@ -10,6 +10,10 @@ export default defineConfig({
         target: 'http://localhost:6868',
         changeOrigin: true,
       },
+      '/health': {
+        target: 'http://localhost:6868',
+        changeOrigin: true,
+      },
     },
   },
   build: {
@@ -19,6 +23,9 @@ export default defineConfig({
       output: {
         manualChunks: {
           'framer': ['framer-motion'],
+          'recharts': ['recharts'],
+          'markdown': ['react-markdown', 'react-syntax-highlighter'],
+          'router': ['react-router-dom'],
         },
       },
     },

@@ -3,26 +3,30 @@ import { PageShell } from '../components/shared/PageShell';
 import { EmptyState } from '../components/shared/EmptyState';
 import { usePagination } from '../hooks/usePagination';
 import { getAudit } from '../api/audit';
-import type { AuditEntry } from '../types';
+
+interface RawAuditEntry {
+  timestamp: string;
+  action: string;
+  actor: string;
+  details: unknown;
+}
 
 export function AuditPage() {
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [entries, setEntries] = useState<RawAuditEntry[]>([]);
   const [filter, setFilter] = useState('');
-  const [levelFilter, setLevelFilter] = useState<string>('all');
 
   useEffect(() => {
     getAudit().then(setEntries).catch(() => {});
   }, []);
 
   const filtered = entries.filter((e) => {
-    if (levelFilter !== 'all' && e.level !== levelFilter) return false;
-    if (filter && !e.action.toLowerCase().includes(filter.toLowerCase()) && !e.actor.toLowerCase().includes(filter.toLowerCase()) && !e.details.toLowerCase().includes(filter.toLowerCase())) return false;
-    return true;
+    if (!filter) return true;
+    const q = filter.toLowerCase();
+    const det = typeof e.details === 'string' ? e.details : JSON.stringify(e.details ?? {});
+    return e.action.toLowerCase().includes(q) || e.actor.toLowerCase().includes(q) || det.toLowerCase().includes(q);
   });
 
   const { page, totalPages, paged, next, prev } = usePagination(filtered, 20);
-
-  const levelColor: Record<string, string> = { info: 'text-aic-accent', warning: 'text-aic-yellow', error: 'text-aic-red' };
 
   return (
     <PageShell title="AUDIT LOG">
@@ -34,16 +38,6 @@ export function AuditPage() {
             placeholder="Search..."
             className="bg-aic-bg-dark border-2 border-aic-border text-aic-text font-pixel text-px-xs p-2 focus:outline-none focus:border-aic-accent min-w-[200px]"
           />
-          <select
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
-            className="bg-aic-bg-dark border-2 border-aic-border text-aic-text font-pixel text-px-xs p-2 focus:outline-none focus:border-aic-accent"
-          >
-            <option value="all">ALL LEVELS</option>
-            <option value="info">INFO</option>
-            <option value="warning">WARNING</option>
-            <option value="error">ERROR</option>
-          </select>
           <span className="font-pixel text-px-xs text-aic-text-dim ml-auto">{filtered.length} entries</span>
         </div>
         <div className="panel flex-1 min-h-0 overflow-y-auto">
@@ -57,17 +51,17 @@ export function AuditPage() {
                   <th className="text-left px-3 py-2 text-aic-text-dim">ACTOR</th>
                   <th className="text-left px-3 py-2 text-aic-text-dim">ACTION</th>
                   <th className="text-left px-3 py-2 text-aic-text-dim">DETAILS</th>
-                  <th className="text-left px-3 py-2 text-aic-text-dim">LEVEL</th>
                 </tr>
               </thead>
               <tbody>
-                {paged.map((e) => (
-                  <tr key={e.id} className="border-b border-aic-border hover:bg-aic-bg-panel-dark">
+                {paged.map((e, i) => (
+                  <tr key={i} className="border-b border-aic-border hover:bg-aic-bg-panel-dark">
                     <td className="px-3 py-2 text-aic-text-dim whitespace-nowrap">{new Date(e.timestamp).toLocaleString()}</td>
                     <td className="px-3 py-2 text-aic-text">{e.actor}</td>
                     <td className="px-3 py-2 text-aic-accent">{e.action}</td>
-                    <td className="px-3 py-2 text-aic-text max-w-xs truncate">{e.details}</td>
-                    <td className={`px-3 py-2 font-pixel text-px-xs ${levelColor[e.level] ?? 'text-aic-text-dim'}`}>{e.level.toUpperCase()}</td>
+                    <td className="px-3 py-2 text-aic-text max-w-xs truncate font-mono text-xs">
+                      {typeof e.details === 'string' ? e.details : JSON.stringify(e.details ?? {})}
+                    </td>
                   </tr>
                 ))}
               </tbody>

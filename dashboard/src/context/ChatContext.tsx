@@ -100,16 +100,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           if (data === '[DONE]') break;
           try {
             const parsed = JSON.parse(data);
-            if (parsed.type === 'token' && parsed.content) {
-              dispatch({ type: 'APPEND_STREAM_CHUNK', payload: parsed.content });
-            } else if (parsed.type === 'done') {
-              // Stream complete
-            } else if (parsed.type === 'error') {
-              dispatch({ type: 'SET_ERROR', payload: parsed.message });
+            // OpenAI-compatible SSE: {"choices":[{"delta":{"content":"..."}}]}
+            if (parsed.choices?.[0]?.delta?.content) {
+              dispatch({ type: 'APPEND_STREAM_CHUNK', payload: parsed.choices[0].delta.content });
+            } else if (parsed.error) {
+              dispatch({ type: 'SET_ERROR', payload: typeof parsed.error === 'string' ? parsed.error : parsed.error.message || JSON.stringify(parsed.error) });
             }
           } catch {
-            // Not JSON, treat as raw token
-            dispatch({ type: 'APPEND_STREAM_CHUNK', payload: data });
+            // Not JSON — skip (raw SSE frame noise)
           }
         }
       }

@@ -25,7 +25,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       >
         <div className="px-3 py-1 border-b border-aic-border flex justify-between items-center">
           <span className={`text-px-xs ${isUser ? 'text-aic-accent' : 'text-aic-green'}`}>
-            {message.role.toUpperCase()}
+            {(message.role ?? 'user').toUpperCase()}
           </span>
           <span className="text-px-xs text-aic-text-muted">{formatTimestamp(message.timestamp)}</span>
         </div>

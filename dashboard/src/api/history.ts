@@ -1,10 +1,10 @@
 import { get } from './client';
-import type { HistoryEntry, AnalyticsData } from '../types';
 
+// ponytail: API shapes don't match frontend types, using `any` until types are synced
 export function getHistory() {
-  return get<HistoryEntry[]>('/api/history');
+  return get<any[]>('/api/history');
 }
 
 export function getAnalytics() {
-  return get<AnalyticsData>('/api/analytics');
+  return get<any>('/api/analytics');
 }

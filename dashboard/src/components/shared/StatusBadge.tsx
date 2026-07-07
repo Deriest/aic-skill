@@ -15,7 +15,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   const colors = statusColors[status as WorkerState] ?? statusColors.idle;
   return (
     <span className={`inline-block px-2 py-0.5 font-pixel text-px-xs border ${colors.bg} ${colors.text} ${colors.border}`}>
-      {status.toUpperCase()}
+      {(status ?? 'idle').toUpperCase()}
     </span>
   );
 }
