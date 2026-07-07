@@ -221,9 +221,9 @@ generate_config() {
         "apiKey": "${API_KEY}"
       },
       "models": {
-        "Thinker": { "name": "${MODEL_HIGH_ID}" },
-        "Crafter": { "name": "${MODEL_MID_ID}" },
-        "Sprinter": { "name": "${MODEL_LOW_ID}" }
+        "Thinker": { "name": "${MODEL_HIGH_ID}", "limit": { "context": 512000, "output": 32000 } },
+        "Crafter": { "name": "${MODEL_MID_ID}", "limit": { "context": 256000, "output": 16000 } },
+        "Sprinter": { "name": "${MODEL_LOW_ID}", "limit": { "context": 128000, "output": 8000 } }
       }
     }
   }
@@ -267,9 +267,9 @@ configure_free() {
         "apiKey": "free"
       },
       "models": {
-        "Thinker": { "name": "deepseek-v4-flash-free" },
-        "Crafter": { "name": "deepseek-v4-flash-free" },
-        "Sprinter": { "name": "deepseek-v4-flash-free" }
+        "Thinker": { "name": "deepseek-v4-flash-free", "limit": { "context": 128000, "output": 8000 } },
+        "Crafter": { "name": "deepseek-v4-flash-free", "limit": { "context": 128000, "output": 8000 } },
+        "Sprinter": { "name": "deepseek-v4-flash-free", "limit": { "context": 128000, "output": 8000 } }
       }
     }
   }

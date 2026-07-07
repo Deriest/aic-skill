@@ -20,6 +20,16 @@ Your Hermes agent becomes a **Dispatcher** that classifies tasks, spawns special
 
 **Tier aliases** — workers reference `Thinker`, `Crafter`, `Sprinter` (not model IDs). You pick the actual models during setup.
 
+**Context limits per tier** (configured in `opencode.jsonc`):
+
+| Tier | Context Window | Output | Use for |
+|------|---------------|--------|---------|
+| Thinker | 512K tokens | 32K | PM, Architect — large codebase analysis, complex reasoning |
+| Crafter | 256K tokens | 16K | Engineers, Governor — focused coding tasks |
+| Sprinter | 128K tokens | 8K | QA — fast validation, targeted testing |
+
+Context-gathering script adapts per tier: `context-gather.sh <dir> --tier thinker` (32KB/depth 3) vs `--tier sprinter` (8KB/depth 1).
+
 ## Quick Start
 
 ```bash

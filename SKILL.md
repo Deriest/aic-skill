@@ -516,7 +516,7 @@ For full historical context on all pitfalls, see **`references/pitfalls-history.
     - task.type == "documentation" (README, comments, docstrings)
     - QA PASS = auto-approve for these types
     - Governor still mandatory for: security-sensitive tasks, infrastructure, auth, database, deploy
-19. **Context pre-paste** — before spawning workers, gather project context: `bash ~/.hermes/skills/workflows/aic/scripts/context-gather.sh <project_dir> [max_kb]` (default 8KB). Pipe output into the CONTEXT field of the task handoff. Saves ~2 min per worker vs manual file reading.
+19. **Context pre-paste** — before spawning workers, gather project context: `bash ~/.hermes/skills/workflows/aic/scripts/context-gather.sh <project_dir> --tier <thinker|crafter|sprinter>`. Tier sets context depth + cap automatically. Pipe output into the CONTEXT field of the task handoff.
 
 ## Related References & Templates
 

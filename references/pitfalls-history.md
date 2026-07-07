@@ -119,15 +119,15 @@ This avoids redundant re-entry when the user already set up OpenCode previously.
 
 In `opencode.jsonc`, the **model key** (used in `--model provider/KEY`) is NOT the same as the **model name** sent to the API. OpenCode sends the `name` field to the API endpoint, NOT the key.
 
-**Correct pattern:**
+**Correct pattern (tier names as keys):**
 ```jsonc
 "models": {
-  "opus": { "name": "ActualModelNameFromAPI" },
-  "sonnet": { "name": "AnotherModelName" },
-  "haiku": { "name": "ThirdModelName" }
+  "Thinker": { "name": "ActualModelNameFromAPI" },
+  "Crafter": { "name": "AnotherModelName" },
+  "Sprinter": { "name": "ThirdModelName" }
 }
 ```
-Usage: `opencode run --model myprovider/opus` → sends `ActualModelNameFromAPI` to API.
+Usage: `opencode run --model myprovider/Thinker` → sends `ActualModelNameFromAPI` to API.
 
 **WRONG (causes "No active credentials for provider: openai"):**
 ```jsonc
@@ -136,7 +136,7 @@ Usage: `opencode run --model myprovider/opus` → sends `ActualModelNameFromAPI`
 }
 ```
 
-**Root cause (2026-07-07):** `setup.sh` configure_proxy() was generating keys equal to model names (e.g., `"Opus": {"name": "Opus"}`). When user ran `opencode run --model tvd/opus` (lowercase), OpenCode couldn't find the key and fell back to `openai` provider. Fixed by using generic keys (`opus`, `sonnet`, `haiku`) with `name` set to the actual API model name.
+**Root cause (2026-07-07):** `setup.sh` was generating keys equal to model names. OpenCode couldn't find the key and fell back to `openai` provider. Fixed by using tier keys (`Thinker`, `Crafter`, `Sprinter`) with `name` set to the actual API model name. Tier names were renamed from Opus/Sonnet/Haiku on 2026-07-07 to be provider-agnostic.
 
 ---
 
@@ -149,7 +149,7 @@ The setup flow for custom proxy should:
 4. Let user pick model for each tier (COMPLEX/STANDARD/FAST) by number, with sensible defaults (1/2/3)
 5. Generate `opencode.jsonc` with correct key/name mapping + `.env`
 
-**User correction (2026-07-07):** "gini saat pertama kali setup > masukan open ai compatible address > lalu api key > lalu pilih 3 model untuk replace atau tetap menggunakan nama Opus, Sonnet, Haiku" — User wanted auto-detection, not manual typing of model names.
+**User correction (2026-07-07):** User wanted auto-detection, not manual typing of model names. Setup was simplified from 6 provider options to 3 (API/Free/Skip) with universal OpenAI-compatible flow.
 
 ---
 
