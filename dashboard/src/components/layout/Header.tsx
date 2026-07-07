@@ -3,7 +3,6 @@ import { useDashboard } from '../../context/DashboardContext';
 
 const NAV_ITEMS = [
   { path: '/', label: 'OVERVIEW', icon: '▦', guide: 'Office view — see all workers' },
-  { path: '/chat', label: 'CHAT', icon: '◉', guide: 'Talk to Orchestrator — create tasks here' },
   { path: '/config', label: 'CONFIG', icon: '⚙', guide: 'Tier settings, API keys, model config' },
   { path: '/tasks', label: 'TASKS', icon: '☐', guide: 'Task queue and current task status' },
   { path: '/workers', label: 'WORKERS', icon: '◈', guide: 'Worker monitor — status, tokens, cost' },

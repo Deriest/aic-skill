@@ -42,13 +42,13 @@ export function SystemPage() {
           />
           <MetricCard
             label="Total Tokens"
-            value={cost ? (cost.tokens.input + cost.tokens.output).toLocaleString() : '?'}
-            color="#ffcc00"
-            sub={cost ? `In: ${cost.tokens.input.toLocaleString()} / Out: ${cost.tokens.output.toLocaleString()}` : ''}
+            value={cost ? (cost.totalTokens.input + cost.totalTokens.output).toLocaleString() : '?'}
+            color="#00d4ff"
+            sub={cost ? `In: ${cost.totalTokens.input.toLocaleString()} / Out: ${cost.totalTokens.output.toLocaleString()}` : ''}
           />
           <MetricCard
             label="Total Cost"
-            value={cost ? `$${cost.cost.toFixed(4)}` : '?'}
+            value={cost ? `$${cost.totalCost.toFixed(4)}` : '?'}
             color="#ff8800"
           />
         </div>

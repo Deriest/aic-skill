@@ -27,11 +27,11 @@ interface WorkerInfo {
   circuitBreaker: { state: string; failures: number };
 }
 
-interface QueueTask {
+export interface QueueTask {
   id: string;
   title: string;
   type: string;
-  priority: string;
-  status: string;
+  priority: number;
+  status: 'queued' | 'running' | 'complete' | 'error' | 'cancelled';
   enqueuedAt: string;
 }

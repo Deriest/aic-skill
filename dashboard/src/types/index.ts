@@ -147,8 +147,8 @@ export interface SystemHealth {
 }
 
 export interface CostData {
-  tokens: { input: number; output: number };
-  cost: number;
+  totalTokens: { input: number; output: number };
+  totalCost: number;
 }
 
 // === Task Queue ===
