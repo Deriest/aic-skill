@@ -1,63 +1,90 @@
 # AI Engineering Company (AIC) — Setup Guide
 
-## Install
+## Quick Install
 
 ```bash
-# 1. Install OpenCode
+# 1. Install OpenCode (requires Node.js >= 18)
 npm install -g opencode-ai@latest
 
-# 2. Install skill
-git clone https://github.com/Deriest/aic-skill.git
-cp -r aic-skill/* ~/.hermes/skills/workflows/aic/
-
-# 3. Load and configure
-/aic
+# 2. Run setup script (auto-detects models from proxy)
+bash ~/.hermes/skills/workflows/aic/scripts/setup.sh
 ```
 
-## Configure
+## Setup Flow (Option 1: OpenAI-Compatible Proxy)
 
-The Dispatcher will ask you:
+The setup script will:
+1. Ask for **Base URL** (e.g. `http://192.168.2.11:20128/v1`)
+2. Ask for **API Key**
+3. Auto-fetch models from `{BASE_URL}/models` endpoint
+4. Display a numbered list of available models
+5. Let you pick 3 models for task tiers:
+   - **COMPLEX** (PM, Architect) — default: model #1
+   - **STANDARD** (Engineers, Governor) — default: model #2
+   - **FAST** (QA) — default: model #3
+6. Auto-generate `opencode.jsonc` and `.env`
 
+## Config Files Generated
+
+### `~/.config/opencode/opencode.jsonc`
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "tvd": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "tvd Proxy",
+      "options": {
+        "baseURL": "http://192.168.2.11:20128/v1",
+        "apiKey": "sk-..."
+      },
+      "models": {
+        "Opus": { "name": "actual-model-id-from-api" },
+        "Sonnet": { "name": "actual-model-id-from-api" },
+        "Haiku": { "name": "actual-model-id-from-api" }
+      }
+    }
+  }
+}
 ```
-What is your API key?
-> sk-or-xxx
 
-Choose your model tier:
-  1) Claude (Opus/Sonnet/Haiku) via OpenRouter
-  2) Claude (Opus/Sonnet/Haiku) via Anthropic direct
-  3) GPT-4o / GPT-4o-mini via OpenAI
-  4) Free (deepseek-v4-flash-free) no key needed
-  5) Custom - enter your own models
+**Key:** `Opus`/`Sonnet`/`Haiku` are the OpenCode model keys (used in `--model tvd/Opus`). The `name` field holds the actual API model ID.
 
-> 1
+### `~/.hermes/skills/workflows/aic/.env`
 ```
-
-Done! This saves `.env` and configures OpenCode automatically.
-
-## .env File
-
+PROVIDER_ID=tvd
+MODEL_OPUS=Opus
+MODEL_SONNET=Sonnet
+MODEL_HAIKU=Haiku
 ```
-PROVIDER=openrouter
-API_KEY=sk-or-xxx
-MODEL_OPUS=anthropic/claude-3-opus
-MODEL_SONNET=anthropic/claude-3-sonnet
-MODEL_HAIKU=anthropic/claude-3-haiku
-```
-
-Edit anytime: `~/.hermes/skills/workflows/aic/.env`
 
 ## Usage
 
-```
+```bash
+# Via Hermes
 /aic
 build a REST API for user auth
+
+# Direct OpenCode
+opencode run "implement auth" --model tvd/Sonnet
+opencode run "design system architecture" --model tvd/Opus
+opencode run "run tests" --model tvd/Haiku
 ```
+
+## Other Provider Options
+
+The setup script also supports:
+- **OpenRouter** — multi-provider, requires API key
+- **Anthropic** — Claude direct, requires API key
+- **OpenAI** — GPT direct, requires API key
+- **Free models** — no auth needed (rate-limited)
+- **Skip** — manual config
 
 ## Troubleshooting
 
 | Error | Fix |
 |---|---|
-| opencode: command not found | npm install -g opencode-ai@latest |
-| Config not found | Run /aic to complete first-run setup |
-
-License: MIT
+| `opencode: command not found` | `npm install -g opencode-ai@latest` |
+| `Node.js >= 18 required` | Upgrade Node.js from https://nodejs.org/ |
+| `Failed to fetch models` | Check Base URL and API key; script falls back to manual model entry |
+| `No active credentials for provider: openai` | Model key = API name instead of generic Opus/Sonnet/Haiku. Re-run setup. |
+| Config not found | Run `/aic` to complete first-run setup |

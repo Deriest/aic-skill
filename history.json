@@ -1,0 +1,187 @@
+[
+  {
+    "task": {
+      "title": "Test Task",
+      "type": "feature",
+      "id": "T-1"
+    },
+    "completedAt": "2026-07-07T03:59:26.301Z",
+    "phases": [
+      {
+        "name": "Build",
+        "status": "complete"
+      }
+    ],
+    "agents": {
+      "dev": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Unknown",
+      "type": "feature",
+      "id": ""
+    },
+    "completedAt": "2026-07-07T04:13:03.984Z",
+    "phases": [
+      {
+        "name": "Unknown",
+        "status": "pending"
+      }
+    ],
+    "agents": {
+      "worker-1": {
+        "status": "running"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Test Sprint",
+      "type": "chore",
+      "id": "T-99"
+    },
+    "completedAt": "2026-07-07T04:15:33.058Z",
+    "phases": [
+      {
+        "name": "Implementation",
+        "status": "active"
+      }
+    ],
+    "agents": {
+      "worker-1": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Test Sprint",
+      "type": "chore",
+      "id": "T-99"
+    },
+    "completedAt": "2026-07-07T04:15:52.432Z",
+    "phases": [
+      {
+        "name": "Implementation",
+        "status": "active"
+      }
+    ],
+    "agents": {
+      "worker-1": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Test Sprint",
+      "type": "chore",
+      "id": "T-99"
+    },
+    "completedAt": "2026-07-07T04:16:30.484Z",
+    "phases": [
+      {
+        "name": "Implementation",
+        "status": "active"
+      }
+    ],
+    "agents": {
+      "worker-1": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    }
+  },
+  {
+    "task": null,
+    "completedAt": "2026-07-07T04:20:28.805Z",
+    "phases": [],
+    "agents": {}
+  },
+  {
+    "task": {
+      "title": "Batch2-Test",
+      "type": "feature",
+      "id": "T-B2"
+    },
+    "completedAt": "2026-07-07T04:25:39.012Z",
+    "phases": [],
+    "agents": {
+      "pm": {
+        "status": "working"
+      },
+      "architect": {
+        "status": "complete"
+      },
+      "frontend": {
+        "status": "complete"
+      },
+      "backend": {
+        "status": "complete"
+      },
+      "qa": {
+        "status": "complete"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Batch2-Test",
+      "type": "feature",
+      "id": "T-B2"
+    },
+    "completedAt": "2026-07-07T04:26:07.026Z",
+    "phases": [],
+    "agents": {
+      "pm": {
+        "status": "working"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Test Task",
+      "type": "feature",
+      "id": "T-1"
+    },
+    "completedAt": "2026-07-07T04:27:44.227Z",
+    "phases": [
+      {
+        "name": "Build",
+        "status": "complete"
+      }
+    ],
+    "agents": {
+      "dev": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    }
+  },
+  {
+    "task": {
+      "title": "Test Bash",
+      "type": "feature",
+      "id": "B-1"
+    },
+    "completedAt": "2026-07-07T04:33:03.053Z",
+    "phases": [
+      {
+        "name": "QA",
+        "status": "complete"
+      }
+    ],
+    "agents": {
+      "qa": {
+        "status": "working",
+        "engine": "test"
+      }
+    }
+  }
+]

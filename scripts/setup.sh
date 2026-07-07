@@ -31,22 +31,16 @@ echo -e "${NC}"
 # ============================================
 echo -e "${BLUE}[1/5] Checking dependencies...${NC}"
 
-# Check Node.js
+# Check Node.js >= 18
 if ! command -v node &> /dev/null; then
-    echo -e "${YELLOW}Node.js not found. Installing...${NC}"
-    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
-        echo -e "${RED}Please install Node.js from https://nodejs.org/${NC}"
-        exit 1
-    elif command -v brew &> /dev/null; then
-        brew install node
-    elif command -v apt-get &> /dev/null; then
-        sudo apt-get update && sudo apt-get install -y nodejs npm
-    elif command -v yum &> /dev/null; then
-        sudo yum install -y nodejs npm
-    else
-        echo -e "${RED}Please install Node.js from https://nodejs.org/${NC}"
-        exit 1
-    fi
+    echo -e "${RED}Node.js not found. Please install Node.js >= 18 from https://nodejs.org/${NC}"
+    exit 1
+fi
+
+NODE_VERSION=$(node --version | sed 's/v//' | cut -d. -f1)
+if [[ "$NODE_VERSION" -lt 18 ]]; then
+    echo -e "${RED}Node.js >= 18 required, found v${NODE_VERSION}. Please upgrade from https://nodejs.org/${NC}"
+    exit 1
 fi
 echo -e "${GREEN}✓ Node.js $(node --version)${NC}"
 
@@ -56,6 +50,21 @@ if ! command -v npm &> /dev/null; then
     exit 1
 fi
 echo -e "${GREEN}✓ npm $(npm --version)${NC}"
+
+# Check jq (needed for model fetching)
+if ! command -v jq &> /dev/null; then
+    echo -e "${YELLOW}jq not found. Installing...${NC}"
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get install -y jq 2>/dev/null || true
+    elif command -v brew &> /dev/null; then
+        brew install jq 2>/dev/null || true
+    fi
+    if ! command -v jq &> /dev/null; then
+        echo -e "${RED}jq required for model auto-detection. Install from https://jqlang.github.io/jq/${NC}"
+        exit 1
+    fi
+fi
+echo -e "${GREEN}✓ jq $(jq --version)${NC}"
 
 # ============================================
 # Step 2: Install/Update OpenCode
@@ -99,23 +108,109 @@ read -p "Choose [1-6]: " PROVIDER_CHOICE
 configure_proxy() {
     echo ""
     echo -e "${CYAN}--- OpenAI-Compatible Proxy Setup ---${NC}"
-    read -p "Provider ID (e.g. myproxy): " PROVIDER_ID
-    read -p "Display Name (e.g. My Proxy): " PROVIDER_NAME
-    read -p "Base URL (e.g. https://my-api.com/v1): " BASE_URL
-    read -p "API Key: " API_KEY
     echo ""
-    echo "Now define your models."
-    echo "These will be used for workers (Opus=complex, Sonnet=standard, Haiku=fast)."
-    echo "Enter model IDs as they appear in your API's /v1/models endpoint."
-    echo ""
-    read -p "Complex reasoning model (e.g. claude-3-opus, gpt-4) [opus]: " MODEL_OPUS
-    MODEL_OPUS=${MODEL_OPUS:-opus}
-    read -p "Standard model (e.g. claude-3-sonnet, gpt-4-turbo) [sonnet]: " MODEL_SONNET
-    MODEL_SONNET=${MODEL_SONNET:-sonnet}
-    read -p "Fast/cheap model (e.g. claude-3-haiku, gpt-3.5-turbo) [haiku]: " MODEL_HAIKU
-    MODEL_HAIKU=${MODEL_HAIKU:-haiku}
 
-    # Write opencode config
+    # Step 1: Get connection info
+    read -p "Base URL (e.g. http://192.168.2.11:20128/v1): " BASE_URL
+    # Strip trailing slash
+    BASE_URL="${BASE_URL%/}"
+    read -p "API Key: " API_KEY
+    read -p "Provider ID (used in opencode config, e.g. tvd) [tvd]: " PROVIDER_ID
+    PROVIDER_ID="${PROVIDER_ID:-tvd}"
+
+    # Step 2: Fetch available models
+    echo ""
+    echo -e "${BLUE}Fetching available models from ${BASE_URL}/models ...${NC}"
+
+    MODELS_RESPONSE=$(curl -sf "${BASE_URL}/models" \
+        -H "Authorization: Bearer ${API_KEY}" \
+        -H "Content-Type: application/json" 2>/dev/null) || {
+        echo -e "${RED}Failed to fetch models from ${BASE_URL}/models${NC}"
+        echo -e "${YELLOW}Check your URL and API key. Falling back to manual entry.${NC}"
+        echo ""
+        read -p "Model for COMPLEX tasks (PM, Architect): " MODEL_HIGH_ID
+        read -p "Model for STANDARD tasks (Engineers, Governor): " MODEL_MID_ID
+        read -p "Model for FAST tasks (QA): " MODEL_LOW_ID
+        generate_config
+        return
+    }
+
+    # Parse model IDs into array
+    MODEL_COUNT=$(echo "$MODELS_RESPONSE" | jq -r '.data | length' 2>/dev/null) || {
+        echo -e "${RED}Unexpected response format. Falling back to manual entry.${NC}"
+        read -p "Model for COMPLEX tasks (PM, Architect): " MODEL_HIGH_ID
+        read -p "Model for STANDARD tasks (Engineers, Governor): " MODEL_MID_ID
+        read -p "Model for FAST tasks (QA): " MODEL_LOW_ID
+        generate_config
+        return
+    }
+
+    if [[ "$MODEL_COUNT" -eq 0 ]]; then
+        echo -e "${RED}No models returned. Falling back to manual entry.${NC}"
+        read -p "Model for COMPLEX tasks (PM, Architect): " MODEL_HIGH_ID
+        read -p "Model for STANDARD tasks (Engineers, Governor): " MODEL_MID_ID
+        read -p "Model for FAST tasks (QA): " MODEL_LOW_ID
+        generate_config
+        return
+    fi
+
+    echo -e "${GREEN}Found ${MODEL_COUNT} models:${NC}"
+    echo ""
+
+    # Build indexed arrays
+    declare -a MODEL_IDS=()
+    for i in $(seq 0 $((MODEL_COUNT - 1))); do
+        MID=$(echo "$MODELS_RESPONSE" | jq -r ".data[$i].id")
+        MODEL_IDS+=("$MID")
+        printf "  ${CYAN}%2d)${NC} %s\n" "$((i + 1))" "$MID"
+    done
+
+    echo ""
+
+    # Step 3: Let user pick 3 models with sensible defaults
+    # Default: first = complex, second = standard, third = fast
+    local DEFAULT_HIGH=1
+    local DEFAULT_MID=2
+    local DEFAULT_LOW=3
+    [[ $MODEL_COUNT -lt 2 ]] && DEFAULT_MID=1
+    [[ $MODEL_COUNT -lt 3 ]] && DEFAULT_LOW=$DEFAULT_MID
+
+    read -p "Model for COMPLEX tasks (PM, Architect) [${DEFAULT_HIGH}]: " PICK_HIGH
+    PICK_HIGH="${PICK_HIGH:-$DEFAULT_HIGH}"
+    read -p "Model for STANDARD tasks (Engineers, Governor) [${DEFAULT_MID}]: " PICK_MID
+    PICK_MID="${PICK_MID:-$DEFAULT_MID}"
+    read -p "Model for FAST tasks (QA) [${DEFAULT_LOW}]: " PICK_LOW
+    PICK_LOW="${PICK_LOW:-$DEFAULT_LOW}"
+
+    # Resolve picks (support both number and raw model ID)
+    MODEL_HIGH_ID=$(resolve_model_pick "$PICK_HIGH" "${MODEL_IDS[@]}")
+    MODEL_MID_ID=$(resolve_model_pick "$PICK_MID" "${MODEL_IDS[@]}")
+    MODEL_LOW_ID=$(resolve_model_pick "$PICK_LOW" "${MODEL_IDS[@]}")
+
+    echo ""
+    echo -e "${GREEN}Selected:${NC}"
+    echo "  COMPLEX:  $MODEL_HIGH_ID"
+    echo "  STANDARD: $MODEL_MID_ID"
+    echo "  FAST:     $MODEL_LOW_ID"
+
+    generate_config
+}
+
+resolve_model_pick() {
+    local pick="$1"
+    shift
+    local models=("$@")
+    # If pick is a number, use as index
+    if [[ "$pick" =~ ^[0-9]+$ ]] && [[ "$pick" -ge 1 ]] && [[ "$pick" -le ${#models[@]} ]]; then
+        echo "${models[$((pick - 1))]}"
+    else
+        # Treat as raw model ID
+        echo "$pick"
+    fi
+}
+
+generate_config() {
+    # Generate opencode.jsonc
     mkdir -p ~/.config/opencode
     cat > ~/.config/opencode/opencode.jsonc << EOCONFIG
 {
@@ -123,25 +218,33 @@ configure_proxy() {
   "provider": {
     "${PROVIDER_ID}": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "${PROVIDER_NAME}",
+      "name": "${PROVIDER_ID} Proxy",
       "options": {
         "baseURL": "${BASE_URL}",
         "apiKey": "${API_KEY}"
       },
       "models": {
-        "${MODEL_OPUS}": { "name": "${MODEL_OPUS}" },
-        "${MODEL_SONNET}": { "name": "${MODEL_SONNET}" },
-        "${MODEL_HAIKU}": { "name": "${MODEL_HAIKU}" }
+        "Opus": { "name": "${MODEL_HIGH_ID}" },
+        "Sonnet": { "name": "${MODEL_MID_ID}" },
+        "Haiku": { "name": "${MODEL_LOW_ID}" }
       }
     }
   }
 }
 EOCONFIG
 
-    PROVIDER_PREFIX="${PROVIDER_ID}"
-    MODEL_HIGH="${MODEL_OPUS}"
-    MODEL_MID="${MODEL_SONNET}"
-    MODEL_LOW="${MODEL_HAIKU}"
+    echo -e "${GREEN}✓ OpenCode config written to ~/.config/opencode/opencode.jsonc${NC}"
+
+    # Generate .env for Dispatcher use
+    cat > "${SKILL_DIR}/.env" << EOENV
+# AI Engineering Company — Auto-generated by setup.sh
+PROVIDER_ID=${PROVIDER_ID}
+MODEL_OPUS=Opus
+MODEL_SONNET=Sonnet
+MODEL_HAIKU=Haiku
+EOENV
+
+    echo -e "${GREEN}✓ .env written to ${SKILL_DIR}/.env${NC}"
 }
 
 configure_openrouter() {
@@ -162,19 +265,27 @@ configure_openrouter() {
         "apiKey": "${API_KEY}"
       },
       "models": {
-        "anthropic/claude-3-opus": { "name": "Claude 3 Opus" },
-        "anthropic/claude-3-sonnet": { "name": "Claude 3 Sonnet" },
-        "anthropic/claude-3-haiku": { "name": "Claude 3 Haiku" }
+        "Opus": { "name": "anthropic/claude-3-opus" },
+        "Sonnet": { "name": "anthropic/claude-3-sonnet" },
+        "Haiku": { "name": "anthropic/claude-3-haiku" }
       }
     }
   }
 }
 EOCONFIG
 
+    cat > "${SKILL_DIR}/.env" << EOENV
+# AI Engineering Company — Auto-generated by setup.sh
+PROVIDER_ID=openrouter
+MODEL_OPUS=Opus
+MODEL_SONNET=Sonnet
+MODEL_HAIKU=Haiku
+EOENV
+
     PROVIDER_PREFIX="openrouter"
-    MODEL_HIGH="anthropic/claude-3-opus"
-    MODEL_MID="anthropic/claude-3-sonnet"
-    MODEL_LOW="anthropic/claude-3-haiku"
+    MODEL_HIGH="Opus"
+    MODEL_MID="Sonnet"
+    MODEL_LOW="Haiku"
 }
 
 configure_anthropic() {
@@ -194,19 +305,27 @@ configure_anthropic() {
         "apiKey": "${API_KEY}"
       },
       "models": {
-        "claude-3-opus-20240229": { "name": "Claude 3 Opus" },
-        "claude-3-sonnet-20240229": { "name": "Claude 3 Sonnet" },
-        "claude-3-haiku-20240307": { "name": "Claude 3 Haiku" }
+        "Opus": { "name": "claude-3-opus-20240229" },
+        "Sonnet": { "name": "claude-3-sonnet-20240229" },
+        "Haiku": { "name": "claude-3-haiku-20240307" }
       }
     }
   }
 }
 EOCONFIG
 
+    cat > "${SKILL_DIR}/.env" << EOENV
+# AI Engineering Company — Auto-generated by setup.sh
+PROVIDER_ID=anthropic
+MODEL_OPUS=Opus
+MODEL_SONNET=Sonnet
+MODEL_HAIKU=Haiku
+EOENV
+
     PROVIDER_PREFIX="anthropic"
-    MODEL_HIGH="claude-3-opus-20240229"
-    MODEL_MID="claude-3-sonnet-20240229"
-    MODEL_LOW="claude-3-haiku-20240307"
+    MODEL_HIGH="Opus"
+    MODEL_MID="Sonnet"
+    MODEL_LOW="Haiku"
 }
 
 configure_openai() {
@@ -226,19 +345,27 @@ configure_openai() {
         "apiKey": "${API_KEY}"
       },
       "models": {
-        "gpt-4o": { "name": "GPT-4o" },
-        "gpt-4o-mini": { "name": "GPT-4o Mini" },
-        "gpt-4-turbo": { "name": "GPT-4 Turbo" }
+        "Opus": { "name": "gpt-4o" },
+        "Sonnet": { "name": "gpt-4o-mini" },
+        "Haiku": { "name": "gpt-4o-mini" }
       }
     }
   }
 }
 EOCONFIG
 
+    cat > "${SKILL_DIR}/.env" << EOENV
+# AI Engineering Company — Auto-generated by setup.sh
+PROVIDER_ID=openai
+MODEL_OPUS=Opus
+MODEL_SONNET=Sonnet
+MODEL_HAIKU=Haiku
+EOENV
+
     PROVIDER_PREFIX="openai"
-    MODEL_HIGH="gpt-4o"
-    MODEL_MID="gpt-4o-mini"
-    MODEL_LOW="gpt-4o-mini"
+    MODEL_HIGH="Opus"
+    MODEL_MID="Sonnet"
+    MODEL_LOW="Haiku"
 }
 
 configure_free() {
@@ -266,6 +393,12 @@ configure_skip() {
     MODEL_LOW="YOUR_HAIKU_MODEL"
 }
 
+# Initialize vars for proxy path (which uses generate_config instead)
+PROVIDER_PREFIX=""
+MODEL_HIGH=""
+MODEL_MID=""
+MODEL_LOW=""
+
 case $PROVIDER_CHOICE in
     1) configure_proxy ;;
     2) configure_openrouter ;;
@@ -276,7 +409,13 @@ case $PROVIDER_CHOICE in
     *) echo -e "${RED}Invalid choice${NC}"; exit 1 ;;
 esac
 
-echo -e "${GREEN}✓ Provider configured: ${PROVIDER_PREFIX}${NC}"
+# For non-proxy providers, PROVIDER_PREFIX/MODEL_* are set in their functions
+# For proxy, generate_config already handled everything
+if [[ -n "$PROVIDER_PREFIX" ]]; then
+    echo -e "${GREEN}✓ Provider configured: ${PROVIDER_PREFIX}${NC}"
+else
+    echo -e "${GREEN}✓ Provider configured (see opencode.jsonc)${NC}"
+fi
 
 # ============================================
 # Step 4: Install Skill
@@ -311,20 +450,14 @@ echo -e "${GREEN}✓ Skill installed to ${SKILL_DIR}${NC}"
 # ============================================
 echo -e "${BLUE}[5/5] Updating model assignments...${NC}"
 
-if [[ "$PROVIDER_PREFIX" != "YOUR_PROVIDER" ]]; then
+if [[ -n "$PROVIDER_PREFIX" && "$PROVIDER_PREFIX" != "YOUR_PROVIDER" ]]; then
     # Replace model references in SKILL.md
-    # Handle provider/model format (e.g. "openrouter/anthropic/claude-3-opus")
-    if [[ "$PROVIDER_PREFIX" == "opencode" ]]; then
-        # Free models: just use the model name with opencode prefix
-        sed -i "s|tvdproxy/Opus|opencode/${MODEL_HIGH}|g" "$SKILL_DIR/SKILL.md"
-        sed -i "s|tvdproxy/Sonnet|opencode/${MODEL_MID}|g" "$SKILL_DIR/SKILL.md"
-        sed -i "s|tvdproxy/Haiku|opencode/${MODEL_LOW}|g" "$SKILL_DIR/SKILL.md"
-    else
-        sed -i "s|tvdproxy/Opus|${PROVIDER_PREFIX}/${MODEL_HIGH}|g" "$SKILL_DIR/SKILL.md"
-        sed -i "s|tvdproxy/Sonnet|${PROVIDER_PREFIX}/${MODEL_MID}|g" "$SKILL_DIR/SKILL.md"
-        sed -i "s|tvdproxy/Haiku|${PROVIDER_PREFIX}/${MODEL_LOW}|g" "$SKILL_DIR/SKILL.md"
-    fi
+    sed -i "s|tvdproxy/Opus|${PROVIDER_PREFIX}/${MODEL_HIGH}|g" "$SKILL_DIR/SKILL.md"
+    sed -i "s|tvdproxy/Sonnet|${PROVIDER_PREFIX}/${MODEL_MID}|g" "$SKILL_DIR/SKILL.md"
+    sed -i "s|tvdproxy/Haiku|${PROVIDER_PREFIX}/${MODEL_LOW}|g" "$SKILL_DIR/SKILL.md"
     echo -e "${GREEN}✓ Models updated in SKILL.md${NC}"
+elif [[ "$PROVIDER_CHOICE" == "1" ]]; then
+    echo -e "${GREEN}✓ Proxy config complete — SKILL.md uses model aliases${NC}"
 else
     echo -e "${YELLOW}⚠ Manual model update needed in SKILL.md${NC}"
 fi
@@ -340,14 +473,17 @@ echo ""
 echo -e "${GREEN}Installed:${NC}"
 echo "  • OpenCode: $(opencode --version 2>/dev/null || echo 'check manually')"
 echo "  • Skill: $SKILL_DIR"
-echo "  • Provider: $PROVIDER_PREFIX"
 echo ""
-echo -e "${GREEN}Model Assignment:${NC}"
-echo "  • Opus (complex):  ${PROVIDER_PREFIX}/${MODEL_HIGH}"
-echo "  • Sonnet (standard): ${PROVIDER_PREFIX}/${MODEL_MID}"
-echo "  • Haiku (fast):    ${PROVIDER_PREFIX}/${MODEL_LOW}"
+echo -e "${GREEN}Config:${NC}"
+echo "  • opencode.jsonc: ~/.config/opencode/opencode.jsonc"
+echo "  • .env:           ${SKILL_DIR}/.env"
 echo ""
 echo -e "${GREEN}Usage:${NC}"
+echo "  opencode run --model ${PROVIDER_ID:-YOUR_PROVIDER}/Opus   # complex tasks"
+echo "  opencode run --model ${PROVIDER_ID:-YOUR_PROVIDER}/Sonnet # standard tasks"
+echo "  opencode run --model ${PROVIDER_ID:-YOUR_PROVIDER}/Haiku  # fast tasks"
+echo ""
+echo -e "${GREEN}Or in Hermes:${NC}"
 echo "  1. Start Hermes:  hermes"
 echo "  2. Load skill:    /aic"
 echo "  3. Give task:     build a REST API for user auth"

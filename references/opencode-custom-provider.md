@@ -62,13 +62,17 @@ opencode run "task" --model YOUR_PROVIDER_ID/sonnet
         "apiKey": "sk-..."
       },
       "models": {
-        "gpt-4": { "name": "GPT-4" },
-        "gpt-3.5": { "name": "GPT-3.5 Turbo" }
+        "opus": { "name": "GPT-4" },
+        "sonnet": { "name": "GPT-3.5 Turbo" },
+        "haiku": { "name": "GPT-3.5 Turbo" }
       }
     }
   }
 }
 ```
+Usage: `opencode run --model myproxy/opus` → sends `GPT-4` to API.
+
+⚠️ Model keys MUST be `opus`, `sonnet`, `haiku` (generic). The `name` field holds the actual API model name. Do NOT use the API model name as the key — it breaks `opencode run`.
 
 ### OpenRouter
 
@@ -83,9 +87,9 @@ opencode run "task" --model YOUR_PROVIDER_ID/sonnet
         "apiKey": "sk-or-..."
       },
       "models": {
-        "anthropic/claude-3-opus": { "name": "Claude 3 Opus" },
-        "anthropic/claude-3-sonnet": { "name": "Claude 3 Sonnet" },
-        "anthropic/claude-3-haiku": { "name": "Claude 3 Haiku" }
+        "opus": { "name": "anthropic/claude-3-opus" },
+        "sonnet": { "name": "anthropic/claude-3-sonnet" },
+        "haiku": { "name": "anthropic/claude-3-haiku" }
       }
     }
   }
@@ -151,9 +155,10 @@ opencode run "say hello" --model YOUR_PROVIDER_ID/sonnet
 
 | Error | Cause | Fix |
 |---|---|---|
+| `No active credentials for provider: openai` | Model key = API model name instead of generic `opus/sonnet/haiku` | Use generic keys, put API name in `name` field |
 | `No active credentials for provider: openai` | Using `provider.openai` with custom baseURL | Use custom provider ID |
 | `API key invalid` | Wrong API key | Check provider dashboard |
-| `Model not found` | Model ID mismatch | Check `/v1/models` endpoint |
+| `Model not found` | Model ID mismatch | Check `/v1/models` endpoint, verify `name` field matches |
 | `Connection refused` | Wrong baseURL | Verify URL format |
 | `Binary locked` (Windows) | OpenCode process running | `taskkill /F /IM opencode.exe` |
 | `Binary locked` (Linux/macOS) | OpenCode process running | `pkill opencode` |

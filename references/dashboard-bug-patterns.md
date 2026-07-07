@@ -46,9 +46,9 @@ The polling hook dispatches `MERGE_STATUS` instead of `UPDATE_STATUS`. The reduc
 
 **ServerStatus type changed:** `log: { message, type }` → `logs: Array<{ message, type }>` in `src/types/index.ts`.
 
-**Files changed:**
-- `scripts/update-status.py` — `append_log()` helper, `logs` array in status, backward-compat `log` field
-- `scripts/server.js` — `drainLogs()` function on GET, returns `{ ...status, logs: pendingLogs }`
+**NOTE (2026-07-07):** The drain-on-read pattern was briefly broken when the server was consolidated to a ring buffer. Restored in Bug 11 fix — server drains both `state.logs` and `state.log` on GET, flushes to disk.
+
+## Bug 2 (superseded): Log Dedup Blocks Accumulation — then Ring Buffer Clash ⚠️ OPEN
 - `src/hooks/useStatusPolling.ts` — Removed `seenLogsRef`, iterates `data.logs` array
 - `src/types/index.ts` — `ServerStatus.log` → `ServerStatus.logs: Array<...>`
 
@@ -223,6 +223,44 @@ export function StatusBubble({ status }: StatusBubbleProps) {
 2. `Sidebar.tsx` — add `h-full` to wrapper div
 3. `TaskInfoPanel.tsx` + `PipelinePanel.tsx` — add `flex-1` to panel divs
 
+## Bug 11: Ring Buffer + APPEND_LOG = Duplicate Logs ✅ FIXED (2026-07-07)
+
+**Symptom:** Activity log grows unboundedly, showing the same entries repeatedly (every 2s poll cycle). User saw: "ini kenapa mengulang2" in activity log.
+
+**Root Cause (2026-07-07):** Server was consolidated from Python+Node hybrid to single Node authority (Batch 2). The ring buffer (100 entries, in-memory) returns the same `state.logs` array on every GET `/api/status`. But `useStatusPolling.ts` still iterates `data.logs` and dispatches `APPEND_LOG` for every entry on every poll — the server never clears the array, so every entry gets re-appended with a new UUID each cycle.
+
+**Fix Applied — SERVER-SIDE drain (not client-side SET_LOGS):**
+
+Rather than adding a new `SET_LOGS` reducer action on the client, the fix restores the drain-on-read pattern on the server. This keeps the client code unchanged and maintains the original contract: "client receives logs once, server clears them after read."
+
+Three changes in `server.js` GET `/api/status` handler:
+```js
+// 1. Snapshot logs + backward-compat log field
+const logsOut = state.logs.slice();
+const logOut = state.log;
+
+// 2. Drain both
+state.logs = [];
+state.log = null;
+
+// 3. Persist drain to disk (prevents re-delivery on restart)
+flush();
+```
+
+**Sub-bug: `state.log` also needed draining.** The backward-compat `log` field (single latest entry) was never cleared. Even after draining `state.logs`, the `log` field persisted old entries. This caused grep-based test assertions to still match on poll 2+.
+
+**Verification (ad-hoc):** Seed 2 unique markers via POST `/api/log`, then 3 sequential GET polls:
+```
+P1 X=1 Y=1   ← delivered once
+P2 X=0 Y=0   ← drained
+P3 X=0 Y=0   ← still empty
+```
+
+**Files changed:**
+- `scripts/server.js` — Drain `state.logs` + `state.log` on GET, flush to disk
+
+**Why server-side over client-side:** The original Bug 2 fix established a drain-on-read contract. The ring buffer consolidation broke that contract. Restoring it server-side (3 lines) is simpler than changing client reducer + types + hook. The client's `APPEND_LOG` loop remains correct — it processes a drained queue exactly once.
+
 ## Component Quick Reference
 
 | File | Purpose | Key Changes (2026-07-06) |
@@ -239,8 +277,7 @@ export function StatusBubble({ status }: StatusBubbleProps) {
 | `Sidebar.tsx` | Task + Pipeline panels | `h-full` for height fill |
 | `TaskInfoPanel.tsx` | Current task display | `flex-1` for sidebar fill |
 | `PipelinePanel.tsx` | Pipeline phases | `flex-1` for sidebar fill |
-| `update-status.py` | CLI status updater | `logs` queue array, `append_log()` helper |
-| `server.js` | Node API server (port 3000) | `drainLogs()` on GET, returns cleared logs |
+| `server.js` | Node API server (port 6868) | Single authority: in-memory state, ring buffer (100 logs), drain-on-read (Bug 11 fix), POST endpoints, history.json, restart resilience |
 | `types/index.ts` | TypeScript types | `MERGE_STATUS` action, `ServerStatus.logs` array |
 
 ## Dashboard Ports
@@ -248,4 +285,4 @@ export function StatusBubble({ status }: StatusBubbleProps) {
 | Service | Port | Notes |
 |---------|------|-------|
 | Vite dev server | **6969** | React UI |
-| Status API (Node) | **3000** | `/api/status` JSON |
+| Status API (Node) | **6868** | `/api/status` JSON |
