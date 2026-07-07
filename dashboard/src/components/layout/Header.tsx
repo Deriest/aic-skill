@@ -1,54 +1,60 @@
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useDashboard } from '../../context/DashboardContext';
-import { ConnectionIndicator } from './ConnectionIndicator';
 
-const navItems = [
-  { path: '/', label: 'OVERVIEW', icon: '▦' },
-  { path: '/chat', label: 'CHAT', icon: '◉' },
-  { path: '/config', label: 'CONFIG', icon: '⚙' },
-  { path: '/tasks', label: 'TASKS', icon: '☐' },
-  { path: '/workers', label: 'WORKERS', icon: '◈' },
-  { path: '/history', label: 'HISTORY', icon: '◷' },
-  { path: '/audit', label: 'AUDIT', icon: '◉' },
-  { path: '/system', label: 'SYSTEM', icon: '▣' },
+const NAV_ITEMS = [
+  { path: '/', label: 'OVERVIEW', icon: '▦', guide: 'Office view — see all workers' },
+  { path: '/chat', label: 'CHAT', icon: '◉', guide: 'Talk to Orchestrator — create tasks here' },
+  { path: '/config', label: 'CONFIG', icon: '⚙', guide: 'Tier settings, API keys, model config' },
+  { path: '/tasks', label: 'TASKS', icon: '☐', guide: 'Task queue and current task status' },
+  { path: '/workers', label: 'WORKERS', icon: '◈', guide: 'Worker monitor — status, tokens, cost' },
+  { path: '/history', label: 'HISTORY', icon: '◷', guide: 'Completed tasks and analytics' },
+  { path: '/audit', label: 'AUDIT', icon: '◉', guide: 'Full audit log of all actions' },
+  { path: '/system', label: 'SYSTEM', icon: '▣', guide: 'Health, uptime, cost, environment' },
 ];
 
 export function Header() {
+  const location = useLocation();
   const { state } = useDashboard();
+  const isOnline = state.connected;
 
   return (
-    <header className="sticky top-0 z-40 bg-gradient-to-b from-[#16213e] to-aic-bg-dark border-b-4 border-aic-accent relative">
-      <div className="px-4 py-3 md:px-6 md:py-3 flex justify-between items-center">
-        <h1 className="font-pixel text-px-lg text-aic-accent text-glow-accent tracking-wider shrink-0">
-          ▸ AIC OFFICE
-        </h1>
-        <nav className="flex gap-1 ml-4 overflow-x-auto">
-          {navItems.map((item) => (
-            <NavLink
+    <header className="border-b-2 border-aic-accent bg-aic-surface px-4 py-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="font-pixel text-px-lg text-aic-accent">▸ AIC OFFICE</span>
+          <span className="font-pixel text-px-xs text-aic-text-muted hidden sm:inline">Control Plane</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-aic-green' : 'bg-aic-red'}`} />
+          <span className={`font-pixel text-px-sm ${isOnline ? 'text-aic-green' : 'text-aic-red'}`}>
+            {isOnline ? 'ONLINE' : 'OFFLINE'}
+          </span>
+        </div>
+      </div>
+
+      <nav className="flex gap-1 mt-3 overflow-x-auto pb-1">
+        {NAV_ITEMS.map((item) => {
+          const active = location.pathname === item.path;
+          return (
+            <Link
               key={item.path}
               to={item.path}
-              end={item.path === '/'}
-              className={({ isActive }) =>
-                `font-pixel text-px-xs px-2 py-1.5 whitespace-nowrap border-2 transition-colors ${
-                  isActive
-                    ? 'border-aic-accent text-aic-accent bg-aic-bg-panel'
-                    : 'border-transparent text-aic-text-dim hover:text-aic-text hover:border-aic-border'
-                }`
-              }
+              title={item.guide}
+              className={`
+                font-pixel text-px-sm px-4 py-2 border-2 transition-all whitespace-nowrap
+                flex items-center gap-2
+                ${active
+                  ? 'border-aic-accent text-aic-accent bg-aic-surface shadow-[0_0_8px_rgba(0,212,255,0.3)]'
+                  : 'border-transparent text-aic-text-muted hover:border-aic-border hover:text-aic-text'}
+              `}
             >
-              <span className="mr-1">{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <ConnectionIndicator connected={state.connected} />
-      </div>
-      {/* Animated dashed border */}
-      <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden translate-y-full">
-        <div className="w-[200%] h-full animate-scroll-border" style={{
-          background: 'repeating-linear-gradient(90deg, #00d4ff 0px, #00d4ff 8px, transparent 8px, transparent 16px)',
-        }} />
-      </div>
+              <span className="text-base">{item.icon}</span>
+              <span>{item.label}</span>
+              {item.guide && <span className="text-aic-yellow text-px-xs ml-1 opacity-60">(!)</span>}
+            </Link>
+          );
+        })}
+      </nav>
     </header>
   );
 }
