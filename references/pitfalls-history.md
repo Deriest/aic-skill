@@ -193,11 +193,11 @@ OpenCode supports `limit` per model in `opencode.jsonc`. This controls context w
 }
 ```
 
-**AIC tier limits:**
+**AIC tier limits (for 1M context models):**
 ```jsonc
-"Thinker":  { "name": "...", "limit": { "context": 512000, "output": 32000 } },
-"Crafter":  { "name": "...", "limit": { "context": 256000, "output": 16000 } },
-"Sprinter": { "name": "...", "limit": { "context": 128000, "output": 8000 } }
+"Thinker":  { "name": "...", "limit": { "context": 800000, "output": 64000 } },
+"Crafter":  { "name": "...", "limit": { "context": 512000, "output": 32000 } },
+"Sprinter": { "name": "...", "limit": { "context": 256000, "output": 16000 } }
 ```
 
 **Why this matters:** Even if the underlying model supports 1M tokens, setting `limit.context` constrains OpenCode's context window per tier. Thinker gets more room for codebase analysis, Sprinter stays fast with less context. Combined with tier-aware `context-gather.sh --tier`, this prevents context overflow and controls cost.

@@ -144,10 +144,17 @@ Features:
 |----------|------|----------|
 | `build X` | feature | PM → Architect → [Designer] → Engineers → QA → Governor |
 | `fix X` | bug | Engineer (→ QA if complex) |
-| `research X` | research | Researcher |
+| `research X` | research | Researcher (→ PM if actionable) |
 | `design Y` | design | Designer |
 | `audit X` | security | Backend → Governor |
 | `deploy X` | infra | Infra → QA |
+| `try/spike X` | experiment | Researcher → Architect (POC, not production) |
+| `optimize X` | optimize | Architect → Engineers → QA |
+| `improve X` | iterate | PM → Engineers → QA |
+| `migrate X to Y` | migrate | Architect → Engineers → QA → Governor |
+| `clean up X` | maintain | Engineers → QA |
+| `plan X` | planning | PM → Architect (specs only, no code) |
+| `develop X` | develop | PM → Architect → Engineers → QA (multi-session) |
 
 ## Config
 

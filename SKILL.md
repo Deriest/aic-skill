@@ -166,7 +166,7 @@ Scan user input for keywords (case-insensitive). First match wins:
 | add, implement, feature, build, create, new | **feature** | PM → Architect → Engineers → QA → Governor |
 | bug, broken, error, fail, crash | **bug** | Engineer(s) → optionally QA |
 | urgent fix, hotfix, production down | **hotfix** | Backend Engineer |
-| research, investigate, analyze, compare | **research** | Researcher |
+| research, investigate, analyze, compare | **research** | Researcher (→ PM if actionable) |
 | design, UX, interface, wireframe, mockup | **design** | Designer |
 | incident, outage, down | **incident** | Infrastructure Engineer |
 | security, vulnerability, CVE, exploit | **security_review** | Backend Engineer → Governor |
@@ -175,6 +175,13 @@ Scan user input for keywords (case-insensitive). First match wins:
 | knowledge, learning | **knowledge_review** | Governor |
 | test, QA, quality, coverage | **testing** | QA Engineer |
 | deploy, CI/CD, infrastructure, server | **infrastructure** | Infrastructure Engineer |
+| spike, experiment, try, validate, feasibility, POC | **experiment** | Researcher → Architect (rapid prototype) |
+| optimize, performance, speed, memory, refactor, clean | **optimize** | Architect → Engineer(s) (analyze then fix) |
+| improve, iterate, enhance, polish, tweak | **iterate** | PM (feedback) → Engineer(s) → QA |
+| migrate, upgrade, move, switch, replace | **migrate** | Architect → Engineers → QA (phased) |
+| maintain, update deps, tech debt, cleanup | **maintain** | Engineer(s) → QA (batch) |
+| plan, roadmap, strategy, long-term, phase | **planning** | PM → Architect (no code, specs only) |
+| develop, work on, continue, progress | **develop** | PM → Architect → Engineers → QA (full cycle) |
 
 ### Disambiguation
 
@@ -208,6 +215,47 @@ If still uncertain → ask Operator.
 
 ### All Others (single phase)
 Spawn the single listed worker. One task, one worker.
+
+### Experiment (2 phases — rapid)
+1. **Researcher** → feasibility analysis, existing solutions, trade-offs
+2. **Architect** → rapid prototype / spike (minimal code, validate concept)
+
+Goal: answer "is this possible / worth it?" fast. Not production code.
+
+### Optimize (2-3 phases)
+1. **Architect** → analyze bottlenecks, identify root causes
+2. **Engineer(s)** → implement fixes (parallel if independent areas)
+3. **QA** → verify improvements (benchmarks, before/after)
+
+### Iterate (2-3 phases)
+1. **PM** → interpret feedback, prioritize changes
+2. **Engineer(s)** → implement improvements
+3. **QA** → regression test
+
+Use when existing feature needs refinement based on user feedback or usage data.
+
+### Migrate (3-4 phases)
+1. **Architect** → migration plan, compatibility analysis, rollback strategy
+2. **Engineer(s)** → implement migration (can be phased: old + new side-by-side)
+3. **QA** → verify old → new, no data loss
+4. **Governor** → compliance check (if breaking changes)
+
+### Maintain (1-2 phases)
+1. **Engineer(s)** → batch updates (deps, tech debt, dead code)
+2. **QA** → smoke test after changes
+
+### Planning (1 phase, no code)
+1. **PM** → roadmap, prioritization, acceptance criteria
+2. **Architect** → technical feasibility, ADR, system design
+
+Output: specs and plans only. No code written.
+
+### Develop (full cycle — long-running)
+Same as Feature workflow but explicitly supports multi-session:
+- Phase 1: PM + Architect (plan)
+- Phase 2+: Engineers implement incrementally
+- Each sub-task can be a separate `/aic` invocation
+- Progress tracked across sessions via history.json
 
 ---
 
