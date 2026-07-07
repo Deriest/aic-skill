@@ -151,6 +151,7 @@ Features:
 | `try/spike X` | experiment | Researcher → Architect (POC, not production) |
 | `optimize X` | optimize | Architect → Engineers → QA |
 | `improve X` | iterate | PM → Engineers → QA |
+| `edit/fix X that doesn't match` | refine | Engineer(s) (targeted fix) |
 | `migrate X to Y` | migrate | Architect → Engineers → QA → Governor |
 | `clean up X` | maintain | Engineers → QA |
 | `plan X` | planning | PM → Architect (specs only, no code) |

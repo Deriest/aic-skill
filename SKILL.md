@@ -178,6 +178,7 @@ Scan user input for keywords (case-insensitive). First match wins:
 | spike, experiment, try, validate, feasibility, POC | **experiment** | Researcher → Architect (rapid prototype) |
 | optimize, performance, speed, memory, refactor, clean | **optimize** | Architect → Engineer(s) (analyze then fix) |
 | improve, iterate, enhance, polish, tweak | **iterate** | PM (feedback) → Engineer(s) → QA |
+| adjust, fix wrong, doesn't match, nggak sesuai, refine, correct, edit, redo | **refine** | Engineer(s) (targeted fix, no full pipeline) |
 | migrate, upgrade, move, switch, replace | **migrate** | Architect → Engineers → QA (phased) |
 | maintain, update deps, tech debt, cleanup | **maintain** | Engineer(s) → QA (batch) |
 | plan, roadmap, strategy, long-term, phase | **planning** | PM → Architect (no code, specs only) |
@@ -233,6 +234,12 @@ Goal: answer "is this possible / worth it?" fast. Not production code.
 3. **QA** → regression test
 
 Use when existing feature needs refinement based on user feedback or usage data.
+
+### Refine (1-2 phases)
+1. **Engineer(s)** → targeted fix — read spec/requirement, edit what doesn't match
+2. [Optional] **QA** → verify fix matches spec
+
+Use when output exists but doesn't match the spec, design, or requirement. Not a bug (it works), not a feature (it exists) — just wrong. Fast fix, no full pipeline.
 
 ### Migrate (3-4 phases)
 1. **Architect** → migration plan, compatibility analysis, rollback strategy
