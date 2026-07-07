@@ -72,13 +72,12 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
           )}
 
           {/* Doodle Art ASCII Character (Bottom Right) */}
-          <div className="absolute -bottom-4 -right-4 opacity-20 pointer-events-none select-none font-mono text-[8px] leading-[8px] whitespace-pre text-aic-accent">
-{`   _____
-  /     \\
- | () () |
-  \\  ^  /
-   |||||
-   |||||`}
+          <div className="absolute bottom-2 right-4 opacity-30 pointer-events-none select-none font-mono text-[9px] leading-[10px] whitespace-pre text-aic-accent text-right">
+{` HAPPY CODING!
+     \\
+    [>_<]
+   /|AIC|\\
+    _|_|_`}
           </div>
         </div>
       </div>
