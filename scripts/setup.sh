@@ -340,6 +340,85 @@ fi
 echo -e "${GREEN}✓ Skill installed to ${SKILL_DIR}${NC}"
 
 # ============================================
+# Phase 3: Git Integration (optional)
+# ============================================
+echo ""
+echo -e "${CYAN}Git Integration${NC}"
+read -p "Do you have a GitHub token (ghp_...)? [y/N]: " HAS_GIT
+if [[ "$HAS_GIT" =~ ^[Yy] ]]; then
+    read -p "Enter your GitHub token (ghp_...): " GITHUB_TOKEN
+    echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> "$SKILL_DIR/.env"
+    read -p "Auto-create branches and PRs? [Y/n]: " AUTO_GIT
+    if [[ ! "$AUTO_GIT" =~ ^[Nn] ]]; then
+        echo "GIT_AUTO_BRANCH=true" >> "$SKILL_DIR/.env"
+        echo "GIT_AUTO_PR=true" >> "$SKILL_DIR/.env"
+        echo -e "${GREEN}  ✓ Git integration enabled (auto-branch + auto-PR)${NC}"
+    else
+        echo "GIT_AUTO_BRANCH=false" >> "$SKILL_DIR/.env"
+        echo "GIT_AUTO_PR=false" >> "$SKILL_DIR/.env"
+        echo -e "${GREEN}  ✓ Git integration enabled (manual mode)${NC}"
+    fi
+else
+    echo "GITHUB_TOKEN=" >> "$SKILL_DIR/.env"
+    echo "GIT_AUTO_BRANCH=false" >> "$SKILL_DIR/.env"
+    echo "GIT_AUTO_PR=false" >> "$SKILL_DIR/.env"
+    echo -e "${YELLOW}  ⚠ Git integration disabled (local only)${NC}"
+fi
+
+# ============================================
+# Phase 3: Multi-Repo Support (optional)
+# ============================================
+echo ""
+echo -e "${CYAN}Multi-Repo Support${NC}"
+read -p "Do you have multiple repos for this project? [y/N]: " HAS_MULTI
+if [[ "$HAS_MULTI" =~ ^[Yy] ]]; then
+    echo "Enter repo paths with roles (empty line to finish):"
+    echo "Example: /home/user/frontend-app frontend"
+    REPOS=""
+    while true; do
+        read -p "  Repo path + role: " REPO_LINE
+        if [[ -z "$REPO_LINE" ]]; then break; fi
+        REPOS="$REPOS$REPO_LINE;"
+    done
+    if [[ -n "$REPOS" ]]; then
+        echo "MULTI_REPOS=$REPOS" >> "$SKILL_DIR/.env"
+        echo -e "${GREEN}  ✓ Multi-repo configured${NC}"
+    fi
+else
+    echo "MULTI_REPOS=" >> "$SKILL_DIR/.env"
+    echo -e "${YELLOW}  ⚠ Single-repo mode${NC}"
+fi
+
+# ============================================
+# Phase 3: Webhook Notifications (optional)
+# ============================================
+echo ""
+echo -e "${CYAN}Notifications${NC}"
+read -p "Webhook URL for notifications (Slack/Discord/Telegram, empty to skip): " WEBHOOK_URL
+if [[ -n "$WEBHOOK_URL" ]]; then
+    echo "WEBHOOK_URL=$WEBHOOK_URL" >> "$SKILL_DIR/.env"
+    echo -e "${GREEN}  ✓ Notifications enabled${NC}"
+else
+    echo "WEBHOOK_URL=" >> "$SKILL_DIR/.env"
+    echo -e "${YELLOW}  ⚠ Notifications disabled${NC}"
+fi
+
+# ============================================
+# Phase 5: Dashboard Auth (optional)
+# ============================================
+echo ""
+echo -e "${CYAN}Dashboard Security${NC}"
+read -p "Set API key for dashboard? [y/N]: " HAS_AUTH
+if [[ "$HAS_AUTH" =~ ^[Yy] ]]; then
+    read -p "Enter API key: " API_KEY_VAL
+    echo "AIC_API_KEY=$API_KEY_VAL" >> "$SKILL_DIR/.env"
+    echo -e "${GREEN}  ✓ API key set${NC}"
+else
+    echo "AIC_API_KEY=" >> "$SKILL_DIR/.env"
+    echo -e "${YELLOW}  ⚠ Dashboard open (no auth)${NC}"
+fi
+
+# ============================================
 # Done
 # ============================================
 echo ""

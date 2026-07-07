@@ -20,3 +20,9 @@ node_modules/
 status.json
 .env
 dashboard/dist/
+audit.json
+history.json
+status.json
+snapshots/
+cache/
+CHANGELOG.md

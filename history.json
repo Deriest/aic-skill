@@ -323,5 +323,196 @@
         "engine": "test"
       }
     }
+  },
+  {
+    "task": {
+      "title": "Test Sprint",
+      "type": "chore",
+      "id": "T-99",
+      "priority": "MEDIUM",
+      "startedAt": "2026-07-07T05:39:28.038Z"
+    },
+    "completedAt": "2026-07-07T05:39:28.094Z",
+    "status": "complete",
+    "duration": "0s",
+    "phases": [
+      {
+        "name": "Implementation",
+        "status": "active",
+        "startedAt": "2026-07-07T05:39:28.046Z"
+      }
+    ],
+    "agents": {
+      "worker-1": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    },
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "cost": 0
+  },
+  {
+    "task": {
+      "title": "Concurrent-Test",
+      "type": "chore",
+      "id": "T-CONC",
+      "priority": "MEDIUM",
+      "startedAt": "2026-07-07T05:39:28.126Z"
+    },
+    "completedAt": "2026-07-07T05:39:28.151Z",
+    "status": "complete",
+    "duration": "0s",
+    "phases": [],
+    "agents": {
+      "agent-7": {
+        "status": "working"
+      },
+      "agent-9": {
+        "status": "working"
+      },
+      "agent-2": {
+        "status": "working"
+      },
+      "agent-8": {
+        "status": "working"
+      },
+      "agent-3": {
+        "status": "working"
+      },
+      "agent-4": {
+        "status": "working"
+      },
+      "agent-1": {
+        "status": "working"
+      },
+      "agent-5": {
+        "status": "working"
+      },
+      "agent-6": {
+        "status": "working"
+      },
+      "agent-10": {
+        "status": "working"
+      }
+    },
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "cost": 0
+  },
+  {
+    "task": {
+      "title": "Test Bash",
+      "type": "feature",
+      "id": "B-1",
+      "priority": "MEDIUM",
+      "startedAt": "2026-07-07T05:39:48.225Z"
+    },
+    "completedAt": "2026-07-07T05:39:48.263Z",
+    "status": "complete",
+    "duration": "0s",
+    "phases": [
+      {
+        "name": "QA",
+        "status": "complete",
+        "startedAt": "2026-07-07T05:39:48.247Z",
+        "completedAt": "2026-07-07T05:39:48.252Z"
+      }
+    ],
+    "agents": {
+      "qa": {
+        "status": "working",
+        "engine": "test"
+      }
+    },
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "cost": 0
+  },
+  {
+    "task": {
+      "title": "Test Sprint",
+      "type": "chore",
+      "id": "T-99",
+      "priority": "MEDIUM",
+      "startedAt": "2026-07-07T05:39:54.991Z"
+    },
+    "completedAt": "2026-07-07T05:39:55.041Z",
+    "status": "complete",
+    "duration": "0s",
+    "phases": [
+      {
+        "name": "Implementation",
+        "status": "active",
+        "startedAt": "2026-07-07T05:39:54.999Z"
+      }
+    ],
+    "agents": {
+      "worker-1": {
+        "status": "working",
+        "engine": "opencode"
+      }
+    },
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "cost": 0
+  },
+  {
+    "task": {
+      "title": "Concurrent-Test",
+      "type": "chore",
+      "id": "T-CONC",
+      "priority": "MEDIUM",
+      "startedAt": "2026-07-07T05:39:55.070Z"
+    },
+    "completedAt": "2026-07-07T05:39:55.093Z",
+    "status": "complete",
+    "duration": "0s",
+    "phases": [],
+    "agents": {
+      "agent-5": {
+        "status": "working"
+      },
+      "agent-9": {
+        "status": "working"
+      },
+      "agent-4": {
+        "status": "working"
+      },
+      "agent-2": {
+        "status": "working"
+      },
+      "agent-1": {
+        "status": "working"
+      },
+      "agent-6": {
+        "status": "working"
+      },
+      "agent-7": {
+        "status": "working"
+      },
+      "agent-3": {
+        "status": "working"
+      },
+      "agent-10": {
+        "status": "working"
+      },
+      "agent-8": {
+        "status": "working"
+      }
+    },
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "cost": 0
   }
 ]

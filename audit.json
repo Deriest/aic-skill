@@ -1,0 +1,429 @@
+[
+  {
+    "timestamp": "2026-07-07T05:39:28.030Z",
+    "action": "reset",
+    "actor": "dispatcher",
+    "details": {}
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.038Z",
+    "action": "task_start",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "T-99",
+      "title": "Test Sprint",
+      "type": "chore",
+      "priority": "MEDIUM"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.046Z",
+    "action": "phase_start",
+    "actor": "dispatcher",
+    "details": {
+      "phase": "Implementation"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.054Z",
+    "action": "agent_status",
+    "actor": "worker-1",
+    "details": {
+      "status": "working",
+      "engine": "opencode"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.095Z",
+    "action": "task_complete",
+    "actor": "system",
+    "details": {
+      "title": "Test Sprint",
+      "duration": "0s"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.126Z",
+    "action": "task_start",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "T-CONC",
+      "title": "Concurrent-Test",
+      "type": "chore",
+      "priority": "MEDIUM"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.133Z",
+    "action": "agent_status",
+    "actor": "agent-7",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.133Z",
+    "action": "agent_status",
+    "actor": "agent-9",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.134Z",
+    "action": "agent_status",
+    "actor": "agent-2",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.134Z",
+    "action": "agent_status",
+    "actor": "agent-8",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.135Z",
+    "action": "agent_status",
+    "actor": "agent-3",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.135Z",
+    "action": "agent_status",
+    "actor": "agent-4",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.135Z",
+    "action": "agent_status",
+    "actor": "agent-1",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.136Z",
+    "action": "agent_status",
+    "actor": "agent-5",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.136Z",
+    "action": "agent_status",
+    "actor": "agent-6",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.136Z",
+    "action": "agent_status",
+    "actor": "agent-10",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.151Z",
+    "action": "task_complete",
+    "actor": "system",
+    "details": {
+      "title": "Concurrent-Test",
+      "duration": "0s"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:28.156Z",
+    "action": "reset",
+    "actor": "dispatcher",
+    "details": {}
+  },
+  {
+    "timestamp": "2026-07-07T05:39:41.999Z",
+    "action": "task_enqueue",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "TASK-1783402781999",
+      "priority": "LOW"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:42.005Z",
+    "action": "task_enqueue",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "TASK-1783402782005",
+      "priority": "HIGH"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:42.012Z",
+    "action": "task_enqueue",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "TASK-1783402782012",
+      "priority": "MEDIUM"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:42.084Z",
+    "action": "task_cancel",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": null,
+      "title": "Unknown"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:42.084Z",
+    "action": "task_auto_dequeue",
+    "actor": "system",
+    "details": {
+      "taskId": "TASK-1783402782005",
+      "title": "Q2"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:42.147Z",
+    "action": "agent_status",
+    "actor": "failtest",
+    "details": {
+      "status": "error"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:42.152Z",
+    "action": "agent_status",
+    "actor": "failtest",
+    "details": {
+      "status": "error"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:42.158Z",
+    "action": "circuit_open",
+    "actor": "system",
+    "details": {
+      "agent": "failtest",
+      "failCount": 3
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:42.159Z",
+    "action": "agent_status",
+    "actor": "failtest",
+    "details": {
+      "status": "error"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:48.219Z",
+    "action": "reset",
+    "actor": "dispatcher",
+    "details": {}
+  },
+  {
+    "timestamp": "2026-07-07T05:39:48.225Z",
+    "action": "task_start",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "B-1",
+      "title": "Test Bash",
+      "type": "feature",
+      "priority": "MEDIUM"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:48.237Z",
+    "action": "agent_status",
+    "actor": "qa",
+    "details": {
+      "status": "working",
+      "engine": "test"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:48.247Z",
+    "action": "phase_start",
+    "actor": "dispatcher",
+    "details": {
+      "phase": "QA"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:48.252Z",
+    "action": "phase_complete",
+    "actor": "dispatcher",
+    "details": {
+      "phase": "QA"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:48.263Z",
+    "action": "task_complete",
+    "actor": "system",
+    "details": {
+      "title": "Test Bash",
+      "duration": "0s"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:54.983Z",
+    "action": "reset",
+    "actor": "dispatcher",
+    "details": {}
+  },
+  {
+    "timestamp": "2026-07-07T05:39:54.991Z",
+    "action": "task_start",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "T-99",
+      "title": "Test Sprint",
+      "type": "chore",
+      "priority": "MEDIUM"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:54.999Z",
+    "action": "phase_start",
+    "actor": "dispatcher",
+    "details": {
+      "phase": "Implementation"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.007Z",
+    "action": "agent_status",
+    "actor": "worker-1",
+    "details": {
+      "status": "working",
+      "engine": "opencode"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.041Z",
+    "action": "task_complete",
+    "actor": "system",
+    "details": {
+      "title": "Test Sprint",
+      "duration": "0s"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.070Z",
+    "action": "task_start",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "T-CONC",
+      "title": "Concurrent-Test",
+      "type": "chore",
+      "priority": "MEDIUM"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.076Z",
+    "action": "agent_status",
+    "actor": "agent-5",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.077Z",
+    "action": "agent_status",
+    "actor": "agent-9",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.077Z",
+    "action": "agent_status",
+    "actor": "agent-4",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.078Z",
+    "action": "agent_status",
+    "actor": "agent-2",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.078Z",
+    "action": "agent_status",
+    "actor": "agent-1",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.078Z",
+    "action": "agent_status",
+    "actor": "agent-6",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.079Z",
+    "action": "agent_status",
+    "actor": "agent-7",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.079Z",
+    "action": "agent_status",
+    "actor": "agent-3",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.079Z",
+    "action": "agent_status",
+    "actor": "agent-10",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.080Z",
+    "action": "agent_status",
+    "actor": "agent-8",
+    "details": {
+      "status": "working"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.093Z",
+    "action": "task_complete",
+    "actor": "system",
+    "details": {
+      "title": "Concurrent-Test",
+      "duration": "0s"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:39:55.099Z",
+    "action": "reset",
+    "actor": "dispatcher",
+    "details": {}
+  }
+]

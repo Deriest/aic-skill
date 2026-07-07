@@ -258,3 +258,38 @@ post /api/reset '{}'
 This works for OpenRouter, Anthropic, OpenAI, local proxies, LiteLLM — anything with an OpenAI-compatible API.
 
 **Lesson:** Never hardcode model IDs. Auto-detect from the API, or let the user pick from a live list.
+
+---
+
+## ❌ Sub-worker tier assignment — must be same or lower than head
+
+When a Head spawns sub-workers, the sub-worker tier must be **same or lower** than the head. A Thinker head should not spawn a Thinker sub-worker — that wastes expensive context on a narrow sub-task.
+
+**Rules:**
+- Thinker head → Crafter sub-worker (default), Sprinter (fast tasks)
+- Crafter head → Sprinter sub-worker (default)
+- Sprinter head → Sprinter only
+- **Exception:** Researcher sub-workers can use Crafter even under a Thinker head, because research needs reasoning depth
+
+**Why:** Sub-workers handle focused sub-tasks (one file, one component, one endpoint). They don't need the full context window. The head coordinates; sub-workers execute narrowly.
+
+**User correction (2026-07-07):** User pointed out that sub-workers shouldn't just be "head but smaller" — they're specialists with narrower scope, not reduced-power copies. The head-of-worker hierarchy exists for parallelism (3 sub-workers finishing in 1/3 the time), not for power scaling.
+
+---
+
+## ❌ context-gather.sh must use --tier flag per worker tier
+
+When gathering context before spawning a worker, always pass the `--tier` flag matching the worker's tier. This controls tree depth, file line caps, and output size:
+
+```bash
+bash ~/.hermes/skills/workflows/aic/scripts/context-gather.sh <project_dir> --tier thinker   # 128KB, depth 4, 500 lines/file
+bash ~/.hermes/skills/workflows/aic/scripts/context-gather.sh <project_dir> --tier crafter   # 64KB, depth 3, 300 lines/file
+bash ~/.hermes/skills/workflows/aic/scripts/context-gather.sh <project_dir> --tier sprinter  # 32KB, depth 2, 150 lines/file
+```
+
+**Pitfall:** Using the default (no --tier) gives crafter-level context. For Thinker workers (PM, Architect) analyzing large codebases, always use `--tier thinker` to get deeper tree + more file content. For Sprinter workers (QA), use `--tier sprinter` to keep context fast and focused.
+
+**Wrong:** `context-gather.sh .` for a Thinker worker → only 16KB, misses deeper files.
+**Right:** `context-gather.sh . --tier thinker` → 128KB, depth 4, catches nested modules.
+
+**Lesson:** The --tier flag isn't optional decoration — it's the mechanism that matches context gathering to the worker's actual context window (800K/512K/256K). Without it, Thinker workers get Sprinter-level context and miss the deep analysis they're designed for.
