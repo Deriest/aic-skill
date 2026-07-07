@@ -514,5 +514,18 @@
       "output": 0
     },
     "cost": 0
+  },
+  {
+    "task": {
+      "title": "CancelTest",
+      "type": "bug",
+      "id": "C1",
+      "priority": "MEDIUM",
+      "startedAt": "2026-07-07T05:42:42.641Z"
+    },
+    "completedAt": "2026-07-07T05:42:42.648Z",
+    "status": "cancelled",
+    "phases": [],
+    "agents": {}
   }
 ]

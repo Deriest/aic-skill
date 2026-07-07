@@ -425,5 +425,82 @@
     "action": "reset",
     "actor": "dispatcher",
     "details": {}
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.635Z",
+    "action": "task_enqueue",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "TASK-1783402962635",
+      "priority": "LOW"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.641Z",
+    "action": "task_start",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "C1",
+      "title": "CancelTest",
+      "type": "bug",
+      "priority": "MEDIUM"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.648Z",
+    "action": "task_cancel",
+    "actor": "dispatcher",
+    "details": {
+      "taskId": "C1",
+      "title": "CancelTest"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.648Z",
+    "action": "task_auto_dequeue",
+    "actor": "system",
+    "details": {
+      "taskId": "TASK-1783402962635",
+      "title": "Q1"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.705Z",
+    "action": "agent_status",
+    "actor": "cbtest",
+    "details": {
+      "status": "error"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.711Z",
+    "action": "agent_status",
+    "actor": "cbtest",
+    "details": {
+      "status": "error"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.716Z",
+    "action": "circuit_open",
+    "actor": "system",
+    "details": {
+      "agent": "cbtest",
+      "failCount": 3
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.717Z",
+    "action": "agent_status",
+    "actor": "cbtest",
+    "details": {
+      "status": "error"
+    }
+  },
+  {
+    "timestamp": "2026-07-07T05:42:42.765Z",
+    "action": "reset",
+    "actor": "dispatcher",
+    "details": {}
   }
 ]

@@ -645,6 +645,33 @@ curl -s http://localhost:6868/api/history
 
 # Health check
 curl -s http://localhost:6868/health
+
+# --- Phase 1: Queue & Cancel ---
+
+# Enqueue task (auto-starts when current completes)
+curl -s -X POST http://localhost:6868/api/task-enqueue -H 'Content-Type: application/json' \
+  -d '{"title":"Build Auth","type":"feature","id":"TASK-002","priority":"HIGH"}'
+
+# Cancel active task
+curl -s -X POST http://localhost:6868/api/task-cancel -H 'Content-Type: application/json' \
+  -d '{"id":"TASK-001"}'
+
+# --- Phase 2: Analytics & Cost ---
+
+# Get analytics (avg time, success rate per task type)
+curl -s http://localhost:6868/api/analytics
+
+# Report token usage
+curl -s -X POST http://localhost:6868/api/tokens -H 'Content-Type: application/json' \
+  -d '{"input":5000,"output":2000}'
+
+# Check cumulative cost
+curl -s http://localhost:6868/api/cost
+
+# --- Phase 5: Audit ---
+
+# View audit trail (all state changes)
+curl -s http://localhost:6868/api/audit
 ```
 
 ### Integration with Workers
@@ -720,6 +747,15 @@ Do NOT create or suggest task templates for the user to pick from. The target us
 ### ❌ Git integration requires user-provided token
 Do NOT auto-setup Git. Ask: "Do you have a GitHub token (ghp_...)?" If yes → auto branch/commit/PR. If no → skip Git entirely, work in local files only. Non-coder users typically don't have tokens; don't assume they do.
 
+### ❌ Don't lose user requests — use the queue
+When a task is already active and user sends another, ALWAYS enqueue it (`POST /api/task-enqueue`). NEVER say "wait until current task finishes" or ignore it. The queue auto-dequeues by priority (HIGH > MEDIUM > LOW).
+
+### ❌ Rollback must happen before edits, not after
+The snapshot MUST be taken BEFORE Engineers start modifying files. If you forget and the pipeline fails, there's no way to restore. Add snapshot to the handoff instructions for every coding worker.
+
+### ❌ Circuit breaker doesn't reset on task change
+The circuit breaker state persists across tasks. If QA fails 3x on task A, the circuit stays open for task B too. Don't assume a new task fixes the worker. Check `circuitBreakers` in status and report to Operator.
+
 For full historical context on all pitfalls, see **`references/pitfalls-history.md`**.
 For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 
@@ -754,6 +790,11 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
     - QA PASS = auto-approve for these types
     - Governor still mandatory for: security-sensitive tasks, infrastructure, auth, database, deploy
 19. **Context pre-paste** — before spawning workers, gather project context: `bash ~/.hermes/skills/workflows/aic/scripts/context-gather.sh <project_dir> --tier <thinker|crafter|sprinter>`. Tier sets context depth + cap automatically. Pipe output into the CONTEXT field of the task handoff.
+20. **Use the task queue** — when a task is active and user sends another, enqueue it (`POST /api/task-enqueue` with priority). Do NOT reject or lose user requests. Auto-dequeue starts the next task when current completes.
+21. **Snapshot before editing** — before Engineers start modifying files, run `bash ~/.hermes/skills/workflows/aic/scripts/rollback.sh snapshot <TASK_ID> <file1> [file2...]`. On pipeline failure, `rollback.sh restore <TASK_ID>`. On success, `rollback.sh cleanup <TASK_ID>`.
+22. **Circuit breaker** — the server tracks per-worker failures. After 3 consecutive failures, the circuit opens and that worker is skipped. Monitor via `GET /api/status` → `circuitBreakers` field. Don't keep retrying a worker with an open circuit — report to Operator.
+23. **Record token usage** — after each worker completes, report token consumption: `POST /api/tokens {"input": N, "output": N}`. The server tracks cumulative cost. Include cost in final delivery report.
+24. **Self-test before first task** — run `bash ~/.hermes/skills/workflows/aic/scripts/self-test.sh` to validate config, deps, and server before starting work. Fixes 90% of "why isn't this working" issues.
 
 ## Related References & Templates
 
@@ -762,4 +803,8 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 - **`references/opencode-custom-provider.md`** — OpenCode custom provider configuration for OpenAI-compatible proxies.
 - **`scripts/test-api.sh`** — Smoke tests for the Status API (25 assertions, all 9 endpoints). Run: `bash scripts/test-api.sh`. Requires server on port 6868.
 - **`scripts/test-status.sh`** — Integration tests for legacy status workflow (task-start, agent-status, phase lifecycle, history append). Run: `bash ~/.hermes/skills/workflows/aic/scripts/test-status.sh`. Requires server on port 6868.
+- **`scripts/self-test.sh`** — AIC self-test: validates config, deps, scripts, server, git, webhook. Run: `bash ~/.hermes/skills/workflows/aic/scripts/self-test.sh`. Use before first task in a session.
+- **`scripts/rollback.sh`** — File snapshot/restore for pipeline safety. Run: `rollback.sh snapshot <task_id> <files...>`, `rollback.sh restore <task_id>`, `rollback.sh cleanup <task_id>`.
+- **`scripts/cache-context.sh`** — Cached version of context-gather.sh. Invalidates on git commit. Run: `cache-context.sh <project_dir> <tier>`.
+- **`scripts/changelog.sh`** — Auto-generate changelog entry after task completion. Run: `changelog.sh <title> <type> <duration> <files_changed>`.
 - **`references/aic-roadmap.md`** — Full improvement roadmap: 25 tasks across 5 phases (Engine → Intelligence → DX → Dashboard → Hardening). Use for planning next development sprints.

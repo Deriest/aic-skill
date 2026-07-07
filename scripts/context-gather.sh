@@ -22,12 +22,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Default max_kb per tier (unless explicitly set)
+# Default max_kb per tier — read from .env if available, else fallback
+AIC_ENV="$(dirname "$0")/../.env"
 if [[ -z "$max_kb" ]]; then
+  # Try to read from context limits in .env (set by detect-context.sh via setup.sh)
+  if [[ -f "$AIC_ENV" ]]; then
+    source "$AIC_ENV" 2>/dev/null || true
+  fi
   case "$tier" in
-    thinker)  max_kb=128 ;;
-    crafter)  max_kb=64 ;;
-    sprinter) max_kb=32  ;;
+    thinker)  max_kb=${AIC_CTX_THINKER_KB:-128} ;;
+    crafter)  max_kb=${AIC_CTX_CRAFTER_KB:-64} ;;
+    sprinter) max_kb=${AIC_CTX_SPRINTER_KB:-32} ;;
     *)        max_kb=16 ;;
   esac
 fi
