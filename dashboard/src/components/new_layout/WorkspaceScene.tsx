@@ -6,10 +6,10 @@ export function WorkspaceScene() {
       viewBox="0 0 400 96"
       width="100%"
       height="100%"
-      preserveAspectRatio="xMinYMax meet"
+      preserveAspectRatio="none"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ imageRendering: 'pixelated' }}
+      style={{ imageRendering: 'pixelated', display: 'block', verticalAlign: 'middle' }}
     >
           {/* Room Background / Walls & Floor */}
           <g id="background" shapeRendering="crispEdges">

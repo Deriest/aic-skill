@@ -1,5 +1,4 @@
 import { DashboardState } from '../../types';
-import { WorkspaceScene } from './WorkspaceScene';
 
 export function PipelineTracker({ state }: { state: DashboardState }) {
   const phases = ['Investigate', 'Planning', 'Execution', 'Documentation', 'Verification'];
@@ -75,11 +74,6 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
           
         </div>
       </div>
-
-        {/* Workspace Scene - SVG only, perfectly scaled to fit the remaining space alongside IDLE box */}
-        <div className="w-full h-[96px] shrink-0 mt-auto">
-          <WorkspaceScene />
-        </div>
     </div>
   );
 }
