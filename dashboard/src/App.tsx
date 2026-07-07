@@ -6,6 +6,7 @@ import { Header } from './components/layout/Header';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { OverviewPage } from './pages/OverviewPage';
+import { ChatPage } from './pages/ChatPage';
 import { ConfigEditorPage } from './pages/ConfigEditorPage';
 import { TaskManagerPage } from './pages/TaskManagerPage';
 import { WorkersMonitorPage } from './pages/WorkersMonitorPage';
@@ -23,6 +24,7 @@ function DashboardApp() {
       <Routes>
         <Route element={<DashboardLayout />}>
           <Route index element={<ErrorBoundary><OverviewPage /></ErrorBoundary>} />
+          <Route path="chat" element={<ErrorBoundary><ChatPage /></ErrorBoundary>} />
           <Route path="config" element={<ErrorBoundary><ConfigEditorPage /></ErrorBoundary>} />
           <Route path="tasks" element={<ErrorBoundary><TaskManagerPage /></ErrorBoundary>} />
           <Route path="workers" element={<ErrorBoundary><WorkersMonitorPage /></ErrorBoundary>} />
