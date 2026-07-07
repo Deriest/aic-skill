@@ -6,11 +6,16 @@ export default defineConfig({
   server: {
     port: 6969,
     proxy: {
-      '/api': {
-        target: 'http://localhost:6868',
-        changeOrigin: true,
-      },
       '/health': {
+        target: 'http://localhost:6868',
+        changeOrigin: true
+      },
+      '/api/chat/completions': {
+        target: 'http://localhost:9119',
+        changeOrigin: true,
+        ws: true
+      },
+      '/api': {
         target: 'http://localhost:6868',
         changeOrigin: true,
       },

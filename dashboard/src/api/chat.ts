@@ -7,13 +7,18 @@ export function sendMessage(message: string, signal?: AbortSignal) {
 // ponytail: sendMessage returns raw Response body reader, not parsed JSON
 // The post() helper does res.json() which breaks SSE. Need a raw fetch instead.
 export async function sendMessageSSE(message: string, signal?: AbortSignal): Promise<ReadableStreamDefaultReader<Uint8Array>> {
-  const res = await fetch('/api/chat', {
+  // Routes through Vite proxy to localhost:9119
+  const res = await fetch('/api/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages: [{ role: 'user', content: message }], model: 'Opus' }),
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: message }],
+      stream: true,
+      model: 'default' // Hermes will use its active session model
+    }),
     signal,
   });
-  if (!res.ok) throw new Error(`Chat error: ${res.status}`);
+  if (!res.ok) throw new Error(`Hermes API error: ${res.status}. Is 'hermes server --port 9119' running?`);
   if (!res.body) throw new Error('No response body');
   return res.body.getReader();
 }
