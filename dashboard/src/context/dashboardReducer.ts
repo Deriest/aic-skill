@@ -9,6 +9,9 @@ export const initialState: DashboardState = {
   logEntries: [],
   taskStartTimestamp: null,
   error: null,
+  taskQueue: [],
+  tokens: { input: 0, output: 0 },
+  cost: 0,
 };
 
 export function dashboardReducer(state: DashboardState, action: DashboardAction): DashboardState {
@@ -63,6 +66,19 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
       return {
         ...state,
         error: action.payload,
+      };
+
+    case 'SET_TASK_QUEUE':
+      return {
+        ...state,
+        taskQueue: action.payload,
+      };
+
+    case 'UPDATE_COST':
+      return {
+        ...state,
+        tokens: action.payload.tokens,
+        cost: action.payload.cost,
       };
 
     case 'RESET':

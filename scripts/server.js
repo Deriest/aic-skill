@@ -573,6 +573,254 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { success: true });
     }
 
+    // ============================================
+    // Control Plane API Endpoints
+    // ============================================
+
+    const ENV_FILE = path.join(BASE, '.env');
+    const CONFIG_FILE = path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc');
+    const CHAT_HISTORY_FILE = path.join(BASE, 'chat-history.json');
+    const DETECT_SCRIPT = path.join(BASE, 'scripts', 'detect-context.sh');
+    const SELFTEST_SCRIPT = path.join(BASE, 'scripts', 'self-test.sh');
+    const MAX_CHAT_HISTORY = 100;
+
+    // --- Chat History helpers ---
+    function loadChatHistory() {
+      try {
+        if (fs.existsSync(CHAT_HISTORY_FILE)) return JSON.parse(fs.readFileSync(CHAT_HISTORY_FILE, 'utf8'));
+      } catch (e) { /* ignore */ }
+      return [];
+    }
+    function saveChatHistory(msgs) {
+      try { fs.writeFileSync(CHAT_HISTORY_FILE, JSON.stringify(msgs.slice(-MAX_CHAT_HISTORY), null, 2)); } catch (e) { /* ignore */ }
+    }
+
+    // --- .env helpers ---
+    function parseEnv(content) {
+      const env = {};
+      for (const line of content.split('\n')) {
+        const m = line.match(/^([^#=]+)=(.*)$/);
+        if (m) env[m[1].trim()] = m[2].trim();
+      }
+      return env;
+    }
+    function serializeEnv(env) {
+      return Object.entries(env).map(([k, v]) => `${k}=${v}`).join('\n') + '\n';
+    }
+    function redactValue(val) {
+      if (!val || typeof val !== 'string' || val.length < 12) return '***';
+      return val.slice(0, 8) + '***';
+    }
+
+    // POST /api/chat — SSE proxy to LLM provider
+    if (req.method === 'POST' && req.url === '/api/chat') {
+      const data = await readBody(req);
+      const messages = data.messages || [];
+      const model = data.model || 'Opus';
+
+      // Read provider config from .env
+      let envContent = '';
+      try { envContent = fs.readFileSync(ENV_FILE, 'utf8'); } catch (e) { /* ignore */ }
+      const env = parseEnv(envContent);
+      const baseUrl = env.BASE_URL || 'http://192.168.2.11:20128/v1';
+      const apiKey = env.API_KEY || '';
+
+      const providerPayload = JSON.stringify({
+        model,
+        messages,
+        stream: true,
+      });
+
+      // SSE headers
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+      });
+
+      try {
+        const url = new URL(`${baseUrl}/chat/completions`);
+        const client = url.protocol === 'https:' ? require('https') : http;
+        const proxyReq = client.request({
+          hostname: url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Length': Buffer.byteLength(providerPayload),
+          },
+        }, (proxyRes) => {
+          let buffer = '';
+          proxyRes.on('data', (chunk) => {
+            buffer += chunk.toString();
+            // Forward SSE frames as-is
+            res.write(chunk);
+          });
+          proxyRes.on('end', () => {
+            res.write('data: [DONE]\n\n');
+            res.end();
+          });
+          proxyRes.on('error', () => {
+            res.write('data: [ERROR]\n\n');
+            res.end();
+          });
+        });
+        proxyReq.on('error', (e) => {
+          res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        });
+        proxyReq.write(providerPayload);
+        proxyReq.end();
+      } catch (e) {
+        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+      }
+      return; // Don't send any other response — streaming
+    }
+
+    // GET /api/chat/history
+    if (req.method === 'GET' && req.url === '/api/chat/history') {
+      return json(res, 200, loadChatHistory());
+    }
+
+    // POST /api/chat/history — append message
+    if (req.method === 'POST' && req.url === '/api/chat/history') {
+      const data = await readBody(req);
+      const msgs = loadChatHistory();
+      msgs.push({ role: data.role || 'user', content: data.content || '', timestamp: new Date().toISOString() });
+      saveChatHistory(msgs);
+      return json(res, 200, { success: true, count: msgs.length });
+    }
+
+    // DELETE /api/chat/history — clear
+    if (req.method === 'DELETE' && req.url === '/api/chat/history') {
+      saveChatHistory([]);
+      return json(res, 200, { success: true });
+    }
+
+    // GET /api/config — read .env + opencode.jsonc (redacted)
+    if (req.method === 'GET' && req.url === '/api/config') {
+      let envContent = '';
+      let configContent = '';
+      try { envContent = fs.readFileSync(ENV_FILE, 'utf8'); } catch (e) { /* ignore */ }
+      try { configContent = fs.readFileSync(CONFIG_FILE, 'utf8'); } catch (e) { /* ignore */ }
+
+      const env = parseEnv(envContent);
+      const redactedEnv = {};
+      for (const [k, v] of Object.entries(env)) {
+        redactedEnv[k] = /key|token|secret|password/i.test(k) ? redactValue(v) : v;
+      }
+
+      return json(res, 200, { env: redactedEnv, envRaw: envContent, opencode: configContent });
+    }
+
+    // POST /api/config — write .env + opencode.jsonc
+    if (req.method === 'POST' && req.url === '/api/config') {
+      const data = await readBody(req);
+
+      if (data.env) {
+        // Merge: read existing, override with provided
+        let existing = {};
+        try { existing = parseEnv(fs.readFileSync(ENV_FILE, 'utf8')); } catch (e) { /* ignore */ }
+        const merged = { ...existing, ...data.env };
+        // Don't overwrite redacted values
+        for (const [k, v] of Object.entries(merged)) {
+          if (typeof v === 'string' && v.includes('***')) {
+            merged[k] = existing[k] || v; // keep original
+          }
+        }
+        fs.writeFileSync(ENV_FILE, serializeEnv(merged));
+        appendAudit('config_update', 'web', { keys: Object.keys(data.env) });
+      }
+
+      if (data.opencode) {
+        // Validate JSON
+        try { JSON.parse(data.opencode); }
+        catch (e) { return json(res, 400, { error: 'Invalid JSON in opencode config: ' + e.message }); }
+        fs.mkdirSync(path.dirname(CONFIG_FILE), { recursive: true });
+        fs.writeFileSync(CONFIG_FILE, data.opencode);
+        appendAudit('config_update_opencode', 'web', {});
+      }
+
+      return json(res, 200, { success: true });
+    }
+
+    // POST /api/config/detect-context — run detect-context.sh
+    if (req.method === 'POST' && req.url === '/api/config/detect-context') {
+      const data = await readBody(req);
+      const provider = data.provider || 'custom';
+      const thinker = data.thinker || 'unknown';
+      const crafter = data.crafter || 'unknown';
+      const sprinter = data.sprinter || 'unknown';
+
+      const { execSync } = require('child_process');
+      try {
+        const output = execSync(`bash "${DETECT_SCRIPT}" ${provider} ${thinker} ${crafter} ${sprinter}`, { timeout: 30000 });
+        // Parse JSON from last line
+        const lines = output.toString().trim().split('\n');
+        const jsonLine = lines.filter(l => l.startsWith('{')).pop();
+        return json(res, 200, JSON.parse(jsonLine || '{}'));
+      } catch (e) {
+        return json(res, 500, { error: e.message });
+      }
+    }
+
+    // GET /api/workers — worker list with stats
+    if (req.method === 'GET' && req.url === '/api/workers') {
+      const WORKER_DEFS = [
+        { id: 'pm', name: 'PM', tier: 'thinker', type: 'thinking' },
+        { id: 'researcher', name: 'Researcher', tier: 'crafter', type: 'thinking' },
+        { id: 'designer', name: 'Designer', tier: 'crafter', type: 'thinking' },
+        { id: 'architect', name: 'Architect', tier: 'thinker', type: 'thinking' },
+        { id: 'frontend', name: 'Frontend', tier: 'crafter', type: 'coding' },
+        { id: 'backend', name: 'Backend', tier: 'crafter', type: 'coding' },
+        { id: 'infra', name: 'Infra', tier: 'crafter', type: 'coding' },
+        { id: 'qa', name: 'QA', tier: 'sprinter', type: 'coding' },
+        { id: 'governor', name: 'Governor', tier: 'crafter', type: 'thinking' },
+      ];
+
+      const workers = WORKER_DEFS.map(w => {
+        const agent = state.agents[w.id] || {};
+        const cb = state.circuitBreakers[w.id] || { failCount: 0, state: 'closed', lastFail: null };
+        // Stats from history
+        const history = loadHistory();
+        const workerTasks = history.filter(h =>
+          h.agents && h.agents[w.id] && h.agents[w.id].status === 'complete'
+        );
+        const successRate = history.length > 0 ? Math.round((workerTasks.length / Math.max(history.length, 1)) * 100) : 0;
+
+        return {
+          ...w,
+          status: agent.status || 'idle',
+          engine: agent.engine || null,
+          parent: agent.parent || null,
+          circuitBreaker: cb,
+          stats: {
+            successRate,
+            tasksCompleted: workerTasks.length,
+          },
+        };
+      });
+
+      return json(res, 200, workers);
+    }
+
+    // POST /api/self-test — run self-test.sh
+    if (req.method === 'POST' && req.url === '/api/self-test') {
+      const { execSync } = require('child_process');
+      try {
+        const output = execSync(`bash "${SELFTEST_SCRIPT}" 2>&1`, { timeout: 30000 });
+        return json(res, 200, { success: true, output: output.toString() });
+      } catch (e) {
+        return json(res, 200, { success: false, output: e.stdout ? e.stdout.toString() : e.message });
+      }
+    }
+
     json(res, 404, { error: 'Not found' });
   } catch (e) {
     console.error('[AIC] Request error:', e.message);
