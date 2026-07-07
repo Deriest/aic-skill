@@ -2,121 +2,162 @@
 
 10-worker orchestration system for AI-powered software development.
 
-## What It Does
+Your Hermes agent becomes a **Dispatcher** that classifies tasks, spawns specialized workers, and manages the full development pipeline — from requirements to deployment.
 
-Your agent becomes a Dispatcher that manages 10 specialized AI workers:
+## Workers
 
-- **Product**: PM, Researcher, Designer
-- **Engineering**: Architect, Frontend, Backend, Infra, QA
-- **Governance**: Governor
+| Worker | Tier | Purpose |
+|--------|------|---------|
+| PM | Thinker | Requirements, acceptance criteria |
+| Architect | Thinker | System design, API contracts |
+| Researcher | Crafter | Investigation, analysis |
+| Designer | Crafter | UX/UI specs |
+| Frontend Engineer | Crafter | UI implementation |
+| Backend Engineer | Crafter | API implementation |
+| Infrastructure Engineer | Crafter | Deployment, CI/CD |
+| QA Engineer | Sprinter | Testing, validation |
+| Governor | Crafter | Compliance review |
 
-## Quick Install
+**Tier aliases** — workers reference `Thinker`, `Crafter`, `Sprinter` (not model IDs). You pick the actual models during setup.
 
+## Quick Start
+
+```bash
+# One-line install
+curl -fsSL https://raw.githubusercontent.com/Deriest/aic-skill/main/scripts/setup.sh | bash
 ```
-1. Install OpenCode
+
+Or manually:
+
+```bash
+# 1. Install OpenCode
 npm install -g opencode-ai@latest
 
-2. Install skill
-git clone https://github.com/Deriest/aic-skill.git
-cp -r aic-skill/* ~/.hermes/skills/workflows/aic/
+# 2. Clone skill
+git clone https://github.com/Deriest/aic-skill.git /tmp/aic-skill
+cp -r /tmp/aic-skill/* ~/.hermes/skills/workflows/aic/
 
-3. Load and configure
-/aic
+# 3. Load and go
+hermes
+> /aic build a REST API with JWT auth
 ```
 
-## Configure
+## Setup
 
-The Dispatcher will ask you:
+The setup script guides you through:
 
 ```
-What is your API key?
-> sk-or-xxx
+[1/4] Checking dependencies...     ✓ Node.js, npm, jq
+[2/4] Installing OpenCode...       ✓ opencode-ai
+[3/4] Configure your AI provider...
+      1) Connect to API            → URL, API key, auto-detect models
+      2) Free models               → zero config
+      3) Skip                      → manual
 
-Choose your model tier:
-  1) Claude (Thinker/Crafter/Sprinter) via OpenRouter
-  2) Claude (Thinker/Crafter/Sprinter) via Anthropic direct
-  3) GPT-4o / GPT-4o-mini via OpenAI
-  4) Free (deepseek-v4-flash-free)
-  5) Custom
+      Select Thinker model [1]:    ← pick the complex reasoning model
+      Select Crafter model [2]:    ← pick the standard coding model
+      Select Sprinter model [3]:   ← pick the fast/lightweight model
 
-> 1
+[4/4] Installing AIC skill...      ✓ dashboard + deps
 ```
 
-Done! This auto-generates .env and configures OpenCode.
+Works with **any** OpenAI-compatible API: OpenRouter, Anthropic, OpenAI, local proxies, LiteLLM, etc.
 
 ## Usage
 
 ```
-/aic
-build a REST API for user authentication with JWT
+/aic                                    # load the skill
+build a REST API for user auth          # Dispatcher classifies → spawns workers
+fix the login bug on mobile             # routes to bug pipeline
+research best practices for rate limiting # routes to Researcher
 ```
+
+### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `/aic` | Load skill, start Dispatcher |
+| `/aic dashboard` | Start dashboard + API server |
+| `/aic status` | Show current task progress |
 
 ## Dashboard
 
-Monitor agents visually with the AIC Office dashboard (React + Vite + Framer Motion):
+Pixel-art office dashboard with live worker status, task pipeline, and activity log.
 
-| Service | Port | Purpose |
-|---|---|---|
-| Vite dev server | 6969 | React UI |
-| Status API (Node) | 3000 | `/api/status` JSON |
-
-### Start with `/aic dashboard`
-
-Say `/aic dashboard` in chat to automatically start both services and open the browser at **http://localhost:6969**.
-
-### Manual start
+| Service | Port | URL |
+|---------|------|-----|
+| Status API (Node) | 6868 | http://localhost:6868/api/status |
+| Dashboard (Vite) | 6969 | http://localhost:6969 |
 
 ```bash
-# Vite UI
-cd dashboard && npx vite --port 6969
+# Auto-start via chat
+/aic dashboard
 
-# API server
-node scripts/server.js 3000
+# Or manual
+node ~/.hermes/skills/workflows/aic/scripts/server.js 6868
+cd ~/.hermes/skills/workflows/aic/dashboard && npx vite --port 6969
 ```
 
-Open **http://localhost:6969** in your browser.
-
 Features:
-- 10 worker cards with live status
-- Current task info
-- Pipeline phases
-- Activity log
-
-## Workers
-
-All 9 workers use **OpenCode** (`opencode run`) as their engine. Only the Dispatcher uses `delegate_task` (for orchestrating parallel phases).
-
-| Worker | Model | Engine | Purpose |
-|---|---|---|---|
-| PM | opus | opencode run | Requirements |
-| Architect | opus | opencode run | System design |
-| Researcher | sonnet | opencode run | Investigation |
-| Designer | sonnet | opencode run | UX specs |
-| Frontend | sonnet | opencode run | UI code |
-| Backend | sonnet | opencode run | API code |
-| Infra | sonnet | opencode run | Deployment |
-| QA | haiku | opencode run | Testing |
-| Governor | sonnet | opencode run | Compliance |
+- 10 worker desks with live status (idle/working/error)
+- Task info + pipeline phases
+- Activity log with ring buffer (no duplicates)
+- Task history (last 50 tasks)
 
 ## Task Types
 
-| Say This | Type | Workers |
-|---|---|---|
-| build X | feature | PM - Architect - Engineers - QA - Governor |
-| fix bug | bug | Backend/Frontend |
-| research X | research | Researcher |
-| design Y | design | Designer |
-| security audit | security_review | Backend - Governor |
+| Say this | Type | Pipeline |
+|----------|------|----------|
+| `build X` | feature | PM → Architect → [Designer] → Engineers → QA → Governor |
+| `fix X` | bug | Engineer (→ QA if complex) |
+| `research X` | research | Researcher |
+| `design Y` | design | Designer |
+| `audit X` | security | Backend → Governor |
+| `deploy X` | infra | Infra → QA |
 
-## .env File
+## Config
+
+Two files, generated by setup:
+
+**`~/.config/opencode/opencode.jsonc`** — canonical config for OpenCode:
+```jsonc
+{
+  "provider": {
+    "myprovider": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": { "baseURL": "https://...", "apiKey": "sk-..." },
+      "models": {
+        "Thinker": { "name": "claude-opus-4" },
+        "Crafter": { "name": "claude-sonnet-4" },
+        "Sprinter": { "name": "claude-haiku-3.5" }
+      }
+    }
+  }
+}
+```
+
+**`~/.hermes/skills/workflows/aic/.env`** — Dispatcher reads this for spawn commands:
+```
+PROVIDER_ID=myprovider
+MODEL_THINKER=Thinker
+MODEL_CRAFTER=Crafter
+MODEL_SPRINTER=Sprinter
+```
+
+## Architecture
 
 ```
-PROVIDER=openrouter
-API_KEY=sk-or-xxx
-MODEL_THINKER=anthropic/claude-opus-4
-MODEL_CRAFTER=anthropic/claude-sonnet-4
-MODEL_SPRINTER=anthropic/claude-haiku-3.5
+User → Hermes → Dispatcher (SKILL.md)
+                    ├── PM (Thinker)
+                    ├── Architect (Thinker)
+                    ├── Engineers ×3 (Crafter)
+                    ├── QA (Sprinter)
+                    └── Governor (Crafter)
+                    
+Dashboard ← polls → server.js:6868 ← POST ← Dispatcher (curl)
 ```
+
+Single-process Node server (`server.js`) holds all state in memory, flushes to `status.json` for restart resilience. Ring buffer for logs (100 entries), append-only `history.json` for completed tasks.
 
 ## License
 

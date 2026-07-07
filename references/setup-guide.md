@@ -6,22 +6,31 @@
 # 1. Install OpenCode (requires Node.js >= 18)
 npm install -g opencode-ai@latest
 
-# 2. Run setup script (auto-detects models from proxy)
+# 2. Run setup script (auto-detects models from API)
 bash ~/.hermes/skills/workflows/aic/scripts/setup.sh
 ```
 
-## Setup Flow (Option 1: OpenAI-Compatible Proxy)
+## Setup Options
 
-The setup script will:
-1. Ask for **Base URL** (e.g. `http://192.168.2.11:20128/v1`)
-2. Ask for **API Key**
-3. Auto-fetch models from `{BASE_URL}/models` endpoint
-4. Display a numbered list of available models
-5. Let you pick 3 models for task tiers:
-   - **COMPLEX** (PM, Architect) — default: model #1
-   - **STANDARD** (Engineers, Governor) — default: model #2
-   - **FAST** (QA) — default: model #3
-6. Auto-generate `opencode.jsonc` and `.env`
+| # | Option | What it does |
+|---|--------|-------------|
+| 1 | **Connect to API** | URL → API key → auto-fetch /v1/models → pick Thinker/Crafter/Sprinter |
+| 2 | **Free models** | No auth, uses deepseek-v4-flash-free (rate-limited) |
+| 3 | **Skip** | Manual config |
+
+Option 1 works with **any** OpenAI-compatible API: OpenRouter, Anthropic, OpenAI, local proxies, LiteLLM, etc.
+
+## Setup Flow (Option 1: API)
+
+1. Enter **Base URL** (e.g. `https://openrouter.ai/api/v1` or `http://192.168.2.11:20128/v1`)
+2. Enter **API Key**
+3. Enter **Provider ID** (short name, e.g. `openrouter`, `tvd`)
+4. Script auto-fetches models from `{BASE_URL}/models`
+5. Pick 3 models by number:
+   - **Thinker** (PM, Architect, complex reasoning) — default: #1
+   - **Crafter** (Engineers, standard coding) — default: #2
+   - **Sprinter** (QA, fast/lightweight) — default: #3
+6. Auto-generates `opencode.jsonc` + `.env`
 
 ## Config Files Generated
 
@@ -30,31 +39,31 @@ The setup script will:
 {
   "$schema": "https://opencode.ai/config.json",
   "provider": {
-    "tvd": {
+    "myprovider": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "tvd Proxy",
+      "name": "myprovider",
       "options": {
-        "baseURL": "http://192.168.2.11:20128/v1",
+        "baseURL": "https://openrouter.ai/api/v1",
         "apiKey": "sk-..."
       },
       "models": {
-        "Opus": { "name": "actual-model-id-from-api" },
-        "Sonnet": { "name": "actual-model-id-from-api" },
-        "Haiku": { "name": "actual-model-id-from-api" }
+        "Thinker": { "name": "anthropic/claude-opus-4" },
+        "Crafter": { "name": "anthropic/claude-sonnet-4" },
+        "Sprinter": { "name": "anthropic/claude-haiku-3.5" }
       }
     }
   }
 }
 ```
 
-**Key:** `Opus`/`Sonnet`/`Haiku` are the OpenCode model keys (used in `--model tvd/Opus`). The `name` field holds the actual API model ID.
+**Key:** `Thinker`/`Crafter`/`Sprinter` are OpenCode model keys (used in `--model provider/Thinker`). The `name` field holds the actual API model ID.
 
 ### `~/.hermes/skills/workflows/aic/.env`
 ```
-PROVIDER_ID=tvd
-MODEL_OPUS=Opus
-MODEL_SONNET=Sonnet
-MODEL_HAIKU=Haiku
+PROVIDER_ID=myprovider
+MODEL_THINKER=Thinker
+MODEL_CRAFTER=Crafter
+MODEL_SPRINTER=Sprinter
 ```
 
 ## Usage
@@ -65,19 +74,10 @@ MODEL_HAIKU=Haiku
 build a REST API for user auth
 
 # Direct OpenCode
-opencode run "implement auth" --model tvd/Sonnet
-opencode run "design system architecture" --model tvd/Opus
-opencode run "run tests" --model tvd/Haiku
+opencode run "implement auth" --model myprovider/Crafter
+opencode run "design system architecture" --model myprovider/Thinker
+opencode run "run tests" --model myprovider/Sprinter
 ```
-
-## Other Provider Options
-
-The setup script also supports:
-- **OpenRouter** — multi-provider, requires API key
-- **Anthropic** — Claude direct, requires API key
-- **OpenAI** — GPT direct, requires API key
-- **Free models** — no auth needed (rate-limited)
-- **Skip** — manual config
 
 ## Troubleshooting
 
@@ -86,5 +86,5 @@ The setup script also supports:
 | `opencode: command not found` | `npm install -g opencode-ai@latest` |
 | `Node.js >= 18 required` | Upgrade Node.js from https://nodejs.org/ |
 | `Failed to fetch models` | Check Base URL and API key; script falls back to manual model entry |
-| `No active credentials for provider: openai` | Model key = API name instead of generic Opus/Sonnet/Haiku. Re-run setup. |
+| `No active credentials for provider: openai` | Known OpenCode bug with custom providers in `run` mode. Use `delegate_task` as fallback. |
 | Config not found | Run `/aic` to complete first-run setup |
