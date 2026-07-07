@@ -834,7 +834,15 @@ When rendering dynamic styles from a dictionary (`const config = statusConfig[ph
 
 ### ❌ Typescript Type Mismatches in Shared Status (Primitive vs Object)
 When refactoring state from objects `{ status: 'idle', engine: null }` to primitive strings (`'idle'`) across multiple components (e.g., `WorkerDesk.tsx`, `WorkerGrid.tsx`), ensure you extract the primitive value BEFORE passing it down to purely visual components (`DeskComputer.tsx`, `StatusBubble.tsx`).
-**Fix:** Use an interface mapped precisely: `status: WorkerState['status']` in props, or pass the primitive explicitly via `status={workerState.status}` from the parent. Do NOT use regex replace (`sed`) for refactoring Typescript files with complex syntax — use LSP-aware tools or explicit manual file writes to avoid destroying the `import` statements or object syntaxes.
+**Fix:** Use an interface mapped precisely: `status: WorkerState['status']` in props, or pass the primitive explicitly via `status={workerState?.status ?? 'idle'}` from the parent. Do NOT use regex replace (`sed`) for refactoring Typescript files with complex syntax — use LSP-aware tools or explicit manual file writes to avoid destroying the `import` statements or object syntaxes.
+
+### ❌ Pixel-Art UI Positioning Anomalies (Monitor Offside, Floating Bubbles)
+When converting standard web components to pixel-art equivalents, `absolute` positioning relies heavily on the specific container. 
+**Fix:** For `WorkerDesk`, the monitor must be nested and positioned `-top-12 right-2` (not bottom-right) to sit naturally on the desk surface. `StatusBubble` must be anchored `top-2 left-1/2` relative to the desk surface block, not floating negative pixels above the container.
+
+### ❌ Worker Sorting & Missing Avatars
+If a worker (like the Dispatcher) disappears from the `WorkerGrid` after a refactor, it's often because the hardcoded array or grouping function lost its section map.
+**Fix:** Define an explicit array of strings for desired ordering `['Dispatcher', 'Governance', 'Product', 'Engineering']` inside the grouping utility (`groupWorkersBySection`), and return a sorted tuple `[string, WorkerDef[]][]` so the frontend grid inherently respects the hierarchy.
 
 ### ❌ React dashboard `connected` stays false without explicit health polling
 The `DashboardProvider` does NOT auto-detect server connectivity. The `connected` state starts `false` and only updates when something dispatches `SET_CONNECTED`. Without a `useEffect` that polls `/health` every 5s and dispatches the result, the header permanently shows "OFFLINE" even when the API server is running. **Fix:** Add health polling in `DashboardProvider` on mount — `getHealth().then(d => dispatch({type:'SET_CONNECTED', payload:!!d?.ok})).catch(() => dispatch({type:'SET_CONNECTED', payload:false}))`. Also poll `/api/workers`, `/api/cost`, `/api/queue` for live dashboard data. Without polling, every dashboard page shows stale initial state.
