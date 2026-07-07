@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { PageShell } from '../components/shared/PageShell';
 import { MetricCard } from '../components/shared/MetricCard';
-import { getHealth, resetState } from '../api/system';
-import type { SystemHealth } from '../types';
+import { getHealth, resetState, getCost } from '../api/system';
+import type { SystemHealth, CostData } from '../types';
 
 export function SystemPage() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [cost, setCost] = useState<CostData | null>(null);
   const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     getHealth().then(setHealth).catch(() => {});
+    getCost().then(setCost).catch(() => {});
   }, []);
 
   const handleReset = async () => {
@@ -33,6 +35,18 @@ export function SystemPage() {
             value={health?.ok ? 'OK' : 'DOWN'}
             color={health?.ok ? '#4caf50' : '#f44336'}
             sub={health ? `Uptime: ${(health.uptime / 60).toFixed(1)} min` : ''}
+          />
+          <MetricCard
+            label="Total Tokens"
+            value={cost ? (cost.totalTokens.input + cost.totalTokens.output).toLocaleString() : '?'}
+            color="#00d4ff"
+            sub={cost ? `In: ${cost.totalTokens.input.toLocaleString()} / Out: ${cost.totalTokens.output.toLocaleString()}` : ''}
+          />
+          <MetricCard
+            label="Total Cost"
+            value={cost ? `$${cost.totalCost.toFixed(4)}` : '?'}
+            color="#ff4081"
+            sub="Based on active model tiers"
           />
         </div>
 
