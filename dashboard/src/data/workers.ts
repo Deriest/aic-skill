@@ -1,8 +1,8 @@
 import type { WorkerDef } from '../types';
 
 export const WORKERS: WorkerDef[] = [
-  { id: 'dispatcher',  name: 'DISPATCH',  role: 'Dispatcher',         model: 'session', skinColor: '#d4a574', shirtColor: '#dc143c', pantsColor: '#1a1a1a', hairColor: '#2a2a2a', section: 'Dispatcher' },
-  { id: 'governor',    name: 'GOV',       role: 'Governor',           model: 'crafter',  skinColor: '#ffdbac', shirtColor: '#ffd700', pantsColor: '#2a2a2a', hairColor: '#1a1a1a', section: 'Governance' },
+  { id: 'dispatcher',  name: 'DISPATCH',  role: 'Dispatcher',         model: 'session', skinColor: '#d4a574', shirtColor: '#dc143c', pantsColor: '#1a1a1a', hairColor: '#2a2a2a', section: 'Leadership' },
+  { id: 'governor',    name: 'GOV',       role: 'Governor',           model: 'crafter',  skinColor: '#ffdbac', shirtColor: '#ffd700', pantsColor: '#2a2a2a', hairColor: '#1a1a1a', section: 'Leadership' },
   { id: 'pm',          name: 'PM',        role: 'Product Manager',    model: 'thinker',    skinColor: '#ffcc99', shirtColor: '#3366cc', pantsColor: '#333366', hairColor: '#4a3728', section: 'Product' },
   { id: 'researcher',  name: 'RESEARCH',  role: 'Researcher',         model: 'crafter',  skinColor: '#e6c8b0', shirtColor: '#228b22', pantsColor: '#1a1a2a', hairColor: '#1a1a1a', section: 'Product' },
   { id: 'designer',    name: 'DESIGNER',  role: 'Designer',           model: 'crafter',  skinColor: '#d4a574', shirtColor: '#ff69b4', pantsColor: '#2a1a2a', hairColor: '#8b4513', section: 'Product' },
@@ -14,7 +14,7 @@ export const WORKERS: WorkerDef[] = [
 ];
 
 export const groupWorkersBySection = () => {
-  const sections = ['Dispatcher', 'Governance', 'Product', 'Engineering'];
+  const sections = ['Leadership', 'Product', 'Engineering'];
   
   const grouped = WORKERS.reduce((acc, worker) => {
     if (!acc[worker.section]) {

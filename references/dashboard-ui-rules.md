@@ -12,10 +12,12 @@ The AIC Dashboard is a pure React frontend built with Vite and Tailwind CSS. It 
 ## Positioning & Pixel Aesthetics
 
 - **Avatars (`WorkerDesk`):** Powered by `framer-motion` and HTML5 Canvas (`usePixelCanvas.ts`). Rendered strictly with `imageRendering: 'pixelated'`.
-- **Z-Indexing:** Desks overlap gracefully. Hover effects create neon box-shadows (`shadow-[0_0_15px_rgba(0,255,255,0.2)]`).
-- **Worker Sorting Hierarchy:** The grid strictly sorts workers top-to-bottom: `Dispatcher` -> `Governance` -> `Product` -> `Engineering`. Ensure `groupWorkersBySection` returns a sorted array tuple.
+- **Negative Space (Breathability):** Use generous vertical spacing (`space-y-12`, `py-6`) between department sections. Use generous horizontal gaps (`gap-6 md:gap-8`) between desks. Desk width should be modest (e.g., `w-[120px]`) to avoid overpowering the screen.
+- **Alignment:** Worker grids MUST be center-aligned (`flex justify-center`, `flex flex-col items-center`), never left-aligned. 
+- **Z-Indexing:** Desks overlap gracefully. Hover effects create neon box-shadows (`shadow-[0_0_15px_rgba(0,255,255,0.2)]`). Idle workers should have reduced opacity (`opacity-80`) and no glowing borders to emphasize active ones.
+- **Worker Sorting Hierarchy:** The grid strictly sorts workers top-to-bottom: `Dispatcher` -> `Governance` -> `Product` -> `Engineering`. Ensure `groupWorkersBySection` returns a sorted array tuple. Use subtle borders beneath section headers.
 - **Desk Accents:**
-  - *Monitor*: Anchored relative to desk using `-top-12 right-2`.
+  - *Monitor*: Anchored relative to desk using `-top-12 right-2`. Do NOT let it float offside.
   - *Status Plat/Bubble*: Anchored `top-2 left-1/2 -translate-x-1/2` directly on the wooden surface div.
 
 ## Typescript Strictness
