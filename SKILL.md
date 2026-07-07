@@ -739,7 +739,13 @@ When draining logs on GET `/api/status`, you must clear `state.logs` (array) AND
 Thinker head → Crafter sub-worker. Crafter head → Sprinter sub-worker. Exception: Researcher can use Crafter under any head. Sub-workers are specialists with narrow scope, not reduced-power copies. See `references/pitfalls-history.md` for full details.
 
 ### ❌ context-gather.sh --tier is not optional
-Always pass `--tier thinker|crafter|sprinter` to match the worker being spawned. Without it, defaults to crafter (16KB). Tier caps: thinker=128KB/depth4, crafter=64KB/depth3, sprinter=32KB/depth2. See `references/pitfalls-history.md` for usage details.
+Always pass `--tier thinker|crafter|sprinter` to match the worker being spawned. Without it, defaults to crafter. Tier caps are read from `.env` (set by `detect-context.sh` during setup): `AIC_CTX_THINKER_KB`, `AIC_CTX_CRAFTER_KB`, `AIC_CTX_SPRINTER_KB`. If `.env` doesn't have these, fallback: thinker=128KB, crafter=64KB, sprinter=32KB.
+
+### ❌ Context limits are auto-detected, not hardcoded
+`detect-context.sh` queries the model's actual context window (from API or known-model table) and calculates proportional limits: Thinker=80%, Crafter=60%, Sprinter=40%. This runs during setup. Never hardcode context limits — different users have different models (1M Gemini vs 128K GPT-4o vs 64K free tier). The `.env` file stores `AIC_CTX_*_KB` values that `context-gather.sh` reads at runtime.
+
+### ❌ Shell scripts that produce machine-readable output: stdout=JSON, stderr=human
+When a script needs both human-readable progress AND machine-parseable output, send human output to stderr (`echo "..." >&2`) and JSON to stdout. This lets callers capture clean JSON via `$()` while still showing progress interactively. `detect-context.sh` uses this pattern. Don't mix them — `tail -1` on multiline JSON output will only get the closing `}`.
 
 ### ❌ Task Templates are NOT used — PM is the translator
 Do NOT create or suggest task templates for the user to pick from. The target user is non-coder. PM Head translates natural language → structured engineering specs. Templates add unnecessary complexity for users who don't know what a "REST API template" means. PM decides the structure based on what the user says.
@@ -807,4 +813,4 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 - **`scripts/rollback.sh`** — File snapshot/restore for pipeline safety. Run: `rollback.sh snapshot <task_id> <files...>`, `rollback.sh restore <task_id>`, `rollback.sh cleanup <task_id>`.
 - **`scripts/cache-context.sh`** — Cached version of context-gather.sh. Invalidates on git commit. Run: `cache-context.sh <project_dir> <tier>`.
 - **`scripts/changelog.sh`** — Auto-generate changelog entry after task completion. Run: `changelog.sh <title> <type> <duration> <files_changed>`.
-- **`references/aic-roadmap.md`** — Full improvement roadmap: 25 tasks across 5 phases (Engine → Intelligence → DX → Dashboard → Hardening). Use for planning next development sprints.
+- **`references/aic-roadmap.md`** — Full improvement roadmap: 26 tasks across 5 phases (Engine → Intelligence → DX → Dashboard → Hardening). Phase 1-3 + 5 implemented (2026-07-07). Phase 4 dashboard UI (WebSocket, Gantt, Worker Stats) deferred — React component work.

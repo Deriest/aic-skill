@@ -3,9 +3,9 @@
 # Usage: context-gather.sh [project_dir] [--tier thinker|crafter|sprinter] [max_kb]
 #
 # Tier defaults (unless max_kb override):
-#   thinker  = 32KB (512K context window)
-#   crafter  = 16KB (256K context window)
-#   sprinter =  8KB (128K context window)
+#   thinker  = auto (from .env, fallback 128KB)
+#   crafter  = auto (from .env, fallback 64KB)
+#   sprinter = auto (from .env, fallback 32KB)
 
 set -euo pipefail
 
