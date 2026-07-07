@@ -25,9 +25,9 @@ done
 # Default max_kb per tier (unless explicitly set)
 if [[ -z "$max_kb" ]]; then
   case "$tier" in
-    thinker)  max_kb=32 ;;
-    crafter)  max_kb=16 ;;
-    sprinter) max_kb=8  ;;
+    thinker)  max_kb=128 ;;
+    crafter)  max_kb=64 ;;
+    sprinter) max_kb=32  ;;
     *)        max_kb=16 ;;
   esac
 fi
@@ -43,9 +43,9 @@ output=""
 
 # 1. Project tree (depth varies by tier)
 case "$tier" in
-  thinker)  tree_depth=3 ;;
-  crafter)  tree_depth=2 ;;
-  sprinter) tree_depth=1 ;;
+  thinker)  tree_depth=4 ;;
+  crafter)  tree_depth=3 ;;
+  sprinter) tree_depth=2 ;;
 esac
 
 if command -v tree &>/dev/null; then
@@ -70,9 +70,9 @@ done
 
 # 3. Source files — depth varies by tier
 case "$tier" in
-  thinker)  src_lines=300; src_depth=3 ;;
-  crafter)  src_lines=200; src_depth=2 ;;
-  sprinter) src_lines=100; src_depth=1 ;;
+  thinker)  src_lines=500; src_depth=4 ;;
+  crafter)  src_lines=300; src_depth=3 ;;
+  sprinter) src_lines=150; src_depth=2 ;;
 esac
 
 if [[ -d "$project_dir/src" ]]; then

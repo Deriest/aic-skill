@@ -47,16 +47,26 @@ Option 1 works with **any** OpenAI-compatible API: OpenRouter, Anthropic, OpenAI
         "apiKey": "sk-..."
       },
       "models": {
-        "Thinker": { "name": "anthropic/claude-opus-4" },
-        "Crafter": { "name": "anthropic/claude-sonnet-4" },
-        "Sprinter": { "name": "anthropic/claude-haiku-3.5" }
+        "Thinker": { "name": "anthropic/claude-opus-4", "limit": { "context": 512000, "output": 32000 } },
+        "Crafter": { "name": "anthropic/claude-sonnet-4", "limit": { "context": 256000, "output": 16000 } },
+        "Sprinter": { "name": "anthropic/claude-haiku-3.5", "limit": { "context": 128000, "output": 8000 } }
       }
     }
   }
 }
 ```
 
-**Key:** `Thinker`/`Crafter`/`Sprinter` are OpenCode model keys (used in `--model provider/Thinker`). The `name` field holds the actual API model ID.
+**Key:** `Thinker`/`Crafter`/`Sprinter` are OpenCode model keys (used in `--model provider/Thinker`). The `name` field holds the actual API model ID. The `limit` field sets context window + output caps per tier.
+
+## Context Limits Per Tier
+
+| Tier | Context Window | Output | Workers | context-gather.sh |
+|------|---------------|--------|---------|-------------------|
+| Thinker | 512K tokens | 32K | PM, Architect | `--tier thinker` → 32KB, depth 3 |
+| Crafter | 256K tokens | 16K | Engineers, Governor | `--tier crafter` → 16KB, depth 2 |
+| Sprinter | 128K tokens | 8K | QA | `--tier sprinter` → 8KB, depth 1 |
+
+Even if the underlying model supports 1M tokens, `limit.context` constrains OpenCode per tier. Thinker gets more room for analysis, Sprinter stays fast.
 
 ### `~/.hermes/skills/workflows/aic/.env`
 ```

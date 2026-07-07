@@ -24,11 +24,27 @@ Your Hermes agent becomes a **Dispatcher** that classifies tasks, spawns special
 
 | Tier | Context Window | Output | Use for |
 |------|---------------|--------|---------|
-| Thinker | 512K tokens | 32K | PM, Architect — large codebase analysis, complex reasoning |
-| Crafter | 256K tokens | 16K | Engineers, Governor — focused coding tasks |
-| Sprinter | 128K tokens | 8K | QA — fast validation, targeted testing |
+| Thinker | 800K tokens | 64K | PM, Architect — large codebase analysis, complex reasoning |
+| Crafter | 512K tokens | 32K | Engineers, Governor — focused coding tasks |
+| Sprinter | 256K tokens | 16K | QA — fast validation, targeted testing |
 
-Context-gathering script adapts per tier: `context-gather.sh <dir> --tier thinker` (32KB/depth 3) vs `--tier sprinter` (8KB/depth 1).
+Context-gathering script adapts per tier: `context-gather.sh <dir> --tier thinker` (128KB/depth 4) vs `--tier sprinter` (32KB/depth 2).
+
+## Worker Hierarchy
+
+Each worker is a **Head** who can work AND spawn sub-workers for parallel tasks:
+
+```
+Dispatcher (Hermes)
+  └── PM (Head, Thinker) → can spawn Researcher, Designer
+  └── Architect (Head, Thinker) → can spawn Researcher, multiple Engineers
+  └── Frontend (Head, Crafter) → can spawn Designer, sub-Frontend
+  └── Backend (Head, Crafter) → can spawn Researcher, sub-Backend
+  └── QA (Head, Sprinter) → can spawn sub-QA for parallel test suites
+  └── ... (all 9 heads can spawn sub-workers)
+```
+
+Sub-workers use same or lower tier than their head (Thinker→Crafter, Crafter→Sprinter).
 
 ## Quick Start
 

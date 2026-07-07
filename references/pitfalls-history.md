@@ -6,7 +6,7 @@ Historical anecdotes and detailed troubleshooting stories. For actionable rules,
 
 ## ❌ Over-extending analysis requests into full pipelines
 
-When the user asks for analysis (e.g., "coba kasih saran", "how to increase efficiency", "what are the options", "give me suggestions"), they want **recommendations only** — NOT a full pipeline implementation. Do NOT spawn PM → Architect → Engineer → QA → Governor for an analysis request. Only spawn the single relevant worker (usually PM for requirements) to produce the analysis. The user will tell you when they want to implement.
+When the user asks for analysis (e.g., "coba kasih saran", "how to", "what are the options", "give me suggestions"), they want **recommendations only** — NOT a full pipeline implementation. Do NOT spawn PM → Architect → Engineer → QA → Governor for an analysis request. Only spawn the single relevant worker (usually PM for requirements) to produce the analysis. The user will tell you when they want to implement.
 
 **User correction (2026-07-06):** "engga saya ga suruh fix dashboard sekarang, saya minta cari tau cara untuk menaikan efesiensi waktu" — I spawned a full 5-phase pipeline when the user only wanted efficiency analysis. Over-extending wastes time and ignores the actual request scope.
 
@@ -146,7 +146,7 @@ The setup flow for custom proxy should:
 1. Ask for base URL and API key first
 2. Auto-fetch available models from `{BASE_URL}/models` (with auth header)
 3. Display numbered list of available models
-4. Let user pick model for each tier (COMPLEX/STANDARD/FAST) by number, with sensible defaults (1/2/3)
+4. Let user pick model for each tier (Thinker/Crafter/Sprinter) by number, with sensible defaults (1/2/3)
 5. Generate `opencode.jsonc` with correct key/name mapping + `.env`
 
 **User correction (2026-07-07):** User wanted auto-detection, not manual typing of model names. Setup was simplified from 6 provider options to 3 (API/Free/Skip) with universal OpenAI-compatible flow.
@@ -177,3 +177,84 @@ The `write_file` tool has a security redactor that silently replaces patterns ma
 2. Use `patch` to replace the placeholder with `${API_KEY}`
 — OR —
 3. Write the file, then `grep` for `***`, then `patch` any redacted lines back
+
+---
+
+## ❌ OpenCode `limit.context` per model — discovered 2026-07-07
+
+OpenCode supports `limit` per model in `opencode.jsonc`. This controls context window and output token caps **per model tier**, independent of the model's actual max context.
+
+**Schema (from `https://opencode.ai/config.json`):**
+```jsonc
+"limit": {
+  "context": <number>,  // max context tokens (required)
+  "input": <number>,    // max input tokens (optional)
+  "output": <number>    // max output tokens (required)
+}
+```
+
+**AIC tier limits:**
+```jsonc
+"Thinker":  { "name": "...", "limit": { "context": 512000, "output": 32000 } },
+"Crafter":  { "name": "...", "limit": { "context": 256000, "output": 16000 } },
+"Sprinter": { "name": "...", "limit": { "context": 128000, "output": 8000 } }
+```
+
+**Why this matters:** Even if the underlying model supports 1M tokens, setting `limit.context` constrains OpenCode's context window per tier. Thinker gets more room for codebase analysis, Sprinter stays fast with less context. Combined with tier-aware `context-gather.sh --tier`, this prevents context overflow and controls cost.
+
+---
+
+## ❌ Dashboard activity log loop — drain-on-read fix (2026-07-07)
+
+**Symptom:** Dashboard Activity Log showed duplicate entries that grew with every poll cycle. Each poll re-delivered the same logs, and the client re-appended them.
+
+**Root cause:** `GET /api/status` returned `state.logs` without clearing it. Every 2-second poll returned the full log history, and the React client appended every entry again.
+
+**Fix (server.js lines 126-130):**
+```js
+// Drain logs so client doesn't re-append the same entries each poll
+const logsOut = state.logs.slice();
+const logOut = state.log;
+state.logs = [];
+state.log = null;
+flush();  // persist the cleared state to disk
+```
+
+**Pitfall:** Must clear BOTH `state.logs` (array) AND `state.log` (backward-compat single entry) AND call `flush()`. Missing `state.log` causes grep-based tests to find "ghost" entries. Missing `flush()` causes restart to re-deliver drained logs from disk.
+
+**Verification:** Seed 7 events via POST, poll 3 times: poll 1 gets 7, poll 2 gets 0, poll 3 gets 0.
+
+---
+
+## ❌ test-api.sh false failures from test ordering (2026-07-07)
+
+**Symptom:** `test-api.sh` reported 23/25 pass, 2 fail. Step 9 checked `currentTask == null` and `agents == empty` after "task-complete", but saw stale state from step 8.
+
+**Root cause:** Step 8 created a new task ("Concurrent-Test") with 10 agents but didn't call `task-complete` + `reset` before step 9 verified clean state. Step 9 expected reset state from step 6's `task-complete`, but step 8 overwrote it.
+
+**Fix:** Add cleanup after step 8:
+```bash
+# Clean up concurrent test state
+post /api/task-complete '{}'
+post /api/reset '{}'
+```
+
+**Lesson:** Test scripts that create side effects must clean up before downstream assertions that assume clean state. Every "create" should have a matching "destroy" before the next verification block.
+
+---
+
+## ❌ Hardcoded provider presets get stale model IDs (2026-07-07)
+
+**Symptom:** `setup.sh` had separate functions for OpenRouter, Anthropic, OpenAI with hardcoded model IDs (`claude-3-opus-20240229`, `anthropic/claude-3-opus`). By 2026-07-07 these were outdated — Claude 4 models exist.
+
+**Root cause:** Preset functions encoded model IDs at write time. As models update, presets rot silently.
+
+**Fix:** Delete all preset functions. Use one universal OpenAI-compatible flow for ALL providers:
+1. User enters base URL + API key
+2. Script auto-fetches `/v1/models`
+3. User picks Thinker/Crafter/Sprinter by number
+4. Generate config with actual current model IDs
+
+This works for OpenRouter, Anthropic, OpenAI, local proxies, LiteLLM — anything with an OpenAI-compatible API.
+
+**Lesson:** Never hardcode model IDs. Auto-detect from the API, or let the user pick from a live list.
