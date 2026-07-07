@@ -56,10 +56,10 @@ export const WorkerDesk = memo(function WorkerDesk({ worker, status, engine }: W
 
   return (
     <div
-      className={`pixel-desk flex flex-col items-center p-2 rounded-lg border-2 transition-all duration-300 ${
+      className={`pixel-desk flex flex-col items-center p-2 rounded-lg border transition-all duration-300 ${
         status === 'working'
-          ? 'border-aic-yellow shadow-neon-yellow bg-aic-bg-panel/40 animate-pulse'
-          : 'border-transparent'
+          ? 'border-aic-yellow shadow-[0_0_15px_rgba(255,255,0,0.15)] bg-aic-bg-panel/40 animate-pulse'
+          : 'border-transparent opacity-80 hover:opacity-100'
       }`}
       onClick={handleClick}
     >
