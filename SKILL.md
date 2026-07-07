@@ -427,16 +427,26 @@ Investigate → Planning → Execution → Documentation → Verification
 ```
 1. User triggers task (e.g. /aic add feature X)
 2. Dispatcher: POST /api/task-status {currentTask: {id, title, type}, currentPhase: "Investigate"}
-3. Dispatcher (you, NOT a worker): investigate the codebase
-4. POST /api/task-status {currentPhase: "Planning"}  → pm/researcher/designer/architect now allowed
-5. Spawn PM via opencode run. PM produces requirements.json
-6. POST /api/task-status {currentPhase: "Execution"}  → frontend/backend/infra/qa now allowed
-7. Spawn Architect, then Engineers (parallel if independent)
-8. POST /api/task-status {currentPhase: "Documentation"}  → engineers may finalize docs/changelog
-9. POST /api/task-status {currentPhase: "Verification"}  → governor now allowed
-10. Spawn QA/Governor
-11. POST /api/task-complete   → resets workers + queue, writes history
+3. Dispatcher (you, NOT a worker): investigate the codebase — DO NOT write/patch/edit any code yourself
+4. POST /api/task-status {currentPhase: "Planning"}
+5. POST /api/agent-status {"agent":"pm","status":"working","engine":"opencode"}
+6. Spawn PM via opencode run. PM produces requirements.json
+7. POST /api/agent-status {"agent":"pm","status":"idle"}  ← MANDATORY after worker done
+8. POST /api/task-status {currentPhase: "Execution"}
+9. POST /api/agent-status {"agent":"<engineer>","status":"working","engine":"opencode"}
+10. Spawn Engineer(s) via opencode run
+11. POST /api/agent-status {"agent":"<engineer>","status":"idle"}  ← MANDATORY
+12. POST /api/task-status {currentPhase: "Documentation"}
+13. POST /api/task-status {currentPhase: "Verification"}
+14. Spawn QA/Governor, update their status before/after
+15. POST /api/task-complete  ← MANDATORY — resets ALL workers to idle, clears task/phase
 ```
+
+**⚠️ CRITICAL: Every step that says "POST /api/agent-status" or "POST /api/task-complete" is NON-NEGOTIABLE.**
+The dashboard polls `/api/status` every 1.5s and auto-updates. But if the Dispatcher skips these API calls, the dashboard stays stuck showing stale data forever. This is NOT a dashboard bug — it is the Dispatcher failing to update state.
+
+**⚠️ CRITICAL: Dispatcher MUST NOT take worker jobs.**
+The Dispatcher must NEVER use `write_file`, `patch`, `terminal` (for code edits), or `delegate_task` for coding work. Even for "quick one-liner fixes", spawn a worker via `opencode run`. If you catch yourself about to edit a file — STOP and spawn a worker instead.
 
 **Why the lifecycle exists (not just a docs change):** Without server enforcement, the Dispatcher can — and historically did — skip straight from `phase_start phase:"PM (Translation)"` to setting `backend: working` before PM even started. The guard in `/api/agent-status` makes that impossible: a request to mark `backend: working` while lifecycle is still `Investigate` or `Planning` returns HTTP 403 with the allowed set and a hint. The Dispatcher MUST advance lifecycle to `Implementation` first.
 
@@ -846,7 +856,12 @@ The Dispatcher must:
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
-**Fix (2026-07-08):** To force the responsive SVG to stretch fully horizontally across the right column without vertical distortion, set `viewBox="0 0 400 96"` (or a similarly wide aspect ratio like `viewBox="0 0 240 96"`), draw a wide room background (e.g. `width="400"`), spread the room items horizontally inside the SVG (window on the far left, desk in the center, server rack/diagrams on the far right), and render the SVG with `preserveAspectRatio="xMidYMid meet"` (or slice) inside a wrapper containing `w-full h-[100px] mt-auto overflow-hidden shrink-0`. This guarantees a pixel-perfect, wide room visual that spans the full column width without clipping the left window or getting cut off.
+**Fix (2026-07-08):** To force the responsive SVG to stretch fully horizontally across the right column without vertical distortion, set `viewBox="0 0 400 96"` (or a similarly wide aspect ratio like `viewBox="0 0 240 96"`), draw a wide room background (e.g. `width="400"`), spread the room items horizontally inside the SVG (window on the far left, desk in the center, server rack/diagrams on the far right), and render the SVG with `preserveAspectRatio="none"` or `preserveAspectRatio="xMinYMax meet"` inside a wrapper containing `w-full h-[280px] shrink-0`.
+If the user requests it to align with cards like the Stats Bar, wrap it inside a card with a border (`bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative h-[280px]`). Ensure any floating elements/computers that clutter the interface are disabled or set to `null` to avoid overlap or visuals that block characters.
+If the user requests it to align with cards like the Stats Bar, wrap it inside a card with a border (`bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative h-[280px]`). Ensure any floating elements/computers that clutter the interface are disabled or set to `null` to avoid overlap or visuals that block characters.
+
+### ❌ Computer melayang di atas worker
+Jika komputer melayang di atas kepala/meja worker terasa mengganggu dan user meminta untuk menghapusnya ("saya gamau ada komputer melayang di atas worker"), modifikasi `DeskComputer.tsx` agar mengembalikan `null` atau kosongkan kontainer monitor/keyboard melayang tersebut agar visual di panel Virtual Office bersih dan hanya menyisakan meja pekerja saja.
 
 ### ❌ `framer-motion` undefined config crashes on unexpected backend strings
 When rendering dynamic styles from a dictionary (`const config = statusConfig[phase.status]`), if the backend returns an unexpected string (e.g. "active" instead of "working"), `config` becomes `undefined` and causes a fatal `TypeError` in React (`can't access property... config is undefined`), crashing the whole dashboard.
@@ -1002,7 +1017,12 @@ The Dispatcher must:
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
-**Fix (2026-07-08):** To force the responsive SVG to stretch fully horizontally across the right column without vertical distortion, set `viewBox="0 0 400 96"` (or a similarly wide aspect ratio like `viewBox="0 0 240 96"`), draw a wide room background (e.g. `width="400"`), spread the room items horizontally inside the SVG (window on the far left, desk in the center, server rack/diagrams on the far right), and render the SVG with `preserveAspectRatio="xMidYMid meet"` (or slice) inside a wrapper containing `w-full h-[100px] mt-auto overflow-hidden shrink-0`. This guarantees a pixel-perfect, wide room visual that spans the full column width without clipping the left window or getting cut off.
+**Fix (2026-07-08):** To force the responsive SVG to stretch fully horizontally across the right column without vertical distortion, set `viewBox="0 0 400 96"` (or a similarly wide aspect ratio like `viewBox="0 0 240 96"`), draw a wide room background (e.g. `width="400"`), spread the room items horizontally inside the SVG (window on the far left, desk in the center, server rack/diagrams on the far right), and render the SVG with `preserveAspectRatio="none"` or `preserveAspectRatio="xMinYMax meet"` inside a wrapper containing `w-full h-[280px] shrink-0`.
+If the user requests it to align with cards like the Stats Bar, wrap it inside a card with a border (`bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative h-[280px]`). Ensure any floating elements/computers that clutter the interface are disabled or set to `null` to avoid overlap or visuals that block characters.
+If the user requests it to align with cards like the Stats Bar, wrap it inside a card with a border (`bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative h-[280px]`). Ensure any floating elements/computers that clutter the interface are disabled or set to `null` to avoid overlap or visuals that block characters.
+
+### ❌ Computer melayang di atas worker
+Jika komputer melayang di atas kepala/meja worker terasa mengganggu dan user meminta untuk menghapusnya ("saya gamau ada komputer melayang di atas worker"), modifikasi `DeskComputer.tsx` agar mengembalikan `null` atau kosongkan kontainer monitor/keyboard melayang tersebut agar visual di panel Virtual Office bersih dan hanya menyisakan meja pekerja saja.
 
 ### ❌ Task Description Cutoff (Card Height)
 Do not use `overflow-hidden` or `line-clamp` on the Current Task description block. Use `min-h-[60px]` with `overflow-y-auto` so the text can scroll without breaking the card's fixed height.

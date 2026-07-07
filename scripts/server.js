@@ -154,6 +154,17 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { success: true, worker: state.workers[agent] });
   }
 
+  // POST /api/task-complete — reset all workers to idle, clear task/phase
+  if (req.method === 'POST' && pathname === '/api/task-complete') {
+    for (const w of WORKERS) {
+      state.workers[w] = { status: w === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null };
+    }
+    state.currentTask = null;
+    state.currentPhase = null;
+    saveState();
+    return send(res, 200, { success: true });
+  }
+
   // POST /api/reset — clear all workers to idle
   if (req.method === 'POST' && pathname === '/api/reset') {
     state = defaultState();
