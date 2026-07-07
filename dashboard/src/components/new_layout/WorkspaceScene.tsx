@@ -14,7 +14,7 @@ export function WorkspaceScene() {
           {/* Room Background / Walls & Floor */}
           <g id="background" shapeRendering="crispEdges">
             {/* Dark background already handled by container but let's draw walls */}
-            <rect x="0" y="0" width="400" height="72" fill="#0d0d1e" />
+            <rect x="0" y="0" width="400" height="72" fill="none" />
             {/* Floor */}
             <rect x="0" y="72" width="400" height="24" fill="#14142b" />
             {/* Floor board lines */}
@@ -26,45 +26,45 @@ export function WorkspaceScene() {
           {/* Window showing pixel star night or cyber sky */}
           <g id="window" shapeRendering="crispEdges">
             {/* Window Frame */}
-            <rect x="10" y="8" width="40" height="32" fill="#1f1f3a" />
-            <rect x="11" y="9" width="38" height="30" fill="#050510" />
+            <rect x="0" y="8" width="40" height="32" fill="#1f1f3a" />
+            <rect x="1" y="9" width="38" height="30" fill="#050510" />
             {/* Cyber City Moon / Cyber glow in sky */}
-            <rect x="38" y="12" width="6" height="6" fill="#00d4ff" fillOpacity="0.8" />
-            <rect x="40" y="14" width="2" height="2" fill="#ffffff" />
+            <rect x="28" y="12" width="6" height="6" fill="#00d4ff" fillOpacity="0.8" />
+            <rect x="30" y="14" width="2" height="2" fill="#ffffff" />
             {/* Stars */}
-            <rect x="16" y="15" width="1" height="1" fill="#ffffff" />
-            <rect x="26" y="24" width="1" height="1" fill="#ffffff" fillOpacity="0.7" />
-            <rect x="20" y="28" width="1" height="1" fill="#ffffff" fillOpacity="0.5" />
-            <rect x="34" y="18" width="1" height="1" fill="#ffffff" />
+            <rect x="6" y="15" width="1" height="1" fill="#ffffff" />
+            <rect x="16" y="24" width="1" height="1" fill="#ffffff" fillOpacity="0.7" />
+            <rect x="10" y="28" width="1" height="1" fill="#ffffff" fillOpacity="0.5" />
+            <rect x="24" y="18" width="1" height="1" fill="#ffffff" />
             {/* Grid/Neon grid outside window representing digital cityscape */}
-            <rect x="11" y="32" width="38" height="1" fill="#7c3aed" fillOpacity="0.4" />
-            <rect x="18" y="28" width="4" height="11" fill="#ff4444" fillOpacity="0.2" />
-            <rect x="28" y="22" width="6" height="17" fill="#ffcc00" fillOpacity="0.2" />
+            <rect x="1" y="32" width="38" height="1" fill="#7c3aed" fillOpacity="0.4" />
+            <rect x="8" y="28" width="4" height="11" fill="#ff4444" fillOpacity="0.2" />
+            <rect x="18" y="22" width="6" height="17" fill="#ffcc00" fillOpacity="0.2" />
           </g>
 
           {/* Server Rack / System Board (Glowy computer servers on the side) */}
           <g id="server-rack" shapeRendering="crispEdges">
-            <rect x="360" y="20" width="24" height="52" fill="#20203a" />
-            <rect x="361" y="21" width="22" height="50" fill="#101020" />
+            <rect x="376" y="20" width="24" height="52" fill="#20203a" />
+            <rect x="377" y="21" width="22" height="50" fill="#101020" />
             {/* Server unit 1 */}
-            <rect x="363" y="24" width="18" height="6" fill="#1a1a2e" />
-            <rect x="365" y="26" width="2" height="2" fill="#00ff88" className="animate-pulse" />
-            <rect x="370" y="26" width="4" height="2" fill="#444466" />
+            <rect x="379" y="24" width="18" height="6" fill="#1a1a2e" />
+            <rect x="381" y="26" width="2" height="2" fill="#00ff88" className="animate-pulse" />
+            <rect x="386" y="26" width="4" height="2" fill="#444466" />
             {/* Server unit 2 */}
-            <rect x="363" y="34" width="18" height="6" fill="#1a1a2e" />
-            <rect x="365" y="36" width="2" height="2" fill="#ff4444" />
-            <rect x="370" y="36" width="4" height="2" fill="#444466" />
+            <rect x="379" y="34" width="18" height="6" fill="#1a1a2e" />
+            <rect x="381" y="36" width="2" height="2" fill="#ff4444" />
+            <rect x="386" y="36" width="4" height="2" fill="#444466" />
             {/* Server unit 3 */}
-            <rect x="363" y="44" width="18" height="6" fill="#1a1a2e" />
-            <rect x="365" y="46" width="2" height="2" fill="#00d4ff" className="animate-pulse" />
-            <rect x="370" y="46" width="4" height="2" fill="#00d4ff" fillOpacity="0.4" />
+            <rect x="379" y="44" width="18" height="6" fill="#1a1a2e" />
+            <rect x="381" y="46" width="2" height="2" fill="#00d4ff" className="animate-pulse" />
+            <rect x="386" y="46" width="4" height="2" fill="#00d4ff" fillOpacity="0.4" />
             {/* Server unit 4 */}
-            <rect x="363" y="54" width="18" height="6" fill="#1a1a2e" />
-            <rect x="365" y="56" width="2" height="2" fill="#ffcc00" />
-            <rect x="370" y="56" width="4" height="2" fill="#444466" />
+            <rect x="379" y="54" width="18" height="6" fill="#1a1a2e" />
+            <rect x="381" y="56" width="2" height="2" fill="#ffcc00" />
+            <rect x="386" y="56" width="4" height="2" fill="#444466" />
             {/* Cables hanging */}
-            <path d="M 362 30 Q 358 45 362 60" stroke="#7c3aed" strokeWidth="1" fill="none" />
-            <path d="M 363 40 Q 357 50 363 58" stroke="#00d4ff" strokeWidth="1" fill="none" />
+            <path d="M 378 30 Q 374 45 378 60" stroke="#7c3aed" strokeWidth="1" fill="none" />
+            <path d="M 379 40 Q 373 50 379 58" stroke="#00d4ff" strokeWidth="1" fill="none" />
           </g>
 
           {/* Desk with computer & equipment */}

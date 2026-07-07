@@ -43,7 +43,7 @@ export function OverviewPage() {
           <div className="flex-1 min-h-0">
             <PipelineTracker state={state} />
           </div>
-          <div className="h-[96px] w-full shrink-0">
+          <div className="h-[96px] w-full shrink-0 bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative">
             <WorkspaceScene />
           </div>
         </div>
