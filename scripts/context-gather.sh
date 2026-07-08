@@ -56,6 +56,9 @@ esac
 if command -v tree &>/dev/null; then
   output+="=== PROJECT TREE (depth=$tree_depth, tier=$tier) ==="$'\n'
   output+="$(tree -L "$tree_depth" --dirsfirst "$project_dir" 2>/dev/null || echo '(tree unavailable)')"$'\n\n'
+elif command -v find &>/dev/null; then
+  output+="=== PROJECT TREE (find fallback, tier=$tier) ==="$'\n'
+  output+="$(find "$project_dir" -maxdepth "$tree_depth" -type f | sort | head -200 2>/dev/null || echo '(find unavailable)')"$'\n\n'
 fi
 
 # 2. Key root files

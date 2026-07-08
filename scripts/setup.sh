@@ -8,16 +8,19 @@
 
 set -e
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+# Colors (Windows git-bash compatible — no -e needed with printf)
+if [[ "${TERM:-dumb}" != "dumb" ]] && [[ -t 1 ]]; then
+  RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+  BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
+else
+  RED=''; GREEN=''; YELLOW=''; BLUE=''; CYAN=''; NC=''
+fi
 
-# Skill directory
-SKILL_DIR="${HOME}/.hermes/skills/workflows/aic"
+# Skill directory — cross-platform
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) SKILL_DIR="$(cygpath -u "${USERPROFILE:-$HOME}")/.hermes/skills/workflows/aic" ;;
+  *)                     SKILL_DIR="${HOME}/.hermes/skills/workflows/aic" ;;
+esac
 
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════════════╗"
@@ -58,6 +61,10 @@ if ! command -v jq &> /dev/null; then
         sudo apt-get install -y jq 2>/dev/null || true
     elif command -v brew &> /dev/null; then
         brew install jq 2>/dev/null || true
+    elif command -v choco &> /dev/null; then
+        choco install jq -y 2>/dev/null || true
+    elif command -v winget &> /dev/null; then
+        winget install jqlang.jq 2>/dev/null || true
     fi
     if ! command -v jq &> /dev/null; then
         echo -e "${RED}jq required for model auto-detection. Install from https://jqlang.github.io/jq/${NC}"

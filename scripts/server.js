@@ -107,10 +107,19 @@ const server = http.createServer(async (req, res) => {
   // POST /api/task-status — set current task and pipeline phase
   if (req.method === 'POST' && pathname === '/api/task-status') {
     const data = await readBody(req);
-    if (data.currentTask !== undefined) state.currentTask = data.currentTask;
+    if (data.currentTask !== undefined) {
+      // Auto-generate task ID if not provided
+      if (data.currentTask && !data.currentTask.id) {
+        const now = new Date();
+        const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
+        const seq = String(Math.floor(Math.random() * 900) + 100);
+        data.currentTask.id = `TASK-${ymd}-${seq}`;
+      }
+      state.currentTask = data.currentTask;
+    }
     if (data.currentPhase !== undefined) state.currentPhase = data.currentPhase;
     saveState();
-    return send(res, 200, { success: true });
+    return send(res, 200, { success: true, currentTask: state.currentTask, currentPhase: state.currentPhase });
   }
 
   // GET /api/config

@@ -125,6 +125,53 @@ If OpenCode is **NOT** installed:
 
 Check before first spawn: `opencode --version`
 
+## Scripts Reference
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `preflight.sh` | Auto-check deps, start server, build dashboard | `bash scripts/preflight.sh --auto-start` |
+| `spawn-worker.sh` | Escape-safe worker spawner with auto-context | `bash scripts/spawn-worker.sh <worker> <tier> <project_dir> <prompt_file>` |
+| `context-gather.sh` | Gather project context (tier-bounded) | `bash scripts/context-gather.sh <dir> --tier crafter` |
+| `setup.sh` | First-time setup (provider, models, opencode) | `bash scripts/setup.sh` |
+
+### spawn-worker.sh — Preferred Way to Spawn Workers
+
+Instead of manually constructing `opencode run` commands (which often break due to escaping), use `spawn-worker.sh`:
+
+```bash
+# 1. Write prompt to temp file (no escaping issues)
+echo "Implement the login page with email/password form" > /tmp/aic-task.txt
+
+# 2. Spawn worker — handles context, API status, model selection, timeout
+bash scripts/spawn-worker.sh frontend crafter /path/to/project /tmp/aic-task.txt
+```
+
+The script automatically:
+- Reads prompt from file (no bash quote escaping)
+- Runs `context-gather.sh` and prepends project context
+- Sets worker status to `working` via API before spawn
+- Sets worker status to `idle` via API after spawn
+- Selects model from tier (thinker/crafter/sprinter)
+- Uses Node.js wrapper for maximum escaping safety
+
+### preflight.sh — Run on Every /aic Activation
+
+```bash
+bash scripts/preflight.sh --auto-start
+```
+
+Checks and auto-fixes: opencode installed, .env exists (runs setup.sh if missing), API server running (starts if down), dashboard built (builds if missing).
+
+### Multi-OS Support
+
+All scripts work on Linux, macOS, and Windows (git-bash/MSYS2/WSL). Windows-specific:
+- `setup.sh`: auto-detects MINGW/MSYS paths, uses `choco`/`winget` for jq install
+- `spawn-worker.sh`: uses `$TMPDIR` fallback, Node.js wrapper avoids bash escaping issues
+- `preflight.sh`: uses `lsof` or `fuser` depending on availability
+- `context-gather.sh`: falls back to `find` if `tree` not available
+
+---
+
 ## Worker Engine & Model Assignments
 
 All 9 workers use **OpenCode** (`opencode run`) as their execution engine. The Dispatcher (you) is the only entity that uses `delegate_task` — for orchestrating parallel phases and sub-agents.
