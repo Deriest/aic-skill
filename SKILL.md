@@ -926,7 +926,12 @@ terminal(command='curl -s -X POST http://localhost:6868/api/phase-complete')
 
 ## Pitfalls
 
-### ❌ "UnknownError: Unexpected server error" from OpenCode CLI
+- **`/api/task-start` endpoint was missing (fixed 2026-07-08)** — Dispatcher calls returned `{"error":"not found"}`, `currentTask` never set. The handler now exists: sets `currentTask`, resets workers to idle, clears `currentPhase`.
+- **`task-complete` must NOT reset `currentTask` (fixed 2026-07-08)** — user wants last task visible on dashboard until new task arrives. Only `task-start` clears/replaces `currentTask`.
+- **Haiku (sprinter) confused by complex multi-report prompts** — Governor responded "I see you've provided a file path" when given 4 reports. Fix: use Opus (thinker) for Governor, include explicit action steps.
+- **`kill -9 $(pgrep ...)` in same shell kills the terminal** — use separate commands.
+- Sonnet (crafter) fails on files >100 lines. Use Opus (thinker) for large files.
+- Spawn-worker.sh prompt must include explicit action steps — not abstract "review and approve".
 This often means the proxy server rejected the model name or lacked credentials. Ensure the `.env` model variables (like `MODEL_CRAFTER`) exactly match the model IDs the proxy expects, and that `opencode.jsonc` provider configuration matches the `.env`. Never fallback to `delegate_task` if this happens — fix the configuration by curling the proxy's models endpoint to read the raw HTTP response.
 
 ### ❌ Dashboard UI not updating after worker changes

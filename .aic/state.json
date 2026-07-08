@@ -36,18 +36,18 @@
       "currentTask": null
     },
     "qa": {
-      "status": "complete",
-      "engine": "opencode",
+      "status": "idle",
+      "engine": null,
       "currentTask": null
     },
     "governor": {
-      "status": "working",
-      "engine": "opencode",
+      "status": "idle",
+      "engine": null,
       "currentTask": null
     },
     "dispatcher": {
       "status": "working",
-      "engine": null,
+      "engine": "delegate",
       "currentTask": null
     }
   },

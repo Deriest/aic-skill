@@ -216,11 +216,10 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { success: true, worker: state.workers[agent] });
   }
 
-  // POST /api/task-complete — reset all workers to idle, clear task/phase
+  // POST /api/task-complete — mark task done, keep worker statuses visible
   if (req.method === 'POST' && pathname === '/api/task-complete') {
-    for (const w of WORKERS) {
-      state.workers[w] = { status: w === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null };
-    }
+    // Don't reset workers — let them stay 'complete' so dashboard shows who did what
+    // Workers reset to idle on next task-start
     saveState();
     return send(res, 200, { success: true });
   }
