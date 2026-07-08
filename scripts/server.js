@@ -138,12 +138,38 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // POST /api/agent-status — set a worker's state
+  // POST /api/agent-status — set a worker's state (lifecycle-enforced)
   if (req.method === 'POST' && pathname === '/api/agent-status') {
     const data = await readBody(req);
     const agent = String(data.agent || '').toLowerCase();
     if (!WORKERS.includes(agent)) {
       return send(res, 400, { error: `unknown agent: ${agent}` });
+    }
+    // Lifecycle enforcement: reject "working" if worker not allowed in current phase
+    if (data.status === 'working' && agent !== 'dispatcher') {
+      const phase = (state.currentPhase || '').toLowerCase();
+      const PHASE_ALLOWED = {
+        investigate:    ['researcher'],
+        planning:       ['researcher', 'pm', 'designer', 'architect'],
+        execution:      ['researcher', 'pm', 'designer', 'architect', 'frontend', 'backend', 'infra'],
+        documentation:  ['researcher', 'pm', 'designer', 'architect', 'frontend', 'backend', 'infra'],
+        verification:   ['researcher', 'pm', 'designer', 'architect', 'frontend', 'backend', 'infra', 'qa', 'governor'],
+      };
+      const allowed = PHASE_ALLOWED[phase];
+      if (!allowed) {
+        return send(res, 403, {
+          error: `No active phase. Set currentPhase via POST /api/task-status before spawning workers.`,
+          currentPhase: state.currentPhase,
+        });
+      }
+      if (!allowed.includes(agent)) {
+        return send(res, 403, {
+          error: `Worker "${agent}" is not allowed in phase "${state.currentPhase}". Advance the phase first via POST /api/task-status.`,
+          currentPhase: state.currentPhase,
+          allowedWorkers: allowed,
+          hint: `POST /api/task-status {"currentPhase":"${phase === 'investigate' ? 'Planning' : phase === 'planning' ? 'Execution' : 'Verification'}"}`,
+        });
+      }
     }
     state.workers[agent] = {
       status: data.status || 'idle',
