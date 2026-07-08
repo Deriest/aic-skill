@@ -1,18 +1,19 @@
-# Right Sidebar Layout Architecture
+# Architecture Plan: Pipeline Tracker Scaling
 
-To prevent elements in the right sidebar from expanding vertically under dynamic content, the following Tailwind changes should be applied:
+## Target File
+`src/components/new_layout/PipelineTracker.tsx`
 
-## `src/components/new_layout/PipelineTracker.tsx`
+## Proposed Changes
 
-1. **Current Task Card Container:**
-   - Change from `shrink-0 flex flex-col min-h-[220px]` to `shrink-0 flex flex-col h-[220px]`.
-   - This sets a rigid fixed height of exactly 220px instead of allowing the card to grow.
-2. **Inner Description Block:**
-   - Keep `flex-1 min-h-0 overflow-y-auto` class on the inner container (e.g., `<div className="text-aic-text-bright/90 font-pixel text-[11px] ... flex-1 min-h-0 overflow-y-auto">`) to handle overflow correctly without affecting parent height.
-3. **Pipeline Container:**
-   - Ensure the wrapper container uses `flex-1 min-h-0 relative` so it takes the remaining height strictly and remains scrollable/contained.
+### 1. Increase Text Size
+- **Location**: Line 63
+- **Action**: Replace `text-px-sm` with `text-px-lg` (or `text-[11px]` / `text-px-md`) to fill the `h-[240px]` card proportionally.
 
-## `src/pages/OverviewPage.tsx`
+### 2. Spacing and Alignment
+- **Location**: Line 45 (Parent flex container) & Line 64 (Icon container)
+- **Action**: 
+  - Change parent flex element classes from `flex flex-col justify-between z-10 flex-1 min-h-0` to `flex flex-col gap-4 z-10 flex-1 min-h-0`.
+  - Change icon container class from `w-8` to `w-10` to maintain alignment.
 
-1. **Right Sidebar Container:**
-   - Ensure the outer sidebar element utilizes `flex-1 flex flex-col gap-3 h-full min-w-[400px] overflow-hidden` or is otherwise strictly constrained to avoid vertical expansion.
+### 3. Scroll Container Verification
+- **Verification**: Keep `overflow-y-auto` ONLY on the Current Task description (line 29), ensuring it does not exist on the pipeline tracker container.

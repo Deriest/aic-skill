@@ -859,6 +859,7 @@ This often means the proxy server rejected the model name or lacked credentials.
 
 ### ❌ Dashboard UI not updating after worker changes
 Dashboard assets are served statically from `/dist` by `server.js` (port 6868). The Vite dev server is not active in production monitoring. If a worker modifies React components, the worker MUST run `npm run build` in the `dashboard` directory to update `/dist`. The Operator must hard-refresh their browser (Ctrl+Shift+R or Cmd+Shift+R) to bypass cache and see the new UI. Never assume Vite HMR is running.
+**After ANY build:** Always restart the Node server (`pkill -9 node; bash scripts/preflight.sh --auto-start`) to force it to serve the fresh `/dist` bundle. Node may cache the old index.html in memory. Without restart, even a hard-refresh may serve stale assets.
 
 ### ❌ Dashboard Data Parsing (`engine` or visual state missing)
 If UI fields (like `engine`) don't render despite backend updates, check if the React Context (`DashboardContext.tsx`) actually extracts and merges the field from the API response payload into the typed state interface.
@@ -933,6 +934,18 @@ Jika komputer melayang di atas kepala/meja worker terasa mengganggu dan user mem
 ### ❌ `framer-motion` undefined config crashes on unexpected backend strings
 When rendering dynamic styles from a dictionary (`const config = statusConfig[phase.status]`), if the backend returns an unexpected string (e.g. "active" instead of "working"), `config` becomes `undefined` and causes a fatal `TypeError` in React (`can't access property... config is undefined`), crashing the whole dashboard.
 **Fix:** Always provide a fallback using type casting: `const config = statusConfig[phase.status as keyof typeof statusConfig] || statusConfig.idle;`
+
+### ❌ Syntax Errors with Bash Heredocs in Wrapper Scripts
+When spawning workers or generating scripts dynamically (e.g. via `bash -c`), NEVER nest heredocs inside quoted strings. `bash -c 'cat << "EOF" ...'` will fail with `Syntax error: unexpected EOF`. 
+**Fix:** Always use an unquoted top-level heredoc to write the runner script to disk first, then execute it. Use `cat << 'EOF' > file.js` to ensure the contents (especially Node.js code) are not evaluated by Bash. See `references/bash-heredoc-escaping.md` for the exact safe pattern.
+
+### ❌ spawn-worker.sh heredoc ordering bug (FIXED 2026-07-08)
+The Node.js runner inside `spawn-worker.sh` originally used `cat > "$NODE_RUNNER" << 'NODESCRIPT'` which silently fails with `Syntax error: end of file unexpected` on many bash versions. The heredoc redirect must come BEFORE the file target: `cat << 'NODESCRIPT' > "$NODE_RUNNER"`. This bug caused ALL workers to crash instantly (exit 2) without ever starting opencode, making them invisible on the dashboard — the status flipped working→idle in under 1 second so the user never saw them light up.
+**Diagnosis pattern:** If every `spawn-worker.sh` call shows `/bin/sh: 1: Syntax error: end of file unexpected` and `=== worker failed (exit 2) ===`, check the heredoc line ordering in the NODE_RUNNER section.
+
+### ❌ Dispatcher must NEVER bypass spawn-worker.sh with inline Node runners
+A recurring failure mode: when `spawn-worker.sh` fails, the Dispatcher writes its own ad-hoc Node.js script (e.g. `node -e "..."`) to call `opencode run` directly. This SKIPS the `curl` calls inside `spawn-worker.sh` that set worker status to `working`/`idle` on the dashboard API. Result: the worker does the work but the dashboard never shows it as active — the user sees no activity.
+**Fix:** ALWAYS fix `spawn-worker.sh` itself rather than working around it. The script's `curl` calls before/after opencode are what make workers visible on the dashboard. Bypassing the script = invisible workers = user loses trust.
 
 ### ❌ Typescript Type Mismatches in Shared Status (Primitive vs Object)
 When refactoring state from objects `{ status: 'idle', engine: null }` to primitive strings (`'idle'`) across multiple components (e.g., `WorkerDesk.tsx`, `WorkerGrid.tsx`), ensure you extract the primitive value BEFORE passing it down to purely visual components (`DeskComputer.tsx`, `StatusBubble.tsx`).
@@ -1061,6 +1074,13 @@ Even for the smallest tasks like a 1-line text change or tweaking an SVG, NEVER 
 `AnimatePresence` in `TaskInfoPanel.tsx` uses object reference as key. Polling creates new refs every 5s → exit/enter animation fires every cycle.
 **Fix:** Use stable string key (e.g. `currentTask?.title` or `currentTask?.id`) or memoize comparison before dispatching.
 
+### ❌ Expanding Sidebar Cards on New Tasks
+If cards containing dynamic content (like task descriptions or pipelines) are given `min-h-[xxx]` values without being explicitly constrained, adding new text causes the parent card to expand visually, ruining fixed grid alignments or pushing other UI elements out of view.
+**Fix:**
+1. Give the outer card container a rigid fixed height (e.g., `h-[240px]`) instead of `min-h-[...]`.
+2. Apply `flex-1 min-h-0 overflow-y-auto` exclusively to the *inner* text container holding the content.
+3. Ensure the master sidebar wrapper holding these cards has `overflow-hidden` if you want to strictly prevent the sidebar itself from pushing past the screen bounds. This enforces native scrolling strictly inside the card bodies.
+
 ### ❌ PM Ghost-Status (worker shows working without being dispatched)
 `MERGE_STATUS` reducer merges agents with existing state. If a worker was ever set to `working` and not explicitly reset, it persists across polls.
 **Fix:** `task_complete` must unconditionally reset ALL workers. See `references/dashboard-bug-patterns.md` #4.
@@ -1157,6 +1177,7 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 - **`references/dashboard-pitfalls.md`** — State sync, UI crash prevention, and API polling constraints for the React/Node dashboard.
 - **`references/dashboard-pitfalls.md`** — State sync, UI crash prevention, and API polling constraints for the React/Node dashboard.
 - **`references/dashboard-bug-patterns.md`** — Known bugs and fixes for the AIC dashboard: idle stuck, log dedup, UI layout. Component quick reference and port mapping (Vite=6969, API=6868).
+- **`references/pipeline-ui-sizing.md`** — Verified font sizes, spacing, and layout patterns for Pipeline and Current Task cards in the right sidebar.
 - **`references/ui-server-pitfalls.md`** — Crucial fixes for Node.js ENOENT crashes during Vite builds, SVG preserveAspectRatio scaling, and optical alignment tricks.
 - **`references/pitfalls-history.md`** — Full historical anecdotes and detailed troubleshooting stories behind all Pitfalls rules.
 - **`references/opencode-custom-provider.md`** — OpenCode custom provider configuration for OpenAI-compatible proxies.

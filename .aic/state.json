@@ -17,12 +17,12 @@
     },
     "architect": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "frontend": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "backend": {
@@ -47,11 +47,11 @@
     },
     "dispatcher": {
       "status": "working",
-      "engine": null,
+      "engine": "delegate",
       "currentTask": null
     }
   },
   "currentTask": null,
-  "currentPhase": "Documentation",
+  "currentPhase": null,
   "startedAt": 1783481701189
 }
