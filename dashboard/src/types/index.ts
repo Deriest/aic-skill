@@ -7,6 +7,7 @@ export interface WorkerState {
 export interface WorkerDef {
   id: string;
   name: string;
+  displayName?: string;
   role: string;
   spriteId?: string;
   section: string;

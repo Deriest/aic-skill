@@ -17,12 +17,12 @@
     },
     "architect": {
       "status": "complete",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "frontend": {
       "status": "complete",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "backend": {
@@ -37,12 +37,12 @@
     },
     "qa": {
       "status": "complete",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "governor": {
-      "status": "complete",
-      "engine": null,
+      "status": "working",
+      "engine": "opencode",
       "currentTask": null
     },
     "dispatcher": {
@@ -52,10 +52,10 @@
     }
   },
   "currentTask": {
-    "id": "TEST-PIPELINE",
-    "title": "Test pipeline visual",
-    "type": "test"
+    "id": "TASK-20260708-025",
+    "title": "Add worker display names",
+    "type": "feature"
   },
-  "currentPhase": "Closeout",
+  "currentPhase": "Documentation",
   "startedAt": 1783481701189
 }

@@ -111,7 +111,7 @@ export const WorkerDesk = memo(function WorkerDesk({ worker, status, engine }: W
 
       {/* Label */}
       <div className="text-center mt-2 font-pixel text-px-base text-[#ccc]">
-        {worker.name}
+        {worker.displayName ?? worker.name}
         <div className="text-px-sm text-[#888] mt-1">{worker.role}</div>
         <div className="text-px-sm text-aic-accent mt-0.5 font-bold">{worker.model}</div>
       </div>
