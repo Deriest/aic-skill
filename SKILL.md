@@ -77,6 +77,7 @@ Dispatcher delivers completed result to User
 6. **Rejection handling.** If QA rejects → Dispatcher re-spawns Executioner with QA feedback. If Governor rejects → Dispatcher re-spawns QA with Governor feedback. Never skip back more than one stage without user escalation.
 7. **Status tracking.** Dispatcher updates phase transitions via API. Each worker updates its own status to complete when done.
 8. **Every request restarts.** New user request = fresh lifecycle from Investigate. No carrying over from previous tasks.
+9. **No auto-commit by Governor.** Governor MUST NOT `git commit`, `git push`, or stage files directly. After review, Governor submits approval to Dispatcher. Dispatcher then asks the user: "Mau saya commit?" If user approves → Dispatcher runs `git add` and `git commit`. If no answer → do NOT commit. This is mandatory. The only exception is if the user explicitly says "langsung commit" or "auto-commit" beforehand.
 
 **WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
 
