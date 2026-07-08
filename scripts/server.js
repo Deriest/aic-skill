@@ -195,8 +195,6 @@ const server = http.createServer(async (req, res) => {
     for (const w of WORKERS) {
       state.workers[w] = { status: w === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null };
     }
-    state.currentTask = null;
-    state.currentPhase = null;
     saveState();
     return send(res, 200, { success: true });
   }

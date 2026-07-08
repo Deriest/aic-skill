@@ -18,6 +18,13 @@ export function OverviewPage() {
         <div className="flex-[2] flex flex-col min-w-0 gap-3 h-full">
           {/* Virtual Office Box */}
           <div className="flex-1 bg-aic-bg-panel border-2 border-aic-border/50 rounded p-1 shadow-lg overflow-hidden flex flex-col min-h-0">
+             {state.currentTask && (
+               <div className="px-3 py-2 font-pixel text-px-sm flex items-center gap-3 border-b border-aic-border/30">
+                 <span className="text-aic-yellow">[{state.currentTask.id}]</span>
+                 <span className="text-aic-text-primary truncate">{state.currentTask.title}</span>
+                 <span className="text-aic-accent ml-auto">{state.currentPhase}</span>
+               </div>
+             )}
              <OfficeFloor />
           </div>
 

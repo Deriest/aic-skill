@@ -7,7 +7,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [multi-agent, orchestration, workflow, engineering, dispatch]
-    related_skills: [hermes-agent]
+    related_skills: [hermes-agent, aic-dispatcher-discipline]
 ---
 
 # AI Engineering Company — Hermes Worker System

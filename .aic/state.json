@@ -1,7 +1,7 @@
 {
   "workers": {
     "pm": {
-      "status": "idle",
+      "status": "complete",
       "engine": null,
       "currentTask": null
     },
@@ -16,13 +16,13 @@
       "currentTask": null
     },
     "architect": {
-      "status": "idle",
-      "engine": null,
+      "status": "complete",
+      "engine": "opencode",
       "currentTask": null
     },
     "frontend": {
-      "status": "idle",
-      "engine": null,
+      "status": "complete",
+      "engine": "opencode",
       "currentTask": null
     },
     "backend": {
@@ -36,13 +36,13 @@
       "currentTask": null
     },
     "qa": {
-      "status": "idle",
-      "engine": null,
+      "status": "complete",
+      "engine": "opencode",
       "currentTask": null
     },
     "governor": {
-      "status": "idle",
-      "engine": null,
+      "status": "working",
+      "engine": "opencode",
       "currentTask": null
     },
     "dispatcher": {
@@ -52,6 +52,6 @@
     }
   },
   "currentTask": null,
-  "currentPhase": null,
+  "currentPhase": "Documentation",
   "startedAt": 1783481701189
 }
