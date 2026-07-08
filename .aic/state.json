@@ -1,7 +1,7 @@
 {
   "workers": {
     "pm": {
-      "status": "idle",
+      "status": "complete",
       "engine": null,
       "currentTask": null
     },
@@ -16,12 +16,12 @@
       "currentTask": null
     },
     "architect": {
-      "status": "idle",
+      "status": "complete",
       "engine": null,
       "currentTask": null
     },
     "frontend": {
-      "status": "idle",
+      "status": "complete",
       "engine": null,
       "currentTask": null
     },
@@ -36,12 +36,12 @@
       "currentTask": null
     },
     "qa": {
-      "status": "idle",
+      "status": "complete",
       "engine": null,
       "currentTask": null
     },
     "governor": {
-      "status": "idle",
+      "status": "complete",
       "engine": null,
       "currentTask": null
     },
@@ -52,10 +52,10 @@
     }
   },
   "currentTask": {
-    "id": "TEST-NEW",
-    "title": "New task resets all",
+    "id": "TEST-PIPELINE",
+    "title": "Test pipeline visual",
     "type": "test"
   },
-  "currentPhase": null,
+  "currentPhase": "Closeout",
   "startedAt": 1783481701189
 }
