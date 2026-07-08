@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 6969,
+    port: 6868,
     proxy: {
       '/health': {
         target: 'http://localhost:6868',
@@ -24,12 +24,10 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         manualChunks: {
-          'framer': ['framer-motion'],
-          'recharts': ['recharts'],
-          'markdown': ['react-markdown', 'react-syntax-highlighter'],
-          'router': ['react-router-dom'],
-        },
-      },
-    },
-  },
+          vendor: ['react', 'react-dom', 'framer-motion'],
+          ui: ['recharts']
+        }
+      }
+    }
+  }
 });
