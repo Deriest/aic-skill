@@ -947,6 +947,10 @@ The Node.js runner inside `spawn-worker.sh` originally used `cat > "$NODE_RUNNER
 A recurring failure mode: when `spawn-worker.sh` fails, the Dispatcher writes its own ad-hoc Node.js script (e.g. `node -e "..."`) to call `opencode run` directly. This SKIPS the `curl` calls inside `spawn-worker.sh` that set worker status to `working`/`idle` on the dashboard API. Result: the worker does the work but the dashboard never shows it as active — the user sees no activity.
 **Fix:** ALWAYS fix `spawn-worker.sh` itself rather than working around it. The script's `curl` calls before/after opencode are what make workers visible on the dashboard. Bypassing the script = invisible workers = user loses trust.
 
+### ❌ context-gather backtick sanitization (FIXED 2026-07-08)
+When `context-gather.sh` gathers source files containing backticks, the gathered context was passed through a Node.js `execSync` wrapper. Since `execSync` invokes via shell, backticks in the context were interpreted as command substitutions, causing `Syntax error: end of file unexpected` and exit code 2.
+**Fix:** Replaced `execSync` with `execFileSync` in `spawn-worker.sh`'s Node.js runner (lines 86, 92). `execFileSync` passes arguments as an array directly to the process — no shell involvement. This eliminates all shell metacharacter issues (backticks, `$()`, quotes, pipes, semicolons) without needing to sanitize the context output itself. The `--no-context` workaround flag is no longer needed for backtick-related crashes, though it remains available as a performance optimization.
+
 ### ❌ Typescript Type Mismatches in Shared Status (Primitive vs Object)
 When refactoring state from objects `{ status: 'idle', engine: null }` to primitive strings (`'idle'`) across multiple components (e.g., `WorkerDesk.tsx`, `WorkerGrid.tsx`), ensure you extract the primitive value BEFORE passing it down to purely visual components (`DeskComputer.tsx`, `StatusBubble.tsx`).
 **Fix:** Use an interface mapped precisely: `status: WorkerState['status']` in props, or pass the primitive explicitly via `status={workerState?.status ?? 'idle'}` from the parent. Do NOT use regex replace (`sed`) for refactoring Typescript files with complex syntax — use LSP-aware tools or explicit manual file writes to avoid destroying the `import` statements or object syntaxes.
@@ -986,11 +990,10 @@ When building/modifying the React dashboard, the TypeScript interfaces in `src/t
 
 ### ❌ OpenCode CLI string escape crashes (`Unexpected server error`)
 When the `opencode run "..."` command is passed a massive, multi-line prompt containing single/double quotes, bash parser and OpenCode can crash abruptly (often returning `Unexpected server error` or throwing the help menu).
-**Fix:** Never pass the raw prompt directly in `opencode run "prompt"`. Instead, use `scripts/spawn-worker.sh` which handles prompt extraction, context gathering, and safe execution using a Node.js `execSync` wrapper. If you must spawn manually, always write the prompt to a temp text file, then run a Node.js `execSync` wrapper to spawn it safely:
+**Fix:** Never pass the raw prompt directly in `opencode run "prompt"`. Instead, use `scripts/spawn-worker.sh` which handles prompt extraction, context gathering, and safe execution using a Node.js `execFileSync` wrapper (avoids shell interpretation of backticks and other metacharacters). If you must spawn manually, always write the prompt to a temp text file, then run a Node.js `execFileSync` wrapper to spawn it safely:
 ```javascript
-const { execSync } = require('child_process');
-const prompt = require('fs').readFileSync('/tmp/prompt.txt', 'utf8');
-execSync(`opencode run ${JSON.stringify(prompt)} -m ${process.env.MODEL_CRAFTER} --auto`, { stdio: 'inherit' });
+const { execFileSync } = require('child_process');
+execFileSync('opencode', ['run', '/tmp/prompt.txt', '-m', process.env.MODEL_CRAFTER, '--auto'], { stdio: 'inherit' });
 ```
 
 ### ❌ OpenCode auto-rejects reads of sensitive files (.env, credentials, API keys)

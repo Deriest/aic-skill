@@ -1,27 +1,38 @@
 {
-  "task": "Increase pipeline phase label text size to fill the h-[240px] card properly",
-  "file": "src/components/new_layout/PipelineTracker.tsx",
-  "changes": [
-    {
-      "line": 63,
-      "property": "text size class",
-      "current": "text-px-sm",
-      "target": "text-px-lg",
-      "rationale": "text-px-sm is too small for the 240px card. With ~178px usable height after header and padding, 5 labels at text-px-lg (approx 18-20px) fill the space with comfortable breathing room."
-    },
-    {
-      "line": 63,
-      "property": "vertical gap between phases",
-      "current": "implicit via justify-between in parent",
-      "target": "change parent flex from justify-between to gap-4 and remove justify-between",
-      "rationale": "justify-between on 5 items in a flex-1 container spreads them too thin at larger text sizes. gap-4 with flex-1 distributes space evenly and looks more intentional."
-    },
-    {
-      "line": 64,
-      "property": "icon width",
-      "current": "w-8",
-      "target": "w-10",
-      "rationale": "Slightly wider icon column keeps alignment clean at the larger text size."
-    }
+  "task_id": "TASK-20260708-016",
+  "title": "Fix context-gather backtick crash",
+  "type": "bug-infra",
+  "root_cause": "spawn-worker.sh line 92 uses execSync (shell-invoking) to run opencode. The prompt is injected via JS template literal + JSON.stringify(). JSON.stringify does NOT escape backticks — they're valid JSON. When the prompt contains JS template literals from gathered source files, the backticks land inside a bash double-quoted string where bash interprets them as command substitution. Unbalanced backticks (from truncated context) cause 'Syntax error: end of file unexpected' and exit 2.",
+  "heredoc_is_safe": "The heredoc at line 85 uses a single-quoted delimiter (<< 'NODESCRIPT'), so bash writes the JS content literally. Backticks in the heredoc body are never interpreted. The bug is NOT in the heredoc — it's in the generated JS's use of execSync.",
+  "fix": {
+    "strategy": "Replace execSync with execFileSync in the generated Node.js runner to bypass shell interpretation entirely",
+    "file": "scripts/spawn-worker.sh",
+    "changes": [
+      {
+        "line": 86,
+        "description": "Add execFileSync import alongside execSync",
+        "current": "const { execSync } = require('child_process');",
+        "target": "const { execFileSync } = require('child_process');"
+      },
+      {
+        "lines": "92-96",
+        "description": "Replace execSync (shell) with execFileSync (no shell). Build args array instead of template literal string. This eliminates all shell metacharacter issues — backticks, $(), quotes, pipes, etc.",
+        "current": "  execSync(`opencode run ${JSON.stringify(prompt)} -m ${model} --auto`, {\n    stdio: 'inherit',\n    cwd: cwd,\n    timeout: parseInt(process.argv[5] || '300') * 1000,\n  });",
+        "target": "  const promptFile = process.argv[2];\n  execFileSync('opencode', ['run', promptFile, '-m', model, '--auto'], {\n    stdio: 'inherit',\n    cwd: cwd,\n    timeout: parseInt(process.argv[5] || '300') * 1000,\n  });"
+      }
+    ],
+    "note": "execFileSync passes args as an array directly to the process, never through a shell. Backticks, $(), semicolons, pipes — all literal. No sanitization needed."
+  },
+  "why_not_sanitize_context_output": "Stripping backticks from context-gather.sh would lose code fidelity — developers need to see actual source. Escaping (doubling backslashes) is fragile and platform-dependent. The root cause is shell invocation in the runner, not the data content.",
+  "why_not_remove_heredoc": "The heredoc is already safe (single-quoted delimiter). Replacing it with printf or base64 encoding adds complexity for no benefit.",
+  "secondary_fix": {
+    "description": "Remove the --no-context workaround documentation as it becomes unnecessary after the primary fix.",
+    "scope": "docs only, deferred"
+  },
+  "verification": [
+    "Create a test prompt file containing JS template literals: const x = `hello ${name}`;",
+    "Run: scripts/spawn-worker.sh sprinter crafter /tmp/test-project /tmp/test-prompt.txt --no-context (should work)",
+    "Run: scripts/spawn-worker.sh sprinter crafter /tmp/test-project /tmp/test-prompt.txt (with context — should NOT crash)",
+    "Verify worker status hits /api/agent-status with 'working' before opencode and 'idle' after"
   ]
 }

@@ -1,19 +1,23 @@
-# Architecture Plan: Pipeline Tracker Scaling
+# Architecture Plan: Fix context-gather backtick crash
 
 ## Target File
-`src/components/new_layout/PipelineTracker.tsx`
+`scripts/spawn-worker.sh`
+
+## Strategy
+Replace `execSync` with `execFileSync` in the generated Node.js runner wrapper inside `scripts/spawn-worker.sh` to execute `opencode` without shell interpretation. This eliminates issues with shell metacharacters like backticks, variables, and semicolons in the gathered project context.
 
 ## Proposed Changes
 
-### 1. Increase Text Size
-- **Location**: Line 63
-- **Action**: Replace `text-px-sm` with `text-px-lg` (or `text-[11px]` / `text-px-md`) to fill the `h-[240px]` card proportionally.
+### 1. Import execFileSync
+- **Location**: Line 86 of `scripts/spawn-worker.sh`
+- **Action**: Replace `const { execSync } = require('child_process');` with `const { execFileSync } = require('child_process');`.
 
-### 2. Spacing and Alignment
-- **Location**: Line 45 (Parent flex container) & Line 64 (Icon container)
-- **Action**: 
-  - Change parent flex element classes from `flex flex-col justify-between z-10 flex-1 min-h-0` to `flex flex-col gap-4 z-10 flex-1 min-h-0`.
-  - Change icon container class from `w-8` to `w-10` to maintain alignment.
+### 2. Update Exec Call to use execFileSync
+- **Location**: Lines 92-96 of `scripts/spawn-worker.sh`
+- **Action**:
+  - Replace the `execSync` template literal call with `execFileSync`.
+  - Pass arguments as an array: `['run', promptFile, '-m', model, '--auto']`.
+  - Use `promptFile` (which refers to the path passed as `process.argv[2]`) instead of reading the file content and stringifying/embedding it.
 
-### 3. Scroll Container Verification
-- **Verification**: Keep `overflow-y-auto` ONLY on the Current Task description (line 29), ensuring it does not exist on the pipeline tracker container.
+## Verification
+- Run a test command executing the script with context-gather on a project directory containing code with backticks.

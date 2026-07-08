@@ -83,13 +83,13 @@ if command -v opencode &>/dev/null; then
   # Use node wrapper for maximum escaping safety
   NODE_RUNNER=$(mktemp "${TMPDIR:-/tmp}/aic-run-XXXXXX.js")
   cat << 'NODESCRIPT' > "$NODE_RUNNER"
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const fs = require('fs');
-const prompt = fs.readFileSync(process.argv[2], 'utf8');
+const promptFile = process.argv[2];
 const model = process.argv[3];
 const cwd = process.argv[4];
 try {
-  execSync(`opencode run ${JSON.stringify(prompt)} -m ${model} --auto`, {
+  execFileSync('opencode', ['run', promptFile, '-m', model, '--auto'], {
     stdio: 'inherit',
     cwd: cwd,
     timeout: parseInt(process.argv[5] || '300') * 1000,

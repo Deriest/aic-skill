@@ -2,7 +2,7 @@
   "workers": {
     "pm": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "researcher": {
@@ -22,12 +22,12 @@
     },
     "frontend": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "backend": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "infra": {
@@ -51,7 +51,11 @@
       "currentTask": null
     }
   },
-  "currentTask": null,
-  "currentPhase": null,
+  "currentTask": {
+    "id": "TASK-20260708-016",
+    "title": "Fix context-gather backtick crash",
+    "type": "bug-infra"
+  },
+  "currentPhase": "Documentation",
   "startedAt": 1783481701189
 }
