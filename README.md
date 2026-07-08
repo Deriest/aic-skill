@@ -280,6 +280,8 @@ MODEL_SPRINTER=provider/model-name
 
 | Issue | Why it happens | Workaround |
 |-------|---------------|------------|
+| **No Multi-Repo Support** | The API server routes all traffic into a single target active project directory. | On future planning |
+| **No Multi-Session Support** | The dashboard state (`state.json`) and pipeline track one global active task globally. | On future planning |
 | **Dispatcher tokens not tracked** | Dispatcher runs natively in Hermes core, not via `opencode run` so metrics aren't captured | Intentional. Dispatcher cost is tracked via your Hermes bill, not the AIC dashboard |
 | **History page empty after feature deploy** | Tasks created before persistence feature | Run new tasks via `/api/task-start`; old tasks won't have context files |
 | **Dashboard doesn't auto-refresh** | SPA polls on interval, not WebSocket | Refresh manually or wait for next poll cycle (configurable) |
