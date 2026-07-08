@@ -84,11 +84,17 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 5. Set dispatcher to working
+# 5. Set dispatcher to working & Open Dashboard
 if [[ $FAIL -eq 0 ]]; then
   curl -sf -X POST "$API_URL/api/agent-status" \
     -H "Content-Type: application/json" \
     -d '{"agent":"dispatcher","status":"working","engine":"delegate"}' >/dev/null 2>&1 || true
+
+  # Auto-open the dashboard on the production server port (6868)
+  if [[ "$AUTO_START" == true ]]; then
+    sleep 1
+    (xdg-open "$API_URL" 2>/dev/null || open "$API_URL" 2>/dev/null || start "$API_URL" 2>/dev/null) &
+  fi
 fi
 
 echo ""
