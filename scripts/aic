@@ -4,7 +4,7 @@
 API_PORT=6868
 if ! nc -z localhost $API_PORT 2>/dev/null; then
   echo "API Server is down. Starting it now..."
-  nohup node scripts/server.js $API_PORT > /tmp/aic-server.log 2>&1 &
+  nohup node scripts/server.js > /tmp/aic-server.log 2>&1 &
   sleep 2
 fi
 
