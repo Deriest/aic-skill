@@ -12,6 +12,7 @@ AIC transforms Hermes into a full engineering company — with a Dispatcher, PM,
 
 AIC cleanly separates its own engine from your target codebase.
 - **Skill Repository (Engine):** `~/.hermes/skills/workflows/aic/` (Where the API server and dashboard live).
+  *Note: `dispatcher-discipline-aic` is a Hermes background skill that enforces strict Dispatcher orchestration rules. It is not a CLI command.*
 - **Target Project (Your Code):** Can be anywhere on your machine.
 - **Switching Projects:** Use `/aic project <path>` to tell the AIC engine which folder the workers should operate on. The dashboard and task tracking will pivot to monitor that specific active project.
 

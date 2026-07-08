@@ -7,7 +7,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [multi-agent, orchestration, workflow, engineering, dispatch]
-    related_skills: [hermes-agent, dispatcher-discipline]
+    related_skills: [hermes-agent, dispatcher-discipline-aic]
 ---
 
 # AI Engineering Company — Hermes Worker System
@@ -33,7 +33,7 @@ Am I about to skip a lifecycle phase because the task seems trivial?
 **What you CANNOT do:** `write_file`, `patch`, `terminal` for code/file edits. Not even "quick fixes", "one-liners", or "small tweaks". ZERO exceptions.
 **When asked to "check" or "verify":** ONLY perform read-only checks (e.g., grep, ls, cat, curl). DO NOT automatically fix issues you find, and DO NOT spawn workers to fix them without explicit Operator permission.
 
-**QA Rule:** QA MUST validate real application using Vision/Browser/Terminal/API tools — never approve based on execution report alone. See `dispatcher-discipline` for full policy.
+**QA Rule:** QA MUST validate real application using Vision/Browser/Terminal/API tools — never approve based on execution report alone. See `dispatcher-discipline-aic` for full policy.
 
 ### 🚫 STRICT PIPELINE LIFECYCLE (SOP HARGA MATI)
 
@@ -1341,7 +1341,7 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 22. **Circuit breaker** — the server tracks per-worker failures. After 3 consecutive failures, the circuit opens and that worker is skipped. Monitor via `GET /api/status` → `circuitBreakers` field. Don't keep retrying a worker with an open circuit — report to Operator.
 23. **Record token usage** — after each worker completes, report token consumption: `POST /api/tokens {"input": N, "output": N}`. The server tracks cumulative cost. Include cost in final delivery report.
 24. **Self-test before first task** — run `bash ~/.hermes/skills/workflows/aic/scripts/self-test.sh` to validate config, deps, and server before starting work. Fixes 90% of "why isn't this working" issues.
-25. **Git Workflow** — After Governor approves, Dispatcher asks user before any git operation. Governor does NOT commit or merge. User decides: commit to main, commit to branch (feature/TASK-xxx), or merge branch to main. See `dispatcher-discipline` rule #7.
+25. **Git Workflow** — After Governor approves, Dispatcher asks user before any git operation. Governor does NOT commit or merge. User decides: commit to main, commit to branch (feature/TASK-xxx), or merge branch to main. See `dispatcher-discipline-aic` rule #7.
 
 ## Related References & Templates
 
