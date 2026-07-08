@@ -259,7 +259,7 @@ MODEL_SPRINTER=provider/model-name
 
 ### Model tiers
 
-| Tier | Use for | Context window | Workers |
+| Tier | Use for | Workers |
 |------|---------|----------------|---------|
 | **Thinker** | Complex reasoning, architecture | 80% of max | Aria (PM), Atlas (Architect) |
 | **Crafter** | Coding, implementation | 60% of max | Leo, Hugo, Flint, Sage, Luna, Rex |
