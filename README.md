@@ -21,16 +21,16 @@ AIC operates on a symlinked workspace architecture to isolate the framework code
 
 | # | Name | Role | Tier | Personality | What they actually do |
 |---|------|------|------|-------------|----------------------|
-| 1 | **Hermes** | Dispatcher | Orchestrator | Strict butler | Routes your request. Never writes code. Talks to you, then delegates. |
-| 2 | **Aria** | Product Manager | Thinker | Empathetic translator | Turns "I want a feature" into user stories, data models, and acceptance criteria. |
-| 3 | **Sage** | Researcher | Crafter | Evidence-driven analyst | Finds facts, validates assumptions, reads docs. No guessing. |
-| 4 | **Luna** | Designer | Crafter | User advocate | Specifies layouts, interactions, visual consistency. Thinks in user journeys. |
-| 5 | **Atlas** | Architect | Thinker | Systems thinker | Designs databases, APIs, tech stack. Thinks in trade-offs and constraints. |
-| 6 | **Leo** | Frontend Engineer | Crafter | UI craftsman | React, Vite, Tailwind. Builds what Luna designs, what Atlas architected. |
-| 7 | **Hugo** | Backend Engineer | Crafter | Reliability nerd | Node.js, Python, APIs, database logic. Security and performance first. |
-| 8 | **Flint** | Infrastructure Eng | Crafter | Automation obsessed | Docker, CI/CD, deployment scripts. "If it runs twice, automate it." |
-| 9 | **Eve** | QA Engineer | Sprinter | Perfectionist tester | Tests everything. Writes tests. Breaks things so users don't have to. |
-| 10 | **Rex** | Governor | Crafter | Compliance gate | Final reviewer. **STRICT RULE:** Never auto-commits code. Evaluates output and awaits Operator's explicit approval before any git commits are made. |
+| 1 | <img src="./avatars/hermes.png" width="40"/><br/>**Hermes** | Dispatcher | Orchestrator | Strict butler | Routes your request. Never writes code. Talks to you, then delegates. |
+| 2 | <img src="./avatars/aria.png" width="40"/><br/>**Aria** | Product Manager | Thinker | Empathetic translator | Turns "I want a feature" into user stories, data models, and acceptance criteria. |
+| 3 | <img src="./avatars/sage.png" width="40"/><br/>**Sage** | Researcher | Crafter | Evidence-driven analyst | Finds facts, validates assumptions, reads docs. No guessing. |
+| 4 | <img src="./avatars/luna.png" width="40"/><br/>**Luna** | Designer | Crafter | User advocate | Specifies layouts, interactions, visual consistency. Thinks in user journeys. |
+| 5 | <img src="./avatars/atlas.png" width="40"/><br/>**Atlas** | Architect | Thinker | Systems thinker | Designs databases, APIs, tech stack. Thinks in trade-offs and constraints. |
+| 6 | <img src="./avatars/leo.png" width="40"/><br/>**Leo** | Frontend Engineer | Crafter | UI craftsman | React, Vite, Tailwind. Builds what Luna designs, what Atlas architected. |
+| 7 | <img src="./avatars/hugo.png" width="40"/><br/>**Backend** | Backend Engineer | Crafter | Reliability nerd | Node.js, Python, APIs, database logic. Security and performance first. |
+| 8 | <img src="./avatars/flint.png" width="40"/><br/>**Flint** | Infrastructure Eng | Crafter | Automation obsessed | Docker, CI/CD, deployment scripts. "If it runs twice, automate it." |
+| 9 | <img src="./avatars/eve.png" width="40"/><br/>**Eve** | QA Engineer | Sprinter | Perfectionist tester | Tests everything. Writes tests. Breaks things so users don't have to. |
+| 10 | <img src="./avatars/rex.png" width="40"/><br/>**Rex** | Governor | Crafter | Compliance gate | Final reviewer. **STRICT RULE:** Never auto-commits code. Evaluates output and awaits Operator's explicit approval before any git commits are made. |
 
 ---
 
@@ -39,17 +39,17 @@ AIC operates on a symlinked workspace architecture to isolate the framework code
 Every task — no matter how small — follows this 5-phase lifecycle:
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌──────────────────┐    ┌──────────────┐    ┌───────────┐
-│ INVESTIGATE │ →  │  PLANNING   │ →  │ IMPLEMENTATION   │ →  │ VERIFICATION │ →  │  CLOSEOUT │
-│  (Aria)     │    │  (Atlas)    │    │ (Leo, Hugo, Flint)│    │    (Eve)     │    │   (Rex)   │
-└─────────────┘    └─────────────┘    └──────────────────┘    └──────────────┘    └───────────┘
+┌─────────────┐    ┌─────────────┐    ┌─────────────────────────┐    ┌──────────────┐    ┌───────────┐
+│ INVESTIGATE │ →  │  PLANNING   │ →  │      IMPLEMENTATION     │ →  │ VERIFICATION │ →  │  CLOSEOUT │
+│ (Aria, Sage)│    │(Atlas, Luna)│    │   (Leo, Hugo, Flint)    │    │    (Eve)     │    │   (Rex)   │
+└─────────────┘    └─────────────┘    └─────────────────────────┘    └──────────────┘    └───────────┘
 ```
 
-- **Investigate**: PM translates your request into structured specs
-- **Planning**: Architect designs the technical approach
-- **Implementation**: Engineers build it (Frontend + Backend can run in parallel)
-- **Verification**: QA tests against the original requirements
-- **Closeout**: Governor reviews for compliance and quality
+- **Investigate**: PM translates your request into structured specs, backed by Researcher's evidence.
+- **Planning**: Architect designs the technical approach, Designer prepares UI specs.
+- **Implementation**: Engineers build it (Frontend, Backend, and Infra can run in parallel).
+- **Verification**: QA tests against the original requirements and checks coverage.
+- **Closeout**: Governor reviews for compliance and quality.
 
 **No phase is skippable.** Even "just fix a typo" goes through the pipeline.
 
@@ -242,41 +242,6 @@ MODEL_SPRINTER=provider/model-name
 
 ---
 
-## Project Structure
-
-```
-.hermes/skills/workflows/aic/
-├── SKILL.md                    # Main skill definition
-├── AGENTS.md                   # Workspace rules
-├── aic                         # CLI tool
-├── .env                        # Auto-generated config
-├── scripts/
-│   ├── server.js               # Dashboard API (port 6868)
-│   ├── spawn-worker.sh         # Worker spawner
-│   ├── setup.sh                # First-time setup
-│   ├── preflight.sh            # Pre-flight checks
-│   ├── context-gather.sh       # Context collection
-│   └── aic                     # CLI entry point
-├── dashboard/
-│   ├── src/
-│   │   ├── pages/              # Overview, History, Costs, Config
-│   │   ├── components/         # Pipeline tracker, worker grid
-│   │   └── data/workers.ts     # Worker definitions
-│   └── dist/                   # Built dashboard
-├── .aic/
-│   ├── tasks/                  # Per-task context (TASK-XXX/)
-│   │   ├── context.json        # User requirement
-│   │   ├── state.json          # Phase, status, timestamps
-│   │   └── reports/            # Phase reports
-│   ├── metrics.json            # Token usage data
-│   └── state.json              # Global state
-├── characters/                 # Pixel art worker avatars (Internal Assets)
-├── references/                 # Design docs, pitfalls, guides
-└── templates/                  # .env.example, opencode config
-```
-
----
-
 ## Known Limitations & Workarounds
 
 ### A. General System Issues
@@ -287,7 +252,6 @@ MODEL_SPRINTER=provider/model-name
 | **No undo for code changes** | Workers use `opencode run` which modifies files directly | Use git branching before large tasks; `git diff` after each phase |
 | **Token limits** | Large tasks may hit model context windows | Context auto-truncates at 80/60/40% per tier; use Crafter for implementation |
 | **Setup requires internet** | `npm install`, model fetching, OpenCode CLI install | Pre-download dependencies; use `--offline` flags where possible |
-| **Single server instance** | Only one AIC server per machine (port 6868) | Change port in `server.js` if needed |
 
 ### B. Chat / Dispatcher Issues
 
@@ -295,9 +259,7 @@ MODEL_SPRINTER=provider/model-name
 |-------|---------------|------------|
 | **Dispatcher takes over worker tasks** | AI model sees code and "wants to help" | Strict SOUL prompts enforce role boundaries; `spawn-worker.sh` injects role context automatically |
 | **Dispatcher skips phases** | "This is trivial, just fix it" | API lifecycle guard rejects out-of-order phase execution; 403 error forces correct flow |
-| **Dispatcher forgets to update status** | Manual API calls are error-prone | `spawn-worker.sh` auto-updates worker status (working → complete) and pipeline phase |
 | **Worker doesn't finish before next starts** | Race condition in parallel spawning | `spawn-worker.sh` is blocking — it waits for `opencode run` to exit before returning |
-| **Context bleed between workers** | Worker reads previous worker's output and changes it | Each worker gets only its prompt + project context, not previous worker's modifications |
 | **Governor auto-commits code** | Model ignores "ask user first" rule | Rule 9 in SKILL.md: Governor MUST NOT commit. Dispatcher asks user. Enforced by SOUL prompt. |
 | **Language mismatch** | User speaks Indonesian, worker responds in English | Dispatcher auto-detects language and passes it to worker prompts |
 
@@ -305,11 +267,6 @@ MODEL_SPRINTER=provider/model-name
 
 | Issue | Why it happens | Workaround |
 |-------|---------------|------------|
-| **Dashboard blank screen in production** | Vite circular chunk dependency with Recharts | Fixed: `recharts` bundled in `vendor` chunk via `vite.config.ts` |
-| **Cache hit rate > 100%** | Wrong formula: `cache / (input + output)` | Fixed: now uses `cache / (cache + input)` |
-| **Pipeline shows all blue when idle** | CSS color for idle = cyan/40 (still blue) | Fixed: idle stages now gray, active = cyan, complete = green |
-| **Task history shows all ACTIVE** | `task-complete` endpoint didn't update state.json | Fixed: `POST /api/task-complete` now writes `status: 'done'` to task folder |
-| **Worker status not syncing** | Shell JSON quotes not escaped in `spawn-worker.sh` | Fixed: proper `"` escaping in curl payload |
 | **History page empty after feature deploy** | Tasks created before persistence feature | Run new tasks via `/api/task-start`; old tasks won't have context files |
 | **Dashboard doesn't auto-refresh** | SPA polls on interval, not WebSocket | Refresh manually or wait for next poll cycle (configurable) |
 | **Metrics not updating** | Server restarted, in-memory state lost | Metrics persist to `.aic/metrics.json`; reload on server start |
