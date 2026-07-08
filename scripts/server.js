@@ -227,6 +227,9 @@ function serveStatic(req, res, pathname) {
   if (!fs.existsSync(filePath)) {
     // SPA fallback
     filePath = path.join(distDir, 'index.html');
+    if (!fs.existsSync(filePath)) {
+      return send(res, 503, { error: 'Dashboard is currently building or missing. Please try again in a few seconds.' });
+    }
   }
 
   const ext = path.extname(filePath).toLowerCase();
