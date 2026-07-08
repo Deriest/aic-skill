@@ -150,8 +150,11 @@ Hermes: Target project set successfully. The pipeline is currently idle.
 
 ### Handling Large Tasks (Work Packages)
 
-For large or complex tasks, the **Product Manager (Aria)** automatically utilizes **WP Decomposition**. 
-Instead of rushing a massive feature into one prompt, Aria breaks down the project into logical **Work Packages (WPs)**.
+How does AIC know if a task is large? It's a two-step collaboration:
+1. **The Dispatcher (Hermes)** detects the scale based on your initial prompt. If it's a massive request (e.g., "build a full-stack HR system"), Hermes flags it as an "Epic" and instructs the PM to decompose it.
+2. **The Product Manager (Aria)** then analyzes the system requirements and logically breaks it down into bite-sized **Work Packages (WPs)**.
+
+Instead of rushing a massive feature into one prompt, the pipeline processes it sequentially:
 
 ```
 You:  build a full-stack HR management system
@@ -302,8 +305,6 @@ MODEL_SPRINTER=provider/model-name
 
 | Issue | Why it happens | Workaround |
 |-------|---------------|------------|
-| **No Multi-Repo Support** | The API server routes all traffic into a single target active project directory. | On future planning |
-| **No Multi-Session Support** | The dashboard state (`state.json`) and pipeline track one global active task globally. | On future planning |
 | **Dispatcher tokens not tracked** | Dispatcher runs natively in Hermes core, not via `opencode run` so metrics aren't captured | Intentional. Dispatcher cost is tracked via your Hermes bill, not the AIC dashboard |
 | **History page empty after feature deploy** | Tasks created before persistence feature | Run new tasks via `/api/task-start`; old tasks won't have context files |
 | **Dashboard doesn't auto-refresh** | SPA polls on interval, not WebSocket | Refresh manually or wait for next poll cycle (configurable) |
