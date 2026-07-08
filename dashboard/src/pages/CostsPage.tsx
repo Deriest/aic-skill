@@ -1,6 +1,30 @@
 import { useState, useEffect } from 'react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { api } from '../api';
+
+const ALL_WORKERS = ['pm', 'architect', 'researcher', 'designer', 'frontend', 'backend', 'infra', 'qa', 'governor'];
+const WORKER_NAMES: Record<string, string> = {
+  pm: 'Aria (PM)',
+  architect: 'Atlas (Architect)',
+  researcher: 'Sage (Researcher)',
+  designer: 'Luna (Designer)',
+  frontend: 'Leo (Frontend)',
+  backend: 'Hugo (Backend)',
+  infra: 'Flint (Infra)',
+  qa: 'Eve (QA)',
+  governor: 'Rex (Governor)',
+};
+const SHORT_NAMES: Record<string, string> = {
+  pm: 'Aria',
+  architect: 'Atlas',
+  researcher: 'Sage',
+  designer: 'Luna',
+  frontend: 'Leo',
+  backend: 'Hugo',
+  infra: 'Flint',
+  qa: 'Eve',
+  governor: 'Rex',
+};
 
 interface MetricsSummary {
   totalRequests: number;
@@ -100,15 +124,15 @@ export function CostsPage() {
   };
 
   const getWorkerData = () => {
-    return Object.entries(summary?.byWorker || {})
-      .map(([worker, data]) => ({
-        worker,
-        requests: data.requests,
-        input: data.input,
-        output: data.output,
-        cache: data.cache,
-      }))
-      .sort((a, b) => b.requests - a.requests);
+    const byWorker = summary?.byWorker || {};
+    return ALL_WORKERS.map((worker) => ({
+      workerId: worker,
+      worker: SHORT_NAMES[worker] || worker,
+      requests: byWorker[worker]?.requests || 0,
+      input: byWorker[worker]?.input || 0,
+      output: byWorker[worker]?.output || 0,
+      cache: byWorker[worker]?.cache || 0,
+    }));
   };
 
   if (loading && !summary) {
@@ -198,19 +222,20 @@ export function CostsPage() {
             TOKENS OVER TIME
           </h3>
           <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={getChartData()}>
+            <BarChart data={getChartData()}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
               <XAxis dataKey="date" stroke="#666" tick={{ fontSize: 10 }} />
               <YAxis stroke="#666" tick={{ fontSize: 10 }} tickFormatter={formatNumber} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #444' }}
                 labelStyle={{ color: '#fff' }}
+                cursor={{ fill: 'transparent' }}
               />
               <Legend />
-              <Area type="monotone" dataKey="input" stackId="1" stroke="#00ff88" fill="#00ff8840" name="Input" />
-              <Area type="monotone" dataKey="output" stackId="1" stroke="#ffaa00" fill="#ffaa0040" name="Output" />
-              <Area type="monotone" dataKey="cache" stackId="1" stroke="#00ccff" fill="#00ccff40" name="Cache" />
-            </AreaChart>
+              <Bar dataKey="input" fill="#00ff88" name="Input" />
+              <Bar dataKey="output" fill="#ffaa00" name="Output" />
+              <Bar dataKey="cache" fill="#00ccff" name="Cache" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
@@ -222,11 +247,12 @@ export function CostsPage() {
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={getWorkerData()}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="worker" stroke="#666" tick={{ fontSize: 10 }} />
+              <XAxis dataKey="worker" stroke="#666" tick={{ fontSize: 9 }} interval={0} />
               <YAxis stroke="#666" tick={{ fontSize: 10 }} tickFormatter={formatNumber} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #444' }}
                 labelStyle={{ color: '#fff' }}
+                cursor={{ fill: 'transparent' }}
               />
               <Legend />
               <Bar dataKey="input" fill="#00ff88" name="Input" />
@@ -256,7 +282,7 @@ export function CostsPage() {
           <tbody>
             {getWorkerData().map((row) => (
               <tr key={row.worker} className="border-b border-aic-border/30 hover:bg-aic-border/10">
-                <td className="py-2 text-aic-accent">{row.worker.toUpperCase()}</td>
+                <td className="py-2 text-aic-accent">{WORKER_NAMES[row.workerId] || row.worker}</td>
                 <td className="py-2 text-right text-aic-text-bright">{row.requests}</td>
                 <td className="py-2 text-right text-aic-green">{formatNumber(row.input)}</td>
                 <td className="py-2 text-right text-aic-yellow">{formatNumber(row.output)}</td>
