@@ -60,7 +60,7 @@ Every task — no matter how small — follows this 5-phase lifecycle:
 | Feature | Description |
 |---------|-------------|
 | **Context Persistence** | Every task saves to `.aic/tasks/TASK-XXX/` — context, reports, state. Nothing is lost. |
-| **Resume (`aic continue`)** | Interrupted tasks (crash, token limit, sleep) can be resumed from where they stopped. |
+| **Resume (`/aic continue`)** | Interrupted tasks (crash, token limit, sleep) can be resumed from where they stopped. |
 | **WP Decomposition** | Large projects are broken into dependency-tracked Work Packages by PM. |
 | **Token Cost Tracking** | Per-worker token usage, cache hit rates, time-filtered metrics. |
 | **Auto Pipeline Sync** | Worker status and pipeline phase sync automatically — no manual updates needed. |
@@ -169,7 +169,7 @@ Hermes: ┌─ TASK-20260708-200 ──────────────┐
 ### Resuming an interrupted task
 
 ```
-You:  aic continue
+You:  /aic continue
 
 Hermes: === Resuming TASK-20260708-200 ===
         Title: E-Commerce Website
@@ -203,7 +203,7 @@ Hermes: ┌─ TASK DETAIL ─────────────────�
 | `/aic` | Activate Dispatcher mode |
 | `/aic status` | Show current pipeline status |
 | `/aic status task <TASK-ID>` | Show detailed task info |
-| `aic continue` | Resume last interrupted task (CLI) |
+| `/aic continue` | Resume last interrupted task |
 | `/aic stop` | Deactivate Dispatcher mode |
 
 ---
@@ -237,7 +237,7 @@ MODEL_SPRINTER=provider/model-name
 | `preflight.sh` | Pre-flight check + server start | `bash scripts/preflight.sh --auto-start` |
 | `spawn-worker.sh` | Spawn a worker with auto-status | `bash scripts/spawn-worker.sh <worker> <tier> <dir> <prompt>` |
 | `server.js` | Dashboard API server | `node scripts/server.js 6868` |
-| `aic` | CLI tool | `aic continue` |
+| `aic` | CLI tool | `./aic continue` |
 | `context-gather.sh` | Gather project context | `bash scripts/context-gather.sh <dir> --tier crafter` |
 
 ---
