@@ -38,7 +38,7 @@ export function OverviewPage() {
         </div>
 
         {/* Right Sidebar */}
-        <div className="flex-1 flex flex-col gap-3 h-full min-w-[400px]">
+        <div className="flex-1 flex flex-col gap-3 h-full min-w-[400px] overflow-hidden">
           <div className="flex-1 min-h-0">
             <PipelineTracker state={state} />
           </div>

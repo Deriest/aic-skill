@@ -82,7 +82,7 @@ EXIT_CODE=0
 if command -v opencode &>/dev/null; then
   # Use node wrapper for maximum escaping safety
   NODE_RUNNER=$(mktemp "${TMPDIR:-/tmp}/aic-run-XXXXXX.js")
-  cat > "$NODE_RUNNER" << 'NODESCRIPT'
+  cat << 'NODESCRIPT' > "$NODE_RUNNER"
 const { execSync } = require('child_process');
 const fs = require('fs');
 const prompt = fs.readFileSync(process.argv[2], 'utf8');

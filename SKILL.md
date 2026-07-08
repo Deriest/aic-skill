@@ -867,6 +867,9 @@ If UI fields (like `engine`) don't render despite backend updates, check if the 
 When fixing or modifying dashboard code, if the backend `state.workers` initialization or `WORKERS` array (`server.js`) uses different IDs (e.g., `frontend_engineer`) than the frontend UI list (e.g., `frontend`), the status updates will silently drop into 'unknown' and the UI avatars won't animate.
 **Fix:** Always ensure a 1:1 ID string match between backend state initialization and frontend component mapping. Also beware that stale disk caches (`.aic/state.json`) can override fresh backend code changes upon server restart. If backend IDs change, delete the state cache file before restarting the server: `rm -f .aic/state.json`.
 
+### ❌ Server Lifecycle Strictness prevents workers from spawning
+If you get a 403 Forbidden on `/api/agent-status`, the worker is likely not allowed in the current phase inside `server.js` (e.g. `pm` missing from `investigate` phase, or `governor` missing from `documentation`). Ensure `server.js` maps roles to ALL their valid phases, and always update `/api/task-status` to advance the phase BEFORE spawning workers.
+
 ### ❌ Analysis requests → single worker, no pipeline
 If user says "coba kasih saran", "how to", "what are the options", "give me analysis" → spawn ONE thinking worker for analysis. Do NOT proceed to implementation phases unless explicitly asked.
 
@@ -911,12 +914,13 @@ The default dedup looks at only the last entry. When the dashboard polls `/api/s
 ### ❌ `/api/status` filters out idle workers
 If the agents map filters idle workers, the frontend loses the explicit idle reference and may keep stale `working` display from previous render. **Fix:** Send ALL workers: `agents: Object.fromEntries(Object.entries(state.workers))`.
 
-### ❌ Pipeline / CurrentTask Blinking
-`AnimatePresence` in `TaskInfoPanel.tsx` uses object reference as key. Polling creates new refs every 2-5s → exit/enter animation fires every cycle. **Fix:** Use a stable string key (e.g. `currentTask?.id ?? 'empty'`) or memoize the comparison before dispatching.
+### ❌ Raw JSON textareas for configuration
+Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
-### ❌ Dispatcher role must be STRICTLY a human-facing translator
-See ⛔ ABSOLUTE RULE at the top. User corrections archived there.
-*(Update 2026-07-08: Even for the smallest tasks like a 1-line text change, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.)*
+### ❌ Dispatcher role must be STRICTLY a human-facing translator (No Coding bypass)
+Even for the smallest tasks like a 1-line text change or tweaking an SVG, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.
+
+**WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
@@ -1046,9 +1050,10 @@ When the Dispatcher sends API updates (e.g., `curl -X POST /api/agent-status`), 
 ### ❌ Raw JSON textareas for configuration
 Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
-### ❌ Activity Log Infinite Spam — 3-Layer Bug (Verified Fix 2026-07-08)
-The spam has THREE root causes that must ALL be fixed. See `references/dashboard-bug-patterns.md` for full details.
-1. **Server no-drain:** `/api/status` returns `state.audit.map(...)` without clearing. Fix: drain-on-read (`state.audit = []` after mapping).
+### ❌ Dispatcher role must be STRICTLY a human-facing translator (No Coding bypass)
+Even for the smallest tasks like a 1-line text change or tweaking an SVG, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.
+
+**WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
 2. **Frontend APPEND_LOG:** `useStatusPolling.ts` loops `APPEND_LOG` per entry; dedup only checks last. Fix: replace with `SET_LOGS` that overwrites entire array each poll.
 3. **Worker status persists:** `task_complete` only reset `working` workers. Fix: unconditionally reset ALL workers to idle.
 
@@ -1070,12 +1075,13 @@ When running `npm run build` in the Vite dashboard directory, the `dist/index.ht
 
 ### ❌ Dashboard UI Bloat & Alignment (Config Page & Overview)
 The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never add Chat UIs, Activity Logs, Task Input forms, or stand-alone `/workers` pages to the dashboard. The Dispatcher (Hermes TUI) handles all communication.
-**Fix (Config Page 2026-07-08):** Do not expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save.
-**Fix (Overview 2026-07-08):** Keep spacing tight between the navbar and the main content boxes. Remove redundant title text like "OVERVIEW" to maximize vertical space for the pixel-art assets. Use flexbox centering to align icons (▶) perfectly with text baselines, and enforce SVG constraints (`preserveAspectRatio="xMidYMid slice"`) to prevent animation spill-over.
+### ❌ Raw JSON textareas for configuration
+Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
-### ❌ Dispatcher role must be STRICTLY a human-facing translator
-See ⛔ ABSOLUTE RULE at the top. User corrections archived there.
-*(Update 2026-07-08: Even for the smallest tasks like a 1-line text change, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.)*
+### ❌ Dispatcher role must be STRICTLY a human-facing translator (No Coding bypass)
+Even for the smallest tasks like a 1-line text change or tweaking an SVG, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.
+
+**WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
@@ -1085,8 +1091,12 @@ If the user requests it to align with cards like the Stats Bar, wrap it inside a
 ### ❌ Computer melayang di atas worker
 Jika komputer melayang di atas kepala/meja worker terasa mengganggu dan user meminta untuk menghapusnya ("saya gamau ada komputer melayang di atas worker"), modifikasi `DeskComputer.tsx` agar mengembalikan `null` atau kosongkan kontainer monitor/keyboard melayang tersebut agar visual di panel Virtual Office bersih dan hanya menyisakan meja pekerja saja.
 
-### ❌ Task Description Cutoff (Card Height)
-Do not use `overflow-hidden` or `line-clamp` on the Current Task description block. Use `min-h-[60px]` with `overflow-y-auto` so the text can scroll without breaking the card's fixed height.
+### ❌ Expanding Sidebar Cards on New Tasks
+If cards containing dynamic content (like task descriptions or pipelines) are given `min-h-[xxx]` values without being explicitly constrained, adding new text causes the parent card to expand visually, ruining fixed grid alignments or pushing other UI elements out of view.
+**Fix:**
+1. Give the outer card container a rigid fixed height (e.g., `h-[240px]`) instead of `min-h-[...]`.
+2. Apply `flex-1 min-h-0 overflow-y-auto` exclusively to the *inner* text container holding the content.
+3. Ensure the master sidebar wrapper holding these cards has `overflow-hidden` if you want to strictly prevent the sidebar itself from pushing past the screen bounds. This enforces native scrolling strictly inside the card bodies.
 
 ### ❌ Pixel-Art UI Positioning Anomalies (Fixed Layouts, No Scroll)
 When converting standard web components to pixel-art equivalents, spacing and grid wrappings easily break on smaller viewports if `flex-wrap` drops an item to a new line, or if the container relies on `overflow-y-auto`.

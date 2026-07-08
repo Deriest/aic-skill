@@ -1,0 +1,22 @@
+{
+  "task_id": "TASK-20260708-010",
+  "issue": "Cards in the right sidebar (Current Task and Pipeline) expand dynamically when new task content is added, breaking the intended rigid layout.",
+  "requirements": [
+    {
+      "component": "PipelineTracker",
+      "file": "src/components/new_layout/PipelineTracker.tsx",
+      "changes": [
+        "Modify the 'Current Task' wrapper div from using 'min-h-[220px]' to a strict fixed height, e.g., 'h-[220px]'.",
+        "Ensure that the inner description block ('bg-aic-bg-dark/40') properly handles overflow by keeping 'overflow-y-auto', allowing users to scroll long descriptions without resizing the parent.",
+        "Verify that the 'Pipeline' wrapper continues to use 'flex-1 min-h-0' so it fills the remaining space without expanding beyond the sidebar limits."
+      ]
+    },
+    {
+      "component": "OverviewPage",
+      "file": "src/pages/OverviewPage.tsx",
+      "changes": [
+        "Ensure the right sidebar container strictly forces layout constraints so child elements do not stretch it vertically."
+      ]
+    }
+  ]
+}

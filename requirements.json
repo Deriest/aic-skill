@@ -1,23 +1,41 @@
 {
-  "user_stories": [
-    "as a user I want to see dispatcher always ON when /aic active",
-    "as a user I want current task and pipeline to be stable (no flicker)",
-    "as a user I want activity log to display entries",
-    "as a user I want every task to go through 5-phase workflow (Investigate→Plan→Implement→Doc→Closeout)"
+  "task_id": "TASK-20260708-008",
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Dispatcher Pipeline Bypass",
+      "description": "The Dispatcher takes on small tasks directly instead of following the strict lifecycle.",
+      "requirements": [
+        "Update the Dispatcher's system instructions (AGENTS.md and/or SKILL rules) to explicitly ban direct code execution, even for trivial tasks.",
+        "Enforce that all tasks must pass through the pipeline (Investigate → Planning → Execution → Documentation → Verification) using appropriate workers."
+      ]
+    },
+    {
+      "id": "issue-2",
+      "title": "Config UI Deficiencies",
+      "description": "Config form fails to populate current opencode.jsonc data and lacks fields for Provider, URL, Key, and Model selection.",
+      "requirements": [
+        "Update ConfigPage to correctly parse existing opencode.jsonc data, including comments (JSONC), and populate component state.",
+        "Add a dropdown for 'Provider Type' (e.g., anthropic, openai, custom).",
+        "Add inputs for Base URL and API Key.",
+        "Add dropdowns to select models for specific worker roles (Thinker, Crafter, Sprinter) by auto-detecting models from the selected provider.",
+        "Ensure saving the config preserves the JSONC structure or writes a valid JSON payload that opencode supports."
+      ]
+    },
+    {
+      "id": "issue-3",
+      "title": "Config File Integrity",
+      "description": "User's opencode.jsonc appears missing or wiped out.",
+      "requirements": [
+        "Create a health-check/repair script to verify the existence of ~/.config/opencode/opencode.jsonc or ~/.opencode.jsonc.",
+        "If missing, auto-generate a valid fallback opencode.jsonc file with default values.",
+        "Update the dashboard backend/API to handle missing config gracefully by returning the default structure rather than failing."
+      ]
+    }
   ],
-  "acceptance_criteria": [
-    "Dispatcher status indicates ON/active when `/aic` is active",
-    "Task and pipeline list does not flicker or repeatedly disappear/reappear",
-    "Activity log lists historical and new actions/entries correctly",
-    "Task workflow state strictly transitions through: Investigate -> Planning -> Implementation -> Documentation -> Closeout"
-  ],
-  "priority_order": [
-    "dispatcher stability first",
-    "flicker",
-    "log",
-    "workflow enforcement"
-  ],
-  "tech_suggestions": [
-    "nothing new, use existing stack"
+  "affected_files": [
+    "AGENTS.md",
+    "dashboard/src/pages/ConfigPage.tsx",
+    "scripts/verify_config.sh"
   ]
 }
