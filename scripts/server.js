@@ -10,6 +10,32 @@ const path = require('path');
 
 const SKILL_DIR = path.join(__dirname, '..');
 const STATE_FILE = path.join(SKILL_DIR, '.aic', 'state.json');
+const ENV_FILE = path.join(SKILL_DIR, '.env');
+
+// Parse .env file into object
+function loadEnv() {
+  const env = {};
+  try {
+    const lines = fs.readFileSync(ENV_FILE, 'utf8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq > 0) env[trimmed.slice(0, eq)] = trimmed.slice(eq + 1);
+    }
+  } catch {}
+  return env;
+}
+
+// Get active project (from ./aic selection or .env AIC_PROJECT_DIR)
+function getActiveProject() {
+  const env = loadEnv();
+  return {
+    path: env.AIC_ACTIVE_PROJECT || env.AIC_PROJECT_DIR || '',
+    name: env.AIC_ACTIVE_PROJECT_NAME || '',
+    workspace: env.AIC_PROJECT_DIR || ''
+  };
+}
 const PORT = parseInt(process.argv[2] || process.env.PORT || '6868', 10);
 
 const WORKERS = [
@@ -149,13 +175,20 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { success: true, currentTask: state.currentTask, currentPhase: state.currentPhase });
   }
 
+  // GET /api/project — active project info
+  if (req.method === 'GET' && pathname === '/api/project') {
+    return send(res, 200, getActiveProject());
+  }
+
   // GET /api/config
   if (req.method === 'GET' && pathname === '/api/config') {
     const envPath = path.join(SKILL_DIR, '.env');
     const openCodePath = path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc');
+    const project = getActiveProject();
     const config = {
       env: fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '',
-      opencode: fs.existsSync(openCodePath) ? fs.readFileSync(openCodePath, 'utf8') : ''
+      opencode: fs.existsSync(openCodePath) ? fs.readFileSync(openCodePath, 'utf8') : '',
+      project: project
     };
     return send(res, 200, config);
   }
