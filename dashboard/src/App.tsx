@@ -19,9 +19,9 @@ function DashboardApp() {
       
       {/* Top Header Navigation */}
       <header className="flex justify-between items-center bg-aic-bg-panel border-b-4 border-aic-border px-6 py-4 z-10 relative shrink-0">
-        <div className="flex items-center gap-3 flex-1">
-          <span className="text-aic-accent text-px-lg font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
-          <h1 className="text-3xl font-pixel text-aic-accent tracking-widest uppercase text-shadow-cyan">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <span className="text-aic-accent text-px-lg font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)] shrink-0">▶</span>
+          <h1 className="text-px-lg font-pixel text-aic-accent tracking-widest uppercase text-shadow-cyan whitespace-nowrap">
             AI ENGINEERING COMPANY
           </h1>
         </div>

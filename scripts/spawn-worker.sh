@@ -31,11 +31,11 @@ else
   exit 1
 fi
 
-# Resolve model from tier
+# 3. Model selection based on tier
 case "$TIER" in
-  thinker)  MODEL="${PROVIDER_ID}/${MODEL_THINKER}" ;;
-  crafter)  MODEL="${PROVIDER_ID}/${MODEL_CRAFTER}" ;;
-  sprinter) MODEL="${PROVIDER_ID}/${MODEL_SPRINTER}" ;;
+  thinker)  MODEL="${PROVIDER:-aic}/${MODEL_THINKER}" ;;
+  crafter)  MODEL="${PROVIDER:-aic}/${MODEL_CRAFTER}" ;;
+  sprinter) MODEL="${PROVIDER:-aic}/${MODEL_SPRINTER}" ;;
   *)        echo "ERROR: Unknown tier '$TIER'. Use thinker/crafter/sprinter." >&2; exit 1 ;;
 esac
 
