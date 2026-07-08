@@ -198,7 +198,6 @@ The setup script auto-fetches models from the proxy `/v1/models` endpoint, lets 
 **Second Brain / Knowledge Management (YAGNI):** Do not build complex RAG or vector DBs for worker knowledge. Place markdown files in `docs/` or `.aic/brain/` within the project. The `context-gather.sh` script automatically reads them and feeds them to workers as context.
 
 ### ❌ Automatic Context Limits Overrides
-`detect-context.sh` runs automatically during setup. It queries the proxy's API for the model's actual max context (or uses a fallback table), and writes exact token limits into `.env` (e.g. `AIC_CTX_THINKER_KB=800000`) based on 80/60/40% proportions.
 **Important:** Do NOT allow manual edits to `.env` to override the auto-detection logic unless the Operator explicitly asks for manual limits. The system is designed to be "full otomatis". If the user says "supaya otomatis, tidak boleh diubah-ubah", explain that `setup.sh` handles it automatically and the generated `.env` limits are final and safe.
 
 ### ❌ Dashboard Auto-Start & Port 6868
@@ -1181,10 +1180,8 @@ When draining logs on GET `/api/status`, you must clear `state.logs` (array) AND
 Thinker head → Crafter sub-worker. Crafter head → Sprinter sub-worker. Exception: Researcher can use Crafter under any head. Sub-workers are specialists with narrow scope, not reduced-power copies. See `references/pitfalls-history.md` for full details.
 
 ### ❌ context-gather.sh --tier is not optional
-Always pass `--tier thinker|crafter|sprinter` to match the worker being spawned. Without it, defaults to crafter. Tier caps are read from `.env` (set by `detect-context.sh` during setup): `AIC_CTX_THINKER_KB`, `AIC_CTX_CRAFTER_KB`, `AIC_CTX_SPRINTER_KB`. If `.env` doesn't have these, fallback: thinker=128KB, crafter=64KB, sprinter=32KB.
 
 ### ❌ Automatic Context Limits Overrides
-`detect-context.sh` runs automatically during setup. It queries the proxy's API for the model's actual max context (or uses a fallback table), and writes exact token limits into `.env` (e.g. `AIC_CTX_THINKER_KB=800000`) based on 80/60/40% proportions.
 **Important:** Do NOT allow manual edits to `.env` to override the auto-detection logic unless the Operator explicitly asks for manual limits. The system is designed to be "full otomatis". If the user says "supaya otomatis, tidak boleh diubah-ubah", explain that `setup.sh` handles it automatically and the generated `.env` limits are final and safe.
 
 ### ❌ Dashboard Auto-Start & Port 6868

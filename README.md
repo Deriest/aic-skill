@@ -123,7 +123,7 @@ cd ~/.hermes/skills/workflows/aic/dashboard && npm install && npm run build
 2. **Provider Setup**: Detects and configures your active AI Provider (e.g., OpenAI, Anthropic, Local).
 3. **Model Fetching**: Dynamically pulls available models from the provider's API.
 4. **Tier Configuration**: Lets you assign specific models for **Thinker**, **Crafter**, and **Sprinter** roles.
-5. **Config Generation**: Generates `opencode.jsonc` and `.env` with proper context window limits.
+5. **Config Generation**: Generates `opencode.jsonc` and `.env` with auto context handling.
 6. **Workspace Initialization**: Prepares the global namespace and configures the API server bindings.
 
 ---
@@ -288,7 +288,6 @@ MODEL_SPRINTER=provider/model-name
 |-------|---------------|------------|
 | **Pipeline is sequential** | PM → Architect → Engineers → QA → Governor, always | For parallel work, spawn Frontend + Backend simultaneously (allowed in Implementation phase) |
 | **No undo for code changes** | Workers use `opencode run` which modifies files directly | Use git branching before large tasks; `git diff` after each phase |
-| **Token limits** | Large tasks may hit model context windows | Context auto-truncates at 80/60/40% per tier; use Crafter for implementation |
 | **Setup requires internet** | `npm install`, model fetching, OpenCode CLI install | Pre-download dependencies; use `--offline` flags where possible |
 | **Single server instance** | Only one AIC server per machine (port 6868) | Change port in `server.js` if needed |
 | **No Multi-Repo Support** | The engine orchestrates tasks against a single active project directory at a time. | On future planning |
