@@ -13,7 +13,7 @@ AIC transforms Hermes into a full engineering company — with a Dispatcher, PM,
 AIC cleanly separates its own engine from your target codebase.
 - **Skill Repository (Engine):** `~/.hermes/skills/workflows/aic/` (Where the API server and dashboard live).
 - **Target Project (Your Code):** Can be anywhere on your machine.
-- **Switching Projects:** Use `./aic project <path>` to tell the AIC engine which folder the workers should operate on. The dashboard and task tracking will pivot to monitor that specific active project.
+- **Switching Projects:** Use `/aic project <path>` to tell the AIC engine which folder the workers should operate on. The dashboard and task tracking will pivot to monitor that specific active project.
 
 ---
 
@@ -140,9 +140,9 @@ You:  /aic
 Hermes: [Preflight Check Running... Server Started]
         Hello, I am the AIC Dispatcher.
         Please set your target project folder:
-        ./aic project <path/to/folder>
+        /aic project <path/to/folder>
 
-You:  ./aic project ~/Documents/my-app
+You:  /aic project ~/Documents/my-app
 
 Hermes: Target project set successfully. The pipeline is currently idle.
         What task can I help you with today?
@@ -238,7 +238,7 @@ Hermes: ┌─ TASK DETAIL ─────────────────�
 | Command | What it does |
 |---------|-------------|
 | `/aic` | Activate Dispatcher mode and run **Preflight Check** (auto-checks dependencies, builds dashboard, and starts the API server) |
-| `./aic project <path>` | Change project: Point the AIC workspace to a new or existing project folder |
+| `/aic project <path>` | Change project: Point the AIC workspace to a new or existing project folder |
 | `/aic status` | Show current pipeline status |
 | `/aic status task <TASK-ID>` | Show detailed task info |
 | `/aic continue` | Resume last interrupted task |
@@ -260,10 +260,10 @@ MODEL_SPRINTER=provider/model-name
 ### Model tiers
 
 | Tier | Use for | Workers |
-|------|---------|----------------|---------|
-| **Thinker** | Complex reasoning, architecture | 80% of max | Aria (PM), Atlas (Architect) |
-| **Crafter** | Coding, implementation | 60% of max | Leo, Hugo, Flint, Sage, Luna, Rex |
-| **Sprinter** | Fast tasks, testing | 40% of max | Eve (QA) |
+|---|---|---|
+| **Thinker** | Complex reasoning, architecture | Aria (PM), Atlas (Architect) |
+| **Crafter** | Coding, implementation | Leo, Hugo, Flint, Sage, Luna, Rex |
+| **Sprinter** | Fast tasks, testing | Eve (QA) |
 
 ---
 
@@ -275,7 +275,7 @@ MODEL_SPRINTER=provider/model-name
 | `preflight.sh` | Pre-flight check + server start | `bash scripts/preflight.sh --auto-start` |
 | `spawn-worker.sh` | Spawn a worker with auto-status | `bash scripts/spawn-worker.sh <worker> <tier> <dir> <prompt>` |
 | `server.js` | Dashboard API server | `node scripts/server.js 6868` |
-| `aic` | CLI tool | `./aic continue` |
+| `aic` | CLI tool | `/aic continue` |
 | `context-gather.sh` | Gather project context | `bash scripts/context-gather.sh <dir> --tier crafter` |
 
 ---
