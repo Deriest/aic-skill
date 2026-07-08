@@ -1317,10 +1317,10 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 22. **Circuit breaker** — the server tracks per-worker failures. After 3 consecutive failures, the circuit opens and that worker is skipped. Monitor via `GET /api/status` → `circuitBreakers` field. Don't keep retrying a worker with an open circuit — report to Operator.
 23. **Record token usage** — after each worker completes, report token consumption: `POST /api/tokens {"input": N, "output": N}`. The server tracks cumulative cost. Include cost in final delivery report.
 24. **Self-test before first task** — run `bash ~/.hermes/skills/workflows/aic/scripts/self-test.sh` to validate config, deps, and server before starting work. Fixes 90% of "why isn't this working" issues.
+25. **Git Workflow** — After Governor approves, Dispatcher asks user before any git operation. Governor does NOT commit or merge. User decides: commit to main, commit to branch (feature/TASK-xxx), or merge branch to main. See `aic-dispatcher-discipline` rule #7.
 
 ## Related References & Templates
 
-- **`references/dashboard-pitfalls.md`** — State sync, UI crash prevention, and API polling constraints for the React/Node dashboard.
 - **`references/dashboard-pitfalls.md`** — State sync, UI crash prevention, and API polling constraints for the React/Node dashboard.
 - **`references/dashboard-bug-patterns.md`** — Known bugs and fixes for the AIC dashboard: idle stuck, log dedup, UI layout. Component quick reference and port mapping (Vite=6969, API=6868).
 - **`references/pipeline-ui-sizing.md`** — Verified font sizes, spacing, and layout patterns for Pipeline and Current Task cards in the right sidebar.
