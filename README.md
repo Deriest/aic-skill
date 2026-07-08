@@ -19,18 +19,18 @@ AIC operates on a symlinked workspace architecture to isolate the framework code
 
 ## Meet the Team
 
-| # | Name | Role | Tier | Personality | What they actually do |
-|---|------|------|------|-------------|----------------------|
-| 1 | **Hermes** | Dispatcher | Orchestrator | Strict butler | Routes your request. Never writes code. Talks to you, then delegates. |
-| 2 | **Aria** | Product Manager | Thinker | Empathetic translator | Turns "I want a feature" into user stories, data models, and acceptance criteria. |
-| 3 | **Sage** | Researcher | Crafter | Evidence-driven analyst | Finds facts, validates assumptions, reads docs. No guessing. |
-| 4 | **Luna** | Designer | Crafter | User advocate | Specifies layouts, interactions, visual consistency. Thinks in user journeys. |
-| 5 | **Atlas** | Architect | Thinker | Systems thinker | Designs databases, APIs, tech stack. Thinks in trade-offs and constraints. |
-| 6 | **Leo** | Frontend Engineer | Crafter | UI craftsman | React, Vite, Tailwind. Builds what Luna designs, what Atlas architected. |
-| 7 | **Hugo** | Backend Engineer | Crafter | Reliability nerd | Node.js, Python, APIs, database logic. Security and performance first. |
-| 8 | **Flint** | Infrastructure Eng | Crafter | Automation obsessed | Docker, CI/CD, deployment scripts. "If it runs twice, automate it." |
-| 9 | **Eve** | QA Engineer | Sprinter | Perfectionist tester | Tests everything. Writes tests. Breaks things so users don't have to. |
-| 10 | **Rex** | Governor | Crafter | Compliance gate | Final reviewer. **STRICT RULE:** Never auto-commits code. Evaluates output and awaits Operator's explicit approval before any git commits are made. |
+| # | Name | Role | Tier | Engine | Personality | What they actually do |
+|---|------|------|------|--------|-------------|----------------------|
+| 1 | **Hermes** | Dispatcher | Orchestrator | `delegate_task` | Strict butler | Routes your request. Never writes code. Talks to you, then delegates. |
+| 2 | **Aria** | Product Manager | Thinker | `opencode run` | Empathetic translator | Turns "I want a feature" into user stories, data models, and acceptance criteria. |
+| 3 | **Sage** | Researcher | Crafter | `opencode run` | Evidence-driven analyst | Finds facts, validates assumptions, reads docs. No guessing. |
+| 4 | **Luna** | Designer | Crafter | `opencode run` | User advocate | Specifies layouts, interactions, visual consistency. Thinks in user journeys. |
+| 5 | **Atlas** | Architect | Thinker | `opencode run` | Systems thinker | Designs databases, APIs, tech stack. Thinks in trade-offs and constraints. |
+| 6 | **Leo** | Frontend Engineer | Crafter | `opencode run` | UI craftsman | React, Vite, Tailwind. Builds what Luna designs, what Atlas architected. |
+| 7 | **Hugo** | Backend Engineer | Crafter | `opencode run` | Reliability nerd | Node.js, Python, APIs, database logic. Security and performance first. |
+| 8 | **Flint** | Infrastructure Eng | Crafter | `opencode run` | Automation obsessed | Docker, CI/CD, deployment scripts. "If it runs twice, automate it." |
+| 9 | **Eve** | QA Engineer | Sprinter | `opencode run` | Perfectionist tester | Tests everything. Writes tests. Breaks things so users don't have to. |
+| 10 | **Rex** | Governor | Crafter | `opencode run` | Compliance gate | Final reviewer. **STRICT RULE:** Never auto-commits code. Evaluates output and awaits Operator's explicit approval before any git commits are made. |
 
 ---
 
@@ -111,7 +111,8 @@ bash ~/.hermes/skills/workflows/aic/scripts/setup.sh
 cd ~/.hermes/skills/workflows/aic/dashboard && npm install && npm run build
 
 # 4. Start the server
-node ~/.hermes/skills/workflows/aic/scripts/server.js 6868
+# You don't need to start it manually! Just type `/aic` in Hermes chat.
+# It will run a preflight check and auto-start the server for you.
 ```
 
 ### What setup.sh does
@@ -200,7 +201,7 @@ Hermes: ┌─ TASK DETAIL ─────────────────�
 
 | Command | What it does |
 |---------|-------------|
-| `/aic` | Activate Dispatcher mode |
+| `/aic` | Activate Dispatcher mode and run **Preflight Check** (auto-checks dependencies, builds dashboard, and starts the API server) |
 | `/aic status` | Show current pipeline status |
 | `/aic status task <TASK-ID>` | Show detailed task info |
 | `/aic continue` | Resume last interrupted task |
