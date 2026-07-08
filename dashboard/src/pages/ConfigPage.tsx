@@ -9,6 +9,70 @@ export function ConfigPage() {
   const [apiKey, setApiKey] = useState('');
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
+  const [providerKey, setProviderKey] = useState('aic');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+
+  const getEnvValue = (key: string) => {
+    const variable = envVars.find(v => v.key === key);
+    return variable ? variable.value : '';
+  };
+
+  const setEnvValue = (key: string, value: string) => {
+    setEnvVars(prev => {
+      const exists = prev.some(v => v.key === key);
+      if (exists) {
+        return prev.map(v => v.key === key ? { ...v, value } : v);
+      } else {
+        return [...prev, { key, value }];
+      }
+    });
+  };
+
+  const handleProviderChange = (newPKey: string) => {
+    setProviderKey(newPKey);
+    const customProviders = opencodeObj?.provider || {};
+    const provider = customProviders[newPKey] || {};
+    const options = provider.options || {};
+    setBaseURL(options.baseURL || '');
+    setApiKey(options.apiKey || '');
+  };
+
+  const fetchModels = async () => {
+    if (!baseURL) {
+      setStatus('Base URL is required to fetch models');
+      return;
+    }
+    setStatus('Fetching models...');
+    try {
+      const url = baseURL.endsWith('/') ? `${baseURL}models` : `${baseURL}/models`;
+      const headers: Record<string, string> = {};
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const result = await res.json();
+      
+      if (result && Array.isArray(result.data)) {
+        const ids = result.data.map((m: any) => m.id || m.name).filter(Boolean);
+        setAvailableModels(ids);
+        setStatus(`Successfully fetched ${ids.length} models!`);
+        setTimeout(() => setStatus(''), 3000);
+      } else {
+        throw new Error('Response data is not an array of models');
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus(`Failed to fetch models: ${err instanceof Error ? err.message : 'Unknown'}`);
+    }
+  };
+
+  const uniqueModels = Array.from(new Set([
+    ...availableModels,
+    getEnvValue('MODEL_THINKER'),
+    getEnvValue('MODEL_CRAFTER'),
+    getEnvValue('MODEL_SPRINTER')
+  ].filter(Boolean))) as string[];
 
   // Helper to strip JSON comments before parsing standard JSON if needed
   const parseJsonc = (str: string) => {
@@ -44,6 +108,7 @@ export function ConfigPage() {
         // Find custom provider key or fallback to 'aic'
         const customProviders = obj.provider || {};
         const pKey = Object.keys(customProviders).find(k => k !== 'openai' && k !== 'anthropic') || 'aic';
+        setProviderKey(pKey);
         const provider = customProviders[pKey] || {};
         const options = provider.options || {};
         setBaseURL(options.baseURL || '');
@@ -91,8 +156,9 @@ export function ConfigPage() {
       if (!obj.provider) {
         obj.provider = {};
       }
+      // Remove any existing provider key not selected if we change provider keys, or just keep them? Let's just manage the current providerKey.
       const customProviders = obj.provider;
-      const pKey = Object.keys(customProviders).find(k => k !== 'openai' && k !== 'anthropic') || 'aic';
+      const pKey = providerKey;
       if (!customProviders[pKey]) {
         customProviders[pKey] = {
           npm: "@ai-sdk/openai-compatible",
@@ -193,17 +259,38 @@ export function ConfigPage() {
                   
                   <div className="flex flex-col gap-4 bg-aic-bg-dark/50 p-4 border border-aic-border/30 rounded">
                     <div className="flex flex-col gap-1.5">
-                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">custom_providers.aic.baseURL</label>
-                      <input 
-                        type="text"
-                        placeholder="https://..."
-                        value={baseURL}
-                        onChange={e => setBaseURL(e.target.value)}
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">Provider</label>
+                      <select
+                        value={providerKey}
+                        onChange={e => handleProviderChange(e.target.value)}
                         className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
-                      />
+                      >
+                        <option value="aic">aic</option>
+                        <option value="openai">openai</option>
+                        <option value="anthropic">anthropic</option>
+                      </select>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">custom_providers.aic.apiKey</label>
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">custom_providers.{providerKey}.baseURL</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text"
+                          placeholder="https://..."
+                          value={baseURL}
+                          onChange={e => setBaseURL(e.target.value)}
+                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={fetchModels}
+                          className="font-pixel text-[10px] text-aic-accent border border-aic-accent/50 hover:bg-aic-accent hover:text-black px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+                        >
+                          FETCH MODELS
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">custom_providers.{providerKey}.apiKey</label>
                       <input 
                         type="password"
                         placeholder="sk-..."
@@ -211,6 +298,50 @@ export function ConfigPage() {
                         onChange={e => setApiKey(e.target.value)}
                         className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
                       />
+                    </div>
+
+                    <div className="border-t border-aic-border/20 pt-4 mt-2 flex flex-col gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_THINKER</label>
+                        <select
+                          value={getEnvValue('MODEL_THINKER')}
+                          onChange={e => setEnvValue('MODEL_THINKER', e.target.value)}
+                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
+                        >
+                          <option value="">-- Select Model --</option>
+                          {uniqueModels.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_CRAFTER</label>
+                        <select
+                          value={getEnvValue('MODEL_CRAFTER')}
+                          onChange={e => setEnvValue('MODEL_CRAFTER', e.target.value)}
+                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
+                        >
+                          <option value="">-- Select Model --</option>
+                          {uniqueModels.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_SPRINTER</label>
+                        <select
+                          value={getEnvValue('MODEL_SPRINTER')}
+                          onChange={e => setEnvValue('MODEL_SPRINTER', e.target.value)}
+                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
+                        >
+                          <option value="">-- Select Model --</option>
+                          {uniqueModels.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
