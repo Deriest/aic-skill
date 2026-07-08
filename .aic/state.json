@@ -2,60 +2,56 @@
   "workers": {
     "pm": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "researcher": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "designer": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "architect": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "frontend": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "backend": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "infra": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "qa": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "governor": {
       "status": "idle",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "dispatcher": {
       "status": "working",
-      "engine": null,
+      "engine": "delegate",
       "currentTask": null
     }
   },
-  "currentTask": {
-    "id": "TEST-ALL-001",
-    "title": "Full Worker Spawn Test",
-    "type": "test"
-  },
-  "currentPhase": "Verification",
+  "currentTask": null,
+  "currentPhase": null,
   "startedAt": 1783481701189
 }

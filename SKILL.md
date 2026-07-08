@@ -19,25 +19,62 @@ metadata:
 Before EVERY action, run this mental check:
 ```
 Am I about to use write_file, patch, or terminal (for code/file edits)?
-  → YES = STOP. Spawn a worker via `opencode run` instead.
+  → YES = STOP. Create a prompt and spawn the appropriate worker via spawn-worker.sh.
   → NO  = Proceed.
-Am I about to use delegate_task for coding work?
-  → YES = STOP. Use `opencode run` instead.
+Am I about to spawn one worker to do the entire task?
+  → YES = STOP. Follow the sequential report-chain: PM → Architect → Engineer → QA → Governor.
+  → NO  = Proceed.
+Am I about to skip a lifecycle phase because the task seems trivial?
+  → YES = STOP. Every request goes through the full pipeline. No exceptions.
   → NO  = Proceed.
 ```
 
-**What you CAN do:** Talk to user, classify tasks, hit API endpoints (`curl`), spawn workers via `opencode run` (or `spawn-worker.sh`), read files for investigation.
-**What you CANNOT do:** `write_file`, `patch`, `terminal` for code/file edits, `delegate_task` for coding. Not even "quick fixes", "one-liners", or "small tweaks". ZERO exceptions.
+**What you CAN do:** Talk to user, classify tasks, hit API endpoints (`curl`), create prompts for each department, spawn workers via `spawn-worker.sh`, read files for investigation, aggregate reports between departments.
+**What you CANNOT do:** `write_file`, `patch`, `terminal` for code/file edits. Not even "quick fixes", "one-liners", or "small tweaks". ZERO exceptions.
 
 ### 🚫 STRICT PIPELINE LIFECYCLE (SOP HARGA MATI)
-You are strictly forbidden from skipping lifecycle phases, bypassing workers, or performing "shortcut" executions yourself, regardless of how trivial or small the user's request seems.
-The SOP is absolute:
-1. **Investigate:** Handoff to PM / Researcher to parse requirements.
-2. **Planning:** Handoff to Architect / Designer for technical design.
-3. **Execution:** Handoff to Frontend / Backend / Infra for coding.
-4. **Verification:** Handoff to QA for testing.
-5. **Documentation:** Handoff to Governor for final review.
-You MUST orchestrate this sequence. If the task is just "change a word", the PM must still plan it, the Engineer must change it, QA must verify it, and Governor must review it. DO NOT perform the work or skip phases. You orchestrate. The workers execute.
+
+You are strictly forbidden from skipping lifecycle phases, bypassing workers, performing "shortcut" executions yourself, or spawning a single worker to do the entire task — regardless of how trivial or small the user's request seems.
+
+**Every user request restarts the full workflow from the beginning. No exceptions.**
+
+#### Sequential Report-Chain Model
+
+The Dispatcher is the **single source of truth** for workflow orchestration, task routing, status management, report aggregation, and user communication. Each department is responsible ONLY for its own assigned work.
+
+```
+User Request
+    ↓
+Dispatcher → classifies task, starts lifecycle
+    ↓
+[1] Dispatcher sends prompt → PM
+    PM investigates, updates status=Complete, submits Investigation Report → Dispatcher
+    ↓
+[2] Dispatcher uses Investigation Report → creates prompt → Architect
+    Architect designs, updates status=Complete, submits Architecture Report → Dispatcher
+    ↓
+[3] Dispatcher uses Architecture Report → creates prompt → Executioner (Frontend/Backend/Infra)
+    Executioner implements, updates status=Complete, submits Implementation Report → Dispatcher
+    ↓
+[4] Dispatcher forwards Implementation Report → QA
+    QA verifies, updates status=Complete, submits QA Report → Dispatcher
+    ↓
+[5] Dispatcher sends ALL reports → Governor
+    Governor reviews, updates status=Complete, submits Final Approval → Dispatcher
+    ↓
+Dispatcher delivers completed result to User
+```
+
+#### Rules (Non-Negotiable)
+
+1. **Sequential only.** Each stage MUST complete before the next begins. No parallel departments.
+2. **Reports flow through Dispatcher.** Departments NEVER communicate directly. Every report goes: Department → Dispatcher → next Department.
+3. **Dispatcher creates each prompt** based on the previous department's report. Not pre-generated, not bulk-created.
+4. **No bypassing.** Even "change a word" goes through: PM → Architect → Engineer → QA → Governor.
+5. **No single-worker full tasks.** NEVER spawn one worker to "do everything." Each worker does its specific role.
+6. **Rejection handling.** If QA rejects → Dispatcher re-spawns Executioner with QA feedback. If Governor rejects → Dispatcher re-spawns QA with Governor feedback. Never skip back more than one stage without user escalation.
+7. **Status tracking.** Dispatcher updates phase transitions via API. Each worker updates its own status to complete when done.
+8. **Every request restarts.** New user request = fresh lifecycle from Investigate. No carrying over from previous tasks.
 
 **WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
 
@@ -950,6 +987,10 @@ The default dedup looks at only the last entry. When the dashboard polls `/api/s
 ### ❌ `/api/status` filters out idle workers
 If the agents map filters idle workers, the frontend loses the explicit idle reference and may keep stale `working` display from previous render. **Fix:** Send ALL workers: `agents: Object.fromEntries(Object.entries(state.workers))`.
 
+### ❌ `/api/config` reads template instead of actual user config (FIXED 2026-07-08)
+`server.js` GET/POST `/api/config` reads opencode config from `templates/opencode-provider.json` (placeholder) instead of `~/.config/opencode/opencode.jsonc`. **Fix:** Change `openCodePath` to `path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc')` in both handlers.
+**User preference ("sinkron bukan merge"):** Both panels show their OWN copy of shared fields (BaseURL, API Key, Provider) with shared state. Do NOT merge panels. Both must have identical controls (Fetch Models on both).
+
 ### ❌ Raw JSON textareas for configuration
 Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
@@ -1034,8 +1075,38 @@ execFileSync('opencode', ['run', '/tmp/prompt.txt', '-m', process.env.MODEL_CRAF
 ### ❌ OpenCode auto-rejects reads of sensitive files (.env, credentials, API keys)
 When spawning workers via `opencode run`, OpenCode's permission system auto-rejects reads of files containing secrets (`.env`, files with `API_KEY`, etc.). The worker gets a permission error and may fail to produce its artifact or stall. **Observed (2026-07-07):** PM worker tried to read `.env` → got `! permission requested: read ... auto-rejecting` → never produced `requirements.json`. **Workaround:** Include all non-secret context the worker needs (provider URL, model names, tech stack) directly in the CONTEXT field of the task handoff. Never expect workers to read `.env` or credential files. For config-dependent workers (Backend Engineer building config endpoints), pass the full config structure description in the prompt instead of asking them to read the file.
 
+### ❌ Crafter (Sonnet) fails to edit large files (>300 lines) via opencode run --auto
+When spawning engineers via `opencode run --auto` with Sonnet (crafter tier) to EDIT existing files larger than ~300 lines, the model consistently reads the file, creates a todo/plan, but exhausts its output token budget on thinking and NEVER calls the write tool. The worker reports "completed successfully" (exit 0) but the file is unchanged.
+**Root cause:** Sonnet's thinking overhead scales with file size. For a 368-line TSX file, it spent all tokens on analysis without executing. Smaller files (<100 lines) and new file creation work fine.
+**Verified (2026-07-08):** `opencode run --auto` CAN edit files — a 1-line test file succeeded instantly. PM/Architect succeed because they write NEW files. The failure is specific to editing large existing files with Sonnet.
+**Fix:** Override tier to `thinker` (Opus) for engineers when the target file is >300 lines:
+```bash
+bash scripts/spawn-worker.sh frontend thinker /path/to/project /tmp/prompt.txt
+bash scripts/spawn-worker.sh backend thinker /path/to/project /tmp/prompt.txt
+```
+Opus successfully edited the same 368-line ConfigPage.tsx on the first attempt where Sonnet failed 4 times.
+**Detection pattern:** After an engineer worker "completes successfully", ALWAYS verify with `grep` that the expected change exists in the target file. If unchanged, re-spawn with `thinker` tier.
+**`--no-context` flag:** When re-spawning after a Sonnet failure on large files, add `--no-context` to `spawn-worker.sh` to skip `context-gather.sh`. This reduces the prompt size significantly, giving the model more output tokens for actual edits. Combined with thinker tier, this reliably fixes large-file edit failures.
+**Known tradeoff:** Thinker tier costs more and takes longer. Only override when the engineer needs to edit a large existing file. For creating new files or editing small files (<100 lines), crafter works fine.
+
+### ❌ `process.env.HOME` unreliable in background Node.js processes (verified 2026-07-08)
+When `server.js` is started via `nohup ... &` in the background, `process.env.HOME` may not be set or may resolve to an unexpected value. This caused `/api/config` to read from a wrong path even after the `openCodePath` was fixed to use `$HOME/.config/opencode/opencode.jsonc`.
+**Fix:** Always use `const os = require('os'); os.homedir()` instead of `process.env.HOME` in server.js. The `os.homedir()` function resolves the home directory reliably regardless of environment variable state.
+```javascript
+// WRONG — may be undefined in nohup background processes
+const p = path.join(process.env.HOME, '.config', 'opencode', 'opencode.jsonc');
+
+// CORRECT — always resolves
+const os = require('os');
+const p = path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc');
+```
+
+### ❌ User prefers English for all dashboard UI text
+Labels, info banners, placeholder text, and status messages in the dashboard must be in English. The user speaks Indonesian for conversation but wants the product UI in English. Exception: if the user explicitly requests Indonesian in the UI.
+Example: Info text should read "Saving to `.env` & `opencode.jsonc` — both files sync automatically." NOT "Menyimpan ke `.env` & `opencode.jsonc` — kedua file sinkron otomatis."
+
 ### ❌ `write_file` redacts secret-like patterns
-The `write_file` tool silently replaces `${API_KEY}`, `sk-...`, etc. with `***`. Verify written files with `grep`; use `patch` to restore redacted lines. See `references/pitfalls-history.md` for workaround.
+The `write_file` tool silently replaces `${API_KEY}`, `sk-...`, `maskKey(apiKey)`, and other patterns resembling secrets with `***`. When opencode writes code containing API key references, the terminal diff output may show redacted content, but the actual file written by opencode is correct (opencode writes directly via its own tool, not through Hermes' write_file). Always verify the actual file on disk with `grep`; use `patch` to restore if the file itself was corrupted. See `references/pitfalls-history.md` for full workaround.
 
 ### ❌ Bash `set -e` + `((VAR++))` kills scripts silently
 When `VAR` is 0, `((VAR++))` returns 0 (the OLD value via post-increment), which bash treats as falsy/failure. With `set -e` active, this silently kills the script with no error message. **Fix:** use `VAR=$((VAR + 1))` instead of `((VAR++))`. Same for `((FAIL++))` etc. This bit test-api.sh live — the script exited after the first passing assertion.
@@ -1052,6 +1123,24 @@ When executing long-running background tasks via `terminal(..., background=True)
 
 ### ❌ `pkill` only accepts ONE pattern per invocation
 On this Linux environment, `pkill -9 node vite` will fail with "only one pattern can be provided". Use separate commands: `pkill -9 node; pkill -9 vite; pkill -9 esbuild`. Or use `killall -9 node vite esbuild` (which accepts multiple names). When using `execute_code` or `terminal`, always split `pkill` calls or use `killall` as an alternative.
+
+### ❌ `pkill -9 node` unreliable — use `kill -9 <PID>` directly (verified 2026-07-08)
+On this host, `pkill -9 node` consistently FAILS to kill the server.js process (PID survives across multiple calls). The process stays alive serving stale code. `preflight.sh` then detects port 6868 is already occupied, skips starting a new server, and the old (buggy) code keeps running.
+**Symptom:** You edit server.js, run `pkill -9 node; bash preflight.sh --auto-start`, but the API still returns old behavior. `ps aux | grep server.js` shows the SAME PID from before the kill.
+**Fix:** Always use `kill -9 <PID>` with the specific PID:
+```bash
+# Get PID and kill specifically
+kill -9 $(pgrep -f "server.js 6868") 2>/dev/null; sleep 2
+# Verify dead
+ps aux | grep "server.js" | grep -v grep || echo "Server killed"
+# Then start fresh
+bash scripts/preflight.sh --auto-start
+```
+**Verification:** After restart, ALWAYS confirm the API returns fresh data:
+```bash
+curl -s http://localhost:6868/api/config | python3 -c "import sys,json; print(json.load(sys.stdin).keys())"
+```
+If the output is stale, the old server is still alive — kill again with the specific PID.
 
 ### ❌ Drain-on-read must clear BOTH log fields
 When draining logs on GET `/api/status`, you must clear `state.logs` (array) AND `state.log` (backward-compat single entry) AND call `flush()`. Missing any of these causes: (1) `state.log` leaks into grep-based tests, (2) restart re-delivers drained logs from disk. See Bug 11 in `references/dashboard-bug-patterns.md`.
@@ -1098,6 +1187,10 @@ The AIC dashboard is strictly a *Monitoring Control Plane* (Config, Tasks, Histo
 ### ❌ Worker ID mismatch in API calls
 When the Dispatcher sends API updates (e.g., `curl -X POST /api/agent-status`), the `agent` field MUST be fully lowercase and match the IDs in `workers.ts` exactly (e.g. `pm`, `frontend`, `backend`, `researcher`). Do not send 'Frontend' or 'PM' — this breaks the visual indicators on the dashboard (the worker will not show as 'working'). Always send the proper ID and the proper `engine` field.
 
+### ❌ `/api/config` reads template instead of actual user config (FIXED 2026-07-08)
+`server.js` GET/POST `/api/config` reads opencode config from `templates/opencode-provider.json` (placeholder) instead of `~/.config/opencode/opencode.jsonc`. **Fix:** Change `openCodePath` to `path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc')` in both handlers.
+**User preference ("sinkron bukan merge"):** Both panels show their OWN copy of shared fields (BaseURL, API Key, Provider) with shared state. Do NOT merge panels. Both must have identical controls (Fetch Models on both).
+
 ### ❌ Raw JSON textareas for configuration
 Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
@@ -1133,6 +1226,10 @@ When running `npm run build` in the Vite dashboard directory, the `dist/index.ht
 
 ### ❌ Dashboard UI Bloat & Alignment (Config Page & Overview)
 The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never add Chat UIs, Activity Logs, Task Input forms, or stand-alone `/workers` pages to the dashboard. The Dispatcher (Hermes TUI) handles all communication.
+### ❌ `/api/config` reads template instead of actual user config (FIXED 2026-07-08)
+`server.js` GET/POST `/api/config` reads opencode config from `templates/opencode-provider.json` (placeholder) instead of `~/.config/opencode/opencode.jsonc`. **Fix:** Change `openCodePath` to `path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc')` in both handlers.
+**User preference ("sinkron bukan merge"):** Both panels show their OWN copy of shared fields (BaseURL, API Key, Provider) with shared state. Do NOT merge panels. Both must have identical controls (Fetch Models on both).
+
 ### ❌ Raw JSON textareas for configuration
 Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
@@ -1163,6 +1260,10 @@ When converting standard web components to pixel-art equivalents, spacing and gr
 2. For WorkerGrids, disable `flex-wrap` by substituting `flex justify-center w-full max-w-full` explicitly so items like 'QA' stay uniformly aligned inside their parent tier rather than falling to a new line.
 3. Use absolute positioning appropriately anchored to desk layers when placing dynamic floating SVGs or ASCII art, tracking dimensions relative to `h-[200px]` containers.
 4. **Visual Elements vs Text Baseline:** When placing SVG/icon elements (like an arrow or pixel indicator) inline with text, never rely on standard text baselines as it causes vertical misalignment. ALWAYS wrap the icon in a `flex items-center justify-center` span so it explicitly shares the same horizontal axis as the text.
+
+### ❌ Form Layout Padding and Container Constraints (Visual Balance)
+The user explicitly desires a clean, un-cramped but proportionally compact dashboard layout. Do NOT use overly large padding (like `p-6`) or thick borders (`border-2`) for standard form panels, as it wastes horizontal and vertical real estate.
+**Fix:** Use compact padding (e.g., `p-3` or `p-4`) and thin, semi-transparent borders (`border border-aic-border/30`) for form containers. Remove large shadow drops (`shadow-lg`) unless specifically requested, to keep the UI flat and retro. When creating mirrored or side-by-side forms, ensure their column span leaves no dead space (e.g. use `grid-cols-2` or `grid-cols-3` depending on the surrounding layout context).
 
 ### ❌ Workers Page is Redundant
 Do not build or maintain a standalone `/workers` page. The Overview page serves as the primary dashboard for viewing all worker states.

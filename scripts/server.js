@@ -1,3 +1,4 @@
+const os = require('os');
 // AIC Dashboard API - Minimal server (TASK-20260707-019)
 // Pure state broadcaster for the Virtual Office dashboard.
 // No chat, no tasks, no agents workflow, no audit log, no cost tracking.
@@ -125,7 +126,7 @@ const server = http.createServer(async (req, res) => {
   // GET /api/config
   if (req.method === 'GET' && pathname === '/api/config') {
     const envPath = path.join(SKILL_DIR, '.env');
-    const openCodePath = path.join(SKILL_DIR, 'templates', 'opencode-provider.json');
+    const openCodePath = path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc');
     const config = {
       env: fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '',
       opencode: fs.existsSync(openCodePath) ? fs.readFileSync(openCodePath, 'utf8') : ''
@@ -137,7 +138,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && pathname === '/api/config') {
     const data = await readBody(req);
     const envPath = path.join(SKILL_DIR, '.env');
-    const openCodePath = path.join(SKILL_DIR, 'templates', 'opencode-provider.json');
+    const openCodePath = path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc');
     try {
       if (data.env !== undefined) fs.writeFileSync(envPath, data.env);
       if (data.opencode !== undefined) fs.writeFileSync(openCodePath, data.opencode);

@@ -7,6 +7,7 @@ export function OverviewPage() {
   const { state } = useDashboardContext();
 
   const active = Object.values(state.workers).filter(w => w.status === 'working').length;
+  const complete = Object.values(state.workers).filter(w => w.status === 'complete').length;
   const idle = Object.values(state.workers).filter(w => w.status === 'idle').length;
 
   return (
@@ -27,7 +28,7 @@ export function OverviewPage() {
               <span className="text-px-sm text-aic-text-muted uppercase tracking-widest">ACTIVE</span>
             </div>
             <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-2">
-              <span className="text-3xl text-aic-green mb-1">0</span>
+              <span className="text-3xl text-aic-green mb-1">{complete}</span>
               <span className="text-px-sm text-aic-text-muted uppercase tracking-widest">COMPLETE</span>
             </div>
             <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-2 relative">

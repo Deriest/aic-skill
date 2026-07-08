@@ -1,5 +1,5 @@
 export interface WorkerState {
-  status: 'idle' | 'working' | 'blocked' | 'error';
+  status: 'idle' | 'working' | 'blocked' | 'error' | 'complete';
   engine: string | null;
   currentTask: string | null;
 }

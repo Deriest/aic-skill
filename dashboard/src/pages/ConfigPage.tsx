@@ -11,6 +11,7 @@ export function ConfigPage() {
   const [loading, setLoading] = useState(true);
   const [providerKey, setProviderKey] = useState('aic');
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const getEnvValue = (key: string) => {
     const variable = envVars.find(v => v.key === key);
@@ -27,6 +28,8 @@ export function ConfigPage() {
       }
     });
   };
+
+  const maskKey = (key: string) => key.length > 8 ? key.slice(0, 4) + '****' + key.slice(-4) : '****';
 
   const handleProviderChange = (newPKey: string) => {
     setProviderKey(newPKey);
@@ -99,7 +102,8 @@ export function ConfigPage() {
           };
         });
         
-      setEnvVars(parsedEnv.length ? parsedEnv : [{ key: '', value: '' }]);
+      const filteredEnv = parsedEnv.filter((v: any) => v.key !== 'PROVIDER_BASE_URL' && v.key !== 'BASE_URL');
+      setEnvVars(filteredEnv.length ? filteredEnv : [{ key: '', value: '' }]);
       setOpencodeRaw(data.opencode);
       
       try {
@@ -142,6 +146,8 @@ export function ConfigPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('Saving...');
+    
+    setEnvValue('PROVIDER_BASE_URL', baseURL);
     
     // Reconstruct .env string
     const envString = envVars
@@ -202,55 +208,61 @@ export function ConfigPage() {
           <h2 className="font-pixel text-aic-accent text-px-md uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)] mb-6">
             SYSTEM CONFIGURATION
           </h2>
-          <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded p-6 shadow-lg">
-            <form onSubmit={handleSave} className="flex flex-col gap-8">
+          <div className="bg-aic-bg-panel border border-aic-border/30 rounded p-4 max-w-4xl mx-auto">
+            <form onSubmit={handleSave} className="flex flex-col gap-6">
               
               <div className="grid grid-cols-2 gap-8">
-                {/* Dynamic .env Form */}
+                {/* .env Panel */}
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-aic-accent text-px-sm font-pixel">▶</span>
                     <h3 className="font-pixel text-px-sm text-aic-text-bright uppercase">Environment Variables (.env)</h3>
                   </div>
                   
-                  <div className="flex flex-col gap-3 bg-aic-bg-dark/50 p-4 border border-aic-border/30 rounded">
-                    {envVars.map((v, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input 
-                          type="text"
-                          placeholder="KEY"
-                          value={v.key}
-                          onChange={(e) => handleEnvChange(i, 'key', e.target.value)}
-                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none w-1/3 font-mono text-xs"
-                        />
-                        <span className="text-aic-text-muted font-mono">=</span>
-                        <input 
-                          type="text"
-                          placeholder="VALUE"
-                          value={v.value}
-                          onChange={(e) => handleEnvChange(i, 'value', e.target.value)}
-                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none flex-1 font-mono text-xs"
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => handleRemoveEnv(i)}
-                          className="text-aic-red hover:text-white border border-aic-red/50 hover:bg-aic-red px-2 py-1.5 rounded transition-colors text-xs font-mono"
-                        >
-                          ×
-                        </button>
+                  <div className="flex flex-col gap-4 bg-aic-bg-dark/50 p-4 border border-aic-border/30 rounded">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">PROVIDER ID</label>
+                      <input type="text" value={providerKey} onChange={e => setProviderKey(e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">BaseURL</label>
+                      <input type="text" placeholder="https://..." value={baseURL} onChange={e => setBaseURL(e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">API KEY</label>
+                      <div className="flex gap-2">
+                        <input type={showApiKey ? 'text' : 'password'} placeholder="sk-..." value={showApiKey ? apiKey : maskKey(apiKey)} onChange={e => setApiKey(e.target.value)} readOnly={!showApiKey} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs flex-1" />
+                        <button type="button" onClick={() => setShowApiKey(!showApiKey)} className="font-pixel text-aic-accent border border-aic-accent/50 hover:bg-aic-accent hover:text-black px-3 py-1.5 rounded transition-colors text-xs">{showApiKey ? '◎' : '◉'}</button>
                       </div>
-                    ))}
-                    <button 
-                      type="button" 
-                      onClick={handleAddEnv}
-                      className="self-start mt-2 font-pixel text-[10px] text-aic-green border border-aic-green/50 hover:bg-aic-green hover:text-black px-3 py-1.5 rounded transition-colors"
-                    >
-                      + ADD VARIABLE
-                    </button>
+                    </div>
+                    <button type="button" onClick={fetchModels} className="font-pixel text-[10px] text-aic-accent border border-aic-accent/50 hover:bg-aic-accent hover:text-black px-3 py-1.5 rounded transition-colors whitespace-nowrap">FETCH MODELS</button>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_THINKER</label>
+                      <select value={getEnvValue('MODEL_THINKER')} onChange={e => setEnvValue('MODEL_THINKER', e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs">
+                        <option value="">-- Select --</option>
+                        {uniqueModels.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_CRAFTER</label>
+                      <select value={getEnvValue('MODEL_CRAFTER')} onChange={e => setEnvValue('MODEL_CRAFTER', e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs">
+                        <option value="">-- Select --</option>
+                        {uniqueModels.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_SPRINTER</label>
+                      <select value={getEnvValue('MODEL_SPRINTER')} onChange={e => setEnvValue('MODEL_SPRINTER', e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs">
+                        <option value="">-- Select --</option>
+                        {uniqueModels.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                {/* Opencode Fields Form */}
+
+
+                {/* Opencode Panel */}
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-aic-accent text-px-sm font-pixel">▶</span>
@@ -259,96 +271,52 @@ export function ConfigPage() {
                   
                   <div className="flex flex-col gap-4 bg-aic-bg-dark/50 p-4 border border-aic-border/30 rounded">
                     <div className="flex flex-col gap-1.5">
-                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">Provider</label>
-                      <select
-                        value={providerKey}
-                        onChange={e => handleProviderChange(e.target.value)}
-                        className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
-                      >
-                        <option value="aic">aic</option>
-                        <option value="openai">openai</option>
-                        <option value="anthropic">anthropic</option>
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">PROVIDER ID</label>
+                      <input type="text" value={providerKey} onChange={e => setProviderKey(e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">BaseURL</label>
+                      <input type="text" placeholder="https://..." value={baseURL} onChange={e => setBaseURL(e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">API KEY</label>
+                      <div className="flex gap-2">
+                        <input type={showApiKey ? 'text' : 'password'} placeholder="sk-..." value={showApiKey ? apiKey : maskKey(apiKey)} onChange={e => setApiKey(e.target.value)} readOnly={!showApiKey} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs flex-1" />
+                        <button type="button" onClick={() => setShowApiKey(!showApiKey)} className="font-pixel text-aic-accent border border-aic-accent/50 hover:bg-aic-accent hover:text-black px-3 py-1.5 rounded transition-colors text-xs">{showApiKey ? '◎' : '◉'}</button>
+                      </div>
+                    </div>
+                    <button type="button" onClick={fetchModels} className="font-pixel text-[10px] text-aic-accent border border-aic-accent/50 hover:bg-aic-accent hover:text-black px-3 py-1.5 rounded transition-colors whitespace-nowrap">FETCH MODELS</button>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_THINKER</label>
+                      <select value={getEnvValue('MODEL_THINKER')} onChange={e => setEnvValue('MODEL_THINKER', e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs">
+                        <option value="">-- Select --</option>
+                        {uniqueModels.map(m => <option key={m} value={m}>{m}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">custom_providers.{providerKey}.baseURL</label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="text"
-                          placeholder="https://..."
-                          value={baseURL}
-                          onChange={e => setBaseURL(e.target.value)}
-                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs flex-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={fetchModels}
-                          className="font-pixel text-[10px] text-aic-accent border border-aic-accent/50 hover:bg-aic-accent hover:text-black px-3 py-1.5 rounded transition-colors whitespace-nowrap"
-                        >
-                          FETCH MODELS
-                        </button>
-                      </div>
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_CRAFTER</label>
+                      <select value={getEnvValue('MODEL_CRAFTER')} onChange={e => setEnvValue('MODEL_CRAFTER', e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs">
+                        <option value="">-- Select --</option>
+                        {uniqueModels.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">custom_providers.{providerKey}.apiKey</label>
-                      <input 
-                        type="password"
-                        placeholder="sk-..."
-                        value={apiKey}
-                        onChange={e => setApiKey(e.target.value)}
-                        className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
-                      />
-                    </div>
-
-                    <div className="border-t border-aic-border/20 pt-4 mt-2 flex flex-col gap-3">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_THINKER</label>
-                        <select
-                          value={getEnvValue('MODEL_THINKER')}
-                          onChange={e => setEnvValue('MODEL_THINKER', e.target.value)}
-                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
-                        >
-                          <option value="">-- Select Model --</option>
-                          {uniqueModels.map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_CRAFTER</label>
-                        <select
-                          value={getEnvValue('MODEL_CRAFTER')}
-                          onChange={e => setEnvValue('MODEL_CRAFTER', e.target.value)}
-                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
-                        >
-                          <option value="">-- Select Model --</option>
-                          {uniqueModels.map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_SPRINTER</label>
-                        <select
-                          value={getEnvValue('MODEL_SPRINTER')}
-                          onChange={e => setEnvValue('MODEL_SPRINTER', e.target.value)}
-                          className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs"
-                        >
-                          <option value="">-- Select Model --</option>
-                          {uniqueModels.map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <label className="font-pixel text-px-xs text-aic-text-muted uppercase">MODEL_SPRINTER</label>
+                      <select value={getEnvValue('MODEL_SPRINTER')} onChange={e => setEnvValue('MODEL_SPRINTER', e.target.value)} className="bg-aic-bg-dark border border-aic-border/50 rounded p-2 text-aic-text-bright focus:border-aic-accent focus:outline-none font-mono text-xs">
+                        <option value="">-- Select --</option>
+                        {uniqueModels.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Submit / Status */}
-              <div className="flex items-center justify-between border-t border-aic-border/30 pt-6">
+              <div className="border-t border-aic-border/20 pt-4 mt-2 flex items-center justify-between">
+                <div className="flex items-start gap-2 text-aic-text-muted text-sm">
+                  <span className="text-aic-accent text-lg">ℹ</span>
+                  <span>Saving to <code className="text-aic-accent">.env</code> &amp; <code className="text-aic-accent">opencode.jsonc</code> — both files sync automatically.</span>
+                </div>
                 <span className={`font-pixel text-px-sm ${status.includes('fail') || status.includes('Error') ? 'text-aic-red' : 'text-aic-green'}`}>
                   {status}
                 </span>
