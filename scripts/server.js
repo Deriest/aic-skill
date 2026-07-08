@@ -159,7 +159,13 @@ const server = http.createServer(async (req, res) => {
     if (data.id || data.title) {
       const now = new Date();
       const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
-      const seq = String(Math.floor(Math.random() * 900) + 100);
+      const existing = (function() { try { return fs.readdirSync(TASKS_DIR).filter(d => d.startsWith('TASK-')); } catch(e) { return []; } })().filter(t => t.startsWith(`TASK-${ymd}`));
+      let nextSeq = 1;
+      if (existing.length > 0) {
+        const seqs = existing.map(t => parseInt(t.split('-')[2], 10)).filter(n => !isNaN(n));
+        if (seqs.length > 0) nextSeq = Math.max(...seqs) + 1;
+      }
+      const seq = String(nextSeq).padStart(3, '0');
       const taskId = data.id || `TASK-${ymd}-${seq}`;
       state.currentTask = {
         id: taskId,
@@ -199,7 +205,13 @@ const server = http.createServer(async (req, res) => {
       if (data.currentTask && !data.currentTask.id) {
         const now = new Date();
         const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
-        const seq = String(Math.floor(Math.random() * 900) + 100);
+        const existing = (function() { try { return fs.readdirSync(TASKS_DIR).filter(d => d.startsWith('TASK-')); } catch(e) { return []; } })().filter(t => t.startsWith(`TASK-${ymd}`));
+        let nextSeq = 1;
+        if (existing.length > 0) {
+          const seqs = existing.map(t => parseInt(t.split('-')[2], 10)).filter(n => !isNaN(n));
+          if (seqs.length > 0) nextSeq = Math.max(...seqs) + 1;
+        }
+        const seq = String(nextSeq).padStart(3, '0');
         data.currentTask.id = `TASK-${ymd}-${seq}`;
       }
       state.currentTask = data.currentTask;
