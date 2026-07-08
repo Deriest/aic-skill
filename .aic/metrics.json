@@ -1,0 +1,18 @@
+[
+  {
+    "id": "metric-1783508417651-p6gsx2",
+    "timestamp": "2026-07-08T11:00:17.651Z",
+    "worker": "qa",
+    "tier": "sprinter",
+    "model": "aic/Haiku",
+    "tokens": {
+      "input": 4606,
+      "output": 5,
+      "reasoning": 34,
+      "cacheRead": 9472,
+      "cacheWrite": 0,
+      "total": 4645
+    },
+    "durationSec": 0
+  }
+]

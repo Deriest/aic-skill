@@ -305,7 +305,7 @@ const server = http.createServer(async (req, res) => {
       };
       
       if (summary.totalInput + summary.totalOutput > 0) {
-        summary.cacheHitRate = summary.totalCache / (summary.totalInput + summary.totalOutput);
+        summary.cacheHitRate = summary.totalCache / (summary.totalCache + summary.totalInput);
       }
       
       // Group by worker

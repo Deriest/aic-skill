@@ -207,9 +207,9 @@ export function CostsPage() {
                 labelStyle={{ color: '#fff' }}
               />
               <Legend />
-              <Area type="monotone" dataKey="input" stackId="1" stroke="#00ff88" fill="#00ff8840" name="Input" />
-              <Area type="monotone" dataKey="output" stackId="1" stroke="#ffaa00" fill="#ffaa0040" name="Output" />
-              <Area type="monotone" dataKey="cache" stackId="1" stroke="#00ccff" fill="#00ccff40" name="Cache" />
+              <Area type="monotone" dataKey="input" stackId="1" stroke="#00ff88" fill="#00ff88" fillOpacity={0.8} name="Input" />
+              <Area type="monotone" dataKey="output" stackId="1" stroke="#ffaa00" fill="#ffaa00" fillOpacity={0.8} name="Output" />
+              <Area type="monotone" dataKey="cache" stackId="1" stroke="#00ccff" fill="#00ccff" fillOpacity={0.8} name="Cache" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -220,7 +220,7 @@ export function CostsPage() {
             BY WORKER
           </h3>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={getWorkerData()}>
+            <BarChart data={getWorkerData()} margin={{ top: 5, right: 20, bottom: 5, left: 0 }} style={{ backgroundColor: 'transparent' }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
               <XAxis dataKey="worker" stroke="#666" tick={{ fontSize: 10 }} />
               <YAxis stroke="#666" tick={{ fontSize: 10 }} tickFormatter={formatNumber} />
