@@ -67,14 +67,36 @@ export const WorkerDesk = memo(function WorkerDesk({ worker, status, engine }: W
       <DeskComputer status={status} />
 
       {/* Pixel Character */}
-      <motion.div
-        className="relative"
-        animate={status}
-        variants={prefersReduced ? reducedMotion : characterAnimations}
-        style={{ imageRendering: 'pixelated' }}
-      >
-        <canvas ref={canvasRef} width={42} height={45} className="block" />
-      </motion.div>
+      <div className="relative">
+        {engine && status === 'working' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            className={`absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-0.5 font-pixel text-[8px] border-2 rounded whitespace-nowrap z-10 ${
+              engine === 'opencode'
+                ? 'bg-[#1a0033] text-[#aa66ff] border-[#aa66ff]'
+                : 'bg-[#001a1a] text-[#00d4ff] border-[#00d4ff]'
+            }`}
+            style={{
+              boxShadow: engine === 'opencode'
+                ? '0 0 8px rgba(170, 102, 255, 0.6)'
+                : '0 0 8px rgba(0, 212, 255, 0.6)',
+            }}
+          >
+            {engine === 'opencode' ? '⚡ OPENCODE' : '🧠 DELEGATE'}
+          </motion.div>
+        )}
+
+        <motion.div
+          className="relative"
+          animate={status}
+          variants={prefersReduced ? reducedMotion : characterAnimations}
+          style={{ imageRendering: 'pixelated' }}
+        >
+          <canvas ref={canvasRef} width={42} height={45} className="block" />
+        </motion.div>
+      </div>
 
       {/* Desk Surface — also hosts the on-desk StatusBubble */}
       <div className="w-full h-[40px] bg-gradient-to-b from-[#4a3728] to-[#3d2d1f] border-3 border-[#2a1f15] relative" style={{ imageRendering: 'pixelated' }}>
@@ -91,27 +113,6 @@ export const WorkerDesk = memo(function WorkerDesk({ worker, status, engine }: W
         <div className="text-px-sm text-[#888] mt-1">{worker.role}</div>
         <div className="text-px-sm text-aic-accent mt-0.5 font-bold">{worker.model}</div>
       </div>
-
-      {/* Engine Badge — below desk assembly (below chair & label) */}
-      {engine && status === 'working' && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.5 }}
-          className={`mt-3 pt-2 px-2 py-0.5 font-pixel text-px-xs border-2 border-t border-x-0 border-b-0 ${
-            engine === 'opencode'
-              ? 'bg-[#1a0033] text-[#aa66ff] border-[#aa66ff]'
-              : 'bg-[#001a1a] text-[#00d4ff] border-[#00d4ff]'
-          }`}
-          style={{
-            boxShadow: engine === 'opencode'
-              ? '0 0 8px rgba(170, 102, 255, 0.6)'
-              : '0 0 8px rgba(0, 212, 255, 0.6)',
-          }}
-        >
-          {engine === 'opencode' ? '⚡ OPENCODE' : '🧠 DELEGATE'}
-        </motion.div>
-      )}
     </div>
   );
 });
