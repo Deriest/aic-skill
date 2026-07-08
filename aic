@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # aic — AIC Engineering Company CLI
 # Usage:
-#   ./aic setup     — First-time setup (provider, models, git, multi-repo)
+#   ./aic           — Select project and start
+#   ./aic setup     — First-time setup
 #   ./aic update    — Update AIC to latest version
 #   ./aic uninstall — Remove AIC completely
 #   ./aic test      — Run self-test
@@ -110,6 +111,67 @@ case "$cmd" in
     echo "   You can now talk to Hermes normally."
     # Since Hermes injects skills based on prompt instructions, 
     # we exit cleanly. The user will type /aic stop in the chat.
+    ;;
+
+  start|"")
+    # Read workspace path from .env
+    ENV_FILE="$SKILL_DIR/.env"
+    WORKSPACE=""
+    if [[ -f "$ENV_FILE" ]]; then
+      WORKSPACE=$(grep "^AIC_PROJECT_DIR=" "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
+    fi
+
+    if [[ -z "$WORKSPACE" || ! -d "$WORKSPACE" ]]; then
+      echo "  No workspace configured. Run: ./aic setup"
+      exit 1
+    fi
+
+    # List subfolders
+    echo ""
+    echo "  AIC — Select Project"
+    echo ""
+    echo "  Workspace: $WORKSPACE"
+    echo ""
+
+    declare -a FOLDERS=()
+    idx=1
+    for d in "$WORKSPACE"/*/; do
+      [[ -d "$d" ]] || continue
+      name=$(basename "$d")
+      [[ "$name" == .* ]] && continue
+      FOLDERS+=("$d")
+      printf "    %2d) %s
+" "$idx" "$name"
+      ((idx++))
+    done
+
+    if [[ ${#FOLDERS[@]} -eq 0 ]]; then
+      echo "  No folders found in $WORKSPACE"
+      exit 1
+    fi
+
+    echo ""
+    read -p "  Select project [1-${#FOLDERS[@]}]: " PICK
+
+    if [[ -z "$PICK" || ! "$PICK" =~ ^[0-9]+$ ]] || [[ "$PICK" -lt 1 || "$PICK" -gt ${#FOLDERS[@]} ]]; then
+      echo "  Invalid selection."
+      exit 1
+    fi
+
+    SELECTED="${FOLDERS[$((PICK - 1))]}"
+    PROJECT_NAME=$(basename "$SELECTED")
+
+    echo ""
+    echo -e "${GREEN}  Project: ${PROJECT_NAME}${NC}"
+    echo -e "  Path:    ${SELECTED}"
+    echo ""
+
+    # Save selection for Dispatcher to read
+    set_env "AIC_ACTIVE_PROJECT" "$SELECTED" "$ENV_FILE"
+    set_env "AIC_ACTIVE_PROJECT_NAME" "$PROJECT_NAME" "$ENV_FILE"
+
+    echo "  Ready. Type /aic in Hermes to start."
+    echo ""
     ;;
 
   help|*)
