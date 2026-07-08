@@ -27,7 +27,7 @@ if [[ -f "$SKILL_DIR/.env" ]]; then
   if [[ -n "${MODEL_THINKER:-}" ]]; then ok "MODEL_THINKER=$MODEL_THINKER"; else fail "MODEL_THINKER not set"; fi
   if [[ -n "${MODEL_CRAFTER:-}" ]]; then ok "MODEL_CRAFTER=$MODEL_CRAFTER"; else fail "MODEL_CRAFTER not set"; fi
   if [[ -n "${MODEL_SPRINTER:-}" ]]; then ok "MODEL_SPRINTER=$MODEL_SPRINTER"; else fail "MODEL_SPRINTER not set"; fi
-  if [[ -n "${PROVIDER_ID:-}" ]]; then ok "PROVIDER_ID=$PROVIDER_ID"; else fail "PROVIDER_ID not set"; fi
+  if [[ -n "${PROVIDER_ID:-${PROVIDER:-}}" ]]; then ok "PROVIDER=${PROVIDER_ID:-${PROVIDER}}"; else fail "PROVIDER not set"; fi
 else
   fail ".env not found — run: bash scripts/setup.sh"
 fi
@@ -50,7 +50,7 @@ if command -v jq &>/dev/null; then ok "jq available"; else warn "jq not found (o
 # 3. Scripts
 echo ""
 echo "📜 Scripts"
-for script in server.js rollback.sh context-gather.sh cache-context.sh changelog.sh test-api.sh test-status.sh; do
+for script in server.js rollback.sh context-gather.sh cache-context.sh changelog.sh; do
   if [[ -f "$SCRIPT_DIR/$script" ]]; then
     ok "$script exists"
     if [[ "$script" == *.sh ]] && bash -n "$SCRIPT_DIR/$script" 2>/dev/null; then
