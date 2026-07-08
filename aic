@@ -102,6 +102,16 @@ case "$cmd" in
     ;;
 
 
+  stop)
+    echo "🛑 Stopping AIC Dispatcher mode in the current terminal..."
+    echo "   (Note: The background API server & dashboard are left running for other sessions.)"
+    echo "   To stop the background servers completely, use 'killall node vite'."
+    echo ""
+    echo "   You can now talk to Hermes normally."
+    # Since Hermes injects skills based on prompt instructions, 
+    # we exit cleanly. The user will type /aic stop in the chat.
+    ;;
+
   help|*)
     echo ""
     echo "🏢 AIC — AI Engineering Company"
