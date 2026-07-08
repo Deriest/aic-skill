@@ -375,52 +375,41 @@ echo ""
 # ============================================
 echo -e "${BLUE}[5/6] Setup project folder...${NC}"
 echo ""
-echo "  Where is your project? (AIC workers will operate here)"
+echo "  Set your workspace path. All your projects live here."
+echo "  Each subfolder = a project that AIC can work on."
 echo ""
 
-# Show current directory as default
-DEFAULT_PROJECT="$(pwd)"
-echo -e "  ${CYAN}Current:${NC} ${DEFAULT_PROJECT}"
+# Detect default: use /home/<user> or $HOME
+DEFAULT_PROJECT="$HOME"
+echo -e "  ${CYAN}Default:${NC} ${DEFAULT_PROJECT}"
 echo ""
 
-read -p "  Project path [${DEFAULT_PROJECT}]: " PROJECT_PATH
+read -p "  Workspace path [${DEFAULT_PROJECT}]: " PROJECT_PATH
 PROJECT_PATH="${PROJECT_PATH:-$DEFAULT_PROJECT}"
 
 # Resolve to absolute path
 PROJECT_PATH="$(cd "$PROJECT_PATH" 2>/dev/null && pwd)" || {
   echo -e "${RED}  Path not found: ${PROJECT_PATH}${NC}"
-  echo -e "${YELLOW}  Using current directory${NC}"
-  PROJECT_PATH="$(pwd)"
+  echo -e "${YELLOW}  Using ${DEFAULT_PROJECT}${NC}"
+  PROJECT_PATH="$DEFAULT_PROJECT"
 }
 
-# Detect what's in the project
+# Count subfolders
+SUB_COUNT=$(find "$PROJECT_PATH" -maxdepth 1 -mindepth 1 -type d ! -name '.*' 2>/dev/null | wc -l)
+
 echo ""
-echo -e "${GREEN}  Project: ${PROJECT_PATH}${NC}"
+echo -e "${GREEN}  Workspace: ${PROJECT_PATH}${NC}"
+echo -e "    Folders: ${SUB_COUNT} found"
 
-# Detect project type
-if [[ -f "$PROJECT_PATH/package.json" ]]; then
-  PROJECT_NAME=$(jq -r '.name // "unnamed"' "$PROJECT_PATH/package.json" 2>/dev/null || echo "unnamed")
-  echo -e "    Type: Node.js (${PROJECT_NAME})"
-elif [[ -f "$PROJECT_PATH/pyproject.toml" ]] || [[ -f "$PROJECT_PATH/requirements.txt" ]]; then
-  echo -e "    Type: Python"
-elif [[ -f "$PROJECT_PATH/Cargo.toml" ]]; then
-  echo -e "    Type: Rust"
-elif [[ -f "$PROJECT_PATH/go.mod" ]]; then
-  echo -e "    Type: Go"
-else
-  echo -e "    Type: Generic"
+# List a few
+find "$PROJECT_PATH" -maxdepth 1 -mindepth 1 -type d ! -name '.*' 2>/dev/null | head -5 | while read d; do
+  echo "      $(basename "$d")"
+done
+if [[ "$SUB_COUNT" -gt 5 ]]; then
+  echo "      ... and $((SUB_COUNT - 5)) more"
 fi
 
-# Detect sub-projects (future multi-repo detection)
-SUB_DIRS=$(find "$PROJECT_PATH" -maxdepth 2 -name "package.json" -o -name "pyproject.toml" -o -name "Cargo.toml" -o -name "go.mod" 2>/dev/null | grep -v node_modules | grep -v ".aic" || true)
-if [[ -n "$SUB_DIRS" ]]; then
-  SUB_COUNT=$(echo "$SUB_DIRS" | wc -l)
-  if [[ "$SUB_COUNT" -gt 1 ]]; then
-    echo -e "    Sub-projects: ${SUB_COUNT} detected (multi-repo ready)"
-  fi
-fi
-
-# Write project path to .env
+# Write workspace path to .env
 set_env "AIC_PROJECT_DIR" "$PROJECT_PATH" "$SKILL_DIR/.env"
 
 echo ""
