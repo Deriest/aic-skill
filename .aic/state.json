@@ -1,7 +1,7 @@
 {
   "workers": {
     "pm": {
-      "status": "complete",
+      "status": "idle",
       "engine": null,
       "currentTask": null
     },
@@ -16,13 +16,13 @@
       "currentTask": null
     },
     "architect": {
-      "status": "complete",
-      "engine": "opencode",
+      "status": "idle",
+      "engine": null,
       "currentTask": null
     },
     "frontend": {
-      "status": "complete",
-      "engine": "opencode",
+      "status": "idle",
+      "engine": null,
       "currentTask": null
     },
     "backend": {
@@ -36,13 +36,13 @@
       "currentTask": null
     },
     "qa": {
-      "status": "complete",
-      "engine": "opencode",
+      "status": "idle",
+      "engine": null,
       "currentTask": null
     },
     "governor": {
-      "status": "working",
-      "engine": "opencode",
+      "status": "idle",
+      "engine": null,
       "currentTask": null
     },
     "dispatcher": {
@@ -51,7 +51,11 @@
       "currentTask": null
     }
   },
-  "currentTask": null,
-  "currentPhase": "Documentation",
+  "currentTask": {
+    "id": "TEST-001",
+    "title": "Test task",
+    "type": "bugfix"
+  },
+  "currentPhase": null,
   "startedAt": 1783481701189
 }

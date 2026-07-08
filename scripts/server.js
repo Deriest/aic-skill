@@ -105,6 +105,32 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+
+  // POST /api/task-start — start a new task (sets currentTask + resets workers)
+  if (req.method === 'POST' && pathname === '/api/task-start') {
+    const data = await readBody(req);
+    if (data.id || data.title) {
+      const now = new Date();
+      const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const seq = String(Math.floor(Math.random() * 900) + 100);
+      state.currentTask = {
+        id: data.id || `TASK-${ymd}-${seq}`,
+        title: data.title || 'Untitled Task',
+        type: data.type || 'general'
+      };
+      state.currentPhase = null;
+      // Reset all workers to idle
+      for (const w of WORKERS) {
+        if (w !== 'dispatcher') {
+          state.workers[w] = { status: 'idle', engine: null, currentTask: null };
+        }
+      }
+      saveState();
+      return send(res, 200, { success: true, currentTask: state.currentTask });
+    }
+    return send(res, 400, { error: 'Missing id or title' });
+  }
+
   // POST /api/task-status — set current task and pipeline phase
   if (req.method === 'POST' && pathname === '/api/task-status') {
     const data = await readBody(req);
