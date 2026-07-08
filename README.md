@@ -19,6 +19,8 @@ AIC operates on a symlinked workspace architecture to isolate the framework code
 
 ## Meet the Team
 
+![Meet the Team](./team-grid.png)
+
 | # | Name | Role | Tier | Engine | Personality | What they actually do |
 |---|------|------|------|--------|-------------|----------------------|
 | 1 | **Hermes** | Dispatcher | Orchestrator | `delegate_task` | Strict butler | Routes your request. Never writes code. Talks to you, then delegates. |
@@ -122,7 +124,7 @@ cd ~/.hermes/skills/workflows/aic/dashboard && npm install && npm run build
 3. **Model Fetching**: Dynamically pulls available models from the provider's API.
 4. **Tier Configuration**: Lets you assign specific models for **Thinker**, **Crafter**, and **Sprinter** roles.
 5. **Config Generation**: Generates `opencode.jsonc` and `.env` with proper context window limits.
-6. **Workspace Initialization**: Clones the dashboard UI, installs NPM dependencies, and prepares the environment.
+6. **Workspace Initialization**: Sets up the symlink architecture and prepares the global namespace. (Note: Project folders are selected later using `./aic project`).
 
 ---
 
@@ -211,7 +213,7 @@ Hermes: ┌─ TASK DETAIL ─────────────────�
 | Command | What it does |
 |---------|-------------|
 | `/aic` | Activate Dispatcher mode and run **Preflight Check** (auto-checks dependencies, builds dashboard, and starts the API server) |
-| `./aic project <path>` | Link a target project directory to the AIC workspace |
+| `./aic project <path>` | Change project: Point the AIC workspace to a new or existing project folder |
 | `/aic status` | Show current pipeline status |
 | `/aic status task <TASK-ID>` | Show detailed task info |
 | `/aic continue` | Resume last interrupted task |
