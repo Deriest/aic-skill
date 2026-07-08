@@ -189,7 +189,7 @@ When the Dispatcher (Hermes) spawns workers through the terminal tool, **inline 
 
 2. Call spawn-worker.sh from terminal with those file paths:
    bash scripts/spawn-worker.sh pm thinker /path/to/project /tmp/prompt-pm.txt
-   bash scripts/spawn-worker.sh architect crafter /path/to/project /tmp/prompt-arch.txt
+   bash scripts/spawn-worker.sh architect thinker /path/to/project /tmp/prompt-arch.txt
    ...
 ```
 
