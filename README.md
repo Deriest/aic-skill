@@ -290,6 +290,9 @@ MODEL_SPRINTER=provider/model-name
 | **No undo for code changes** | Workers use `opencode run` which modifies files directly | Use git branching before large tasks; `git diff` after each phase |
 | **Token limits** | Large tasks may hit model context windows | Context auto-truncates at 80/60/40% per tier; use Crafter for implementation |
 | **Setup requires internet** | `npm install`, model fetching, OpenCode CLI install | Pre-download dependencies; use `--offline` flags where possible |
+| **Single server instance** | Only one AIC server per machine (port 6868) | Change port in `server.js` if needed |
+| **No Multi-Repo Support** | The engine orchestrates tasks against a single active project directory at a time. | On future planning |
+| **No Multi-Session Support** | The pipeline, agents, and state tracker operate on one global active session. | On future planning |
 
 ### B. Chat / Dispatcher Issues
 
