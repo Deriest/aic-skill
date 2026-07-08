@@ -1,55 +1,357 @@
 # AI Engineering Company (AIC)
 
-AIC is a multi-agent orchestration framework ported from OpenClaw, allowing you to run a 10-person AI software development firm locally via the Hermes Desktop app.
+> **A 10-agent AI software development workforce, orchestrated from your terminal.**
 
-## The Team
+AIC transforms Hermes into a full engineering company — with a Dispatcher, PM, Architect, Engineers, QA, and Governor — all working through a strict 5-phase pipeline. You talk naturally; AIC builds.
 
-| # | Role | Name | Tier | Focus |
-|---|------|------|------|-------|
-| 1 | **Dispatcher** (You) | Hermes | Orchestrator | User communication, task classification, pipeline routing. |
-| 2 | **PM** | Aria | Thinker | Natural language translation, user stories, structured specs. |
-| 3 | **Researcher** | Sage | Crafter | Evidence, API docs validation, competitor analysis. |
-| 4 | **Designer** | Luna | Crafter | UX/UI specs, layouts, visual consistency. |
-| 5 | **Architect** | Atlas | Thinker | System design, database schemas, tech stack tradeoffs. |
-| 6 | **Frontend** | Leo | Crafter | React, Vite, Tailwind, UI implementation. |
-| 7 | **Backend** | Hugo | Crafter | Node, Python, APIs, database logic. |
-| 8 | **Infra** | Flint | Crafter | Deployment, CI/CD, Docker, scripts. |
-| 9 | **QA** | Eve | Sprinter | Testing, validation, defect reporting. |
-| 10| **Governor** | Rex | Crafter | Safety, policy compliance, final approval. |
+![Dashboard Overview](./dashboard-overview.png)
+
+---
+
+## Meet the Team
+
+<table>
+<tr>
+<td align="center"><img src="./characters/hermes.png" width="64"/><br/><b>Hermes</b><br/>Dispatcher</td>
+<td align="center"><img src="./characters/aria.png" width="64"/><br/><b>Aria</b><br/>Product Manager</td>
+<td align="center"><img src="./characters/sage.png" width="64"/><br/><b>Sage</b><br/>Researcher</td>
+<td align="center"><img src="./characters/luna.png" width="64"/><br/><b>Luna</b><br/>Designer</td>
+<td align="center"><img src="./characters/atlas.png" width="64"/><br/><b>Atlas</b><br/>Architect</td>
+</tr>
+<tr>
+<td align="center"><img src="./characters/leo.png" width="64"/><br/><b>Leo</b><br/>Frontend Engineer</td>
+<td align="center"><img src="./characters/hugo.png" width="64"/><br/><b>Hugo</b><br/>Backend Engineer</td>
+<td align="center"><img src="./characters/flint.png" width="64"/><br/><b>Flint</b><br/>Infrastructure Eng</td>
+<td align="center"><img src="./characters/eve.png" width="64"/><br/><b>Eve</b><br/>QA Engineer</td>
+<td align="center"><img src="./characters/rex.png" width="64"/><br/><b>Rex</b><br/>Governor</td>
+</tr>
+</table>
+
+### Who does what?
+
+| # | Name | Role | Tier | Personality | What they actually do |
+|---|------|------|------|-------------|----------------------|
+| 1 | **Hermes** | Dispatcher | Orchestrator | Strict butler | Routes your request. Never writes code. Talks to you, then delegates. |
+| 2 | **Aria** | Product Manager | Thinker | Empathetic translator | Turns "I want a website" into user stories, data models, and acceptance criteria. |
+| 3 | **Sage** | Researcher | Crafter | Evidence-driven analyst | Finds facts, validates assumptions, reads docs. No guessing. |
+| 4 | **Luna** | Designer | Crafter | User advocate | Specifies layouts, interactions, visual consistency. Thinks in user journeys. |
+| 5 | **Atlas** | Architect | Thinker | Systems thinker | Designs databases, APIs, tech stack. Thinks in trade-offs and constraints. |
+| 6 | **Leo** | Frontend Engineer | Crafter | UI craftsman | React, Vite, Tailwind. Builds what Luna designs, what Atlas architected. |
+| 7 | **Hugo** | Backend Engineer | Crafter | Reliability nerd | Node.js, Python, APIs, database logic. Security and performance first. |
+| 8 | **Flint** | Infrastructure Eng | Crafter | Automation obsessed | Docker, CI/CD, deployment scripts. "If it runs twice, automate it." |
+| 9 | **Eve** | QA Engineer | Sprinter | Perfectionist tester | Tests everything. Writes tests. Breaks things so users don't have to. |
+| 10 | **Rex** | Governor | Crafter | Compliance gate | Final reviewer. Checks policy, security, quality. Green light or rejection. |
+
+---
 
 ## The Pipeline
 
-Every task strictly follows a 5-phase sequential lifecycle:
-`Investigate` → `Planning` → `Implementation` → `Verification` → `Closeout`
+Every task — no matter how small — follows this 5-phase lifecycle:
+
+```
+┌─────────────┐    ┌─────────────┐    ┌──────────────────┐    ┌──────────────┐    ┌───────────┐
+│ INVESTIGATE │ →  │  PLANNING   │ →  │ IMPLEMENTATION   │ →  │ VERIFICATION │ →  │  CLOSEOUT │
+│  (Aria)     │    │  (Atlas)    │    │ (Leo, Hugo, Flint)│    │    (Eve)     │    │   (Rex)   │
+└─────────────┘    └─────────────┘    └──────────────────┘    └──────────────┘    └───────────┘
+```
+
+- **Investigate**: PM translates your request into structured specs
+- **Planning**: Architect designs the technical approach
+- **Implementation**: Engineers build it (Frontend + Backend can run in parallel)
+- **Verification**: QA tests against the original requirements
+- **Closeout**: Governor reviews for compliance and quality
+
+**No phase is skippable.** Even "just fix a typo" goes through the pipeline.
+
+---
 
 ## Features
 
-- **Context Persistence:** Tasks are saved to `.aic/tasks/TASK-XXX/` with full phase context and state.
-- **WP Decomposition:** PM can break down large projects into dependency-tracked Work Packages.
-- **Resume Flow:** Interruptions or server crashes are safely preserved. Type `aic continue` to resume.
-- **Token Tracking:** Detailed cost tracking (cache hits, input/output) mapped per worker.
+| Feature | Description |
+|---------|-------------|
+| **Context Persistence** | Every task saves to `.aic/tasks/TASK-XXX/` — context, reports, state. Nothing is lost. |
+| **Resume (`aic continue`)** | Interrupted tasks (crash, token limit, sleep) can be resumed from where they stopped. |
+| **WP Decomposition** | Large projects are broken into dependency-tracked Work Packages by PM. |
+| **Token Cost Tracking** | Per-worker token usage, cache hit rates, time-filtered metrics. |
+| **Auto Pipeline Sync** | Worker status and pipeline phase sync automatically — no manual updates needed. |
+| **Task History** | Paginated task list with expandable details, status badges, and WP trees. |
 
-## The Dashboard
+---
 
-The Control Plane Dashboard runs locally on port `6868`.
+## Dashboard
+
+The control panel runs on `http://localhost:6868`.
 
 ### Overview
-Live pipeline tracking and worker grid visualization.
 ![Dashboard Overview](./dashboard-overview.png)
+Live pipeline status, worker grid with real-time status indicators, and current task details.
 
-### History
-Persistent task tracking, interrupted run recovery, and Work Package dependency trees.
+### Task History
 ![Dashboard History](./dashboard-history.png)
+Persistent task records with pagination (10/page), expandable context details, and red INTERRUPTED badges for resumable tasks.
 
-### Costs
-Per-worker token usage, cache hit rate tracking, and time-filtered metrics.
+### Token Costs
 ![Dashboard Costs](./dashboard-costs.png)
+Per-worker breakdown of input/output/cache tokens, time-filtered bar charts, and cache hit rate.
 
-## Known Limitations & Mitigation
+---
 
-| Issue | Workaround |
-|-------|------------|
-| **Worker Context Bleed** (Worker tries to do another worker's job) | The Dispatcher (`spawn-worker.sh`) injects strict Role bounding (SOUL prompts) per worker. Do not manually spawn workers using `delegate_task`; always use `spawn-worker.sh` so role boundaries are enforced. |
-| **Pipeline bypass** (Skipping PM/Architect for "simple" bugs) | The API rejects Out-of-Order execution. A bugfix must still pass through PM (for regression notes) and QA (for validation). Enforced by `/api/agent-status` lifecycle guard. |
-| **Missing Context.json on Resume** | Older tasks (pre-persistence feature) won't have context. Run new tasks via `/api/task-start`. |
-| **Dashboard Blank Screen in Prod** | Rollup circular dependency with Recharts. Fixed via Vite vendor chunking in `vite.config.ts`. Do not import heavy UI libraries dynamically. |
+## How to Install
+
+### Prerequisites
+
+| Dependency | Required | Check |
+|------------|----------|-------|
+| **Hermes Agent** | ✅ Yes | `hermes --version` |
+| **Node.js + npm** | ✅ Yes | `node --version` |
+| **jq** | ✅ Yes | `jq --version` |
+| **OpenCode CLI** | ✅ Yes (for engineers) | `opencode --version` |
+| **Python 3** | ⚠️ Optional (for scripts) | `python3 --version` |
+
+### Quick Install
+
+```bash
+# 1. Clone the AIC skill
+git clone --depth 1 https://github.com/Deriest/aic-skill.git ~/.hermes/skills/workflows/aic
+
+# 2. Run setup (interactive — picks provider, models, configures everything)
+bash ~/.hermes/skills/workflows/aic/scripts/setup.sh
+
+# 3. Build the dashboard
+cd ~/.hermes/skills/workflows/aic/dashboard && npm install && npm run build
+
+# 4. Start the server
+node ~/.hermes/skills/workflows/aic/scripts/server.js 6868
+```
+
+### What setup.sh does
+
+1. Checks dependencies (Hermes, Node, npm, jq, OpenCode)
+2. Auto-detects available AI models from your provider
+3. Lets you pick 3 models: **Thinker** (complex reasoning), **Crafter** (coding), **Sprinter** (fast tasks)
+4. Generates `opencode.jsonc` and `.env` with correct config
+5. Sets context window limits automatically (80/60/40% per tier)
+
+---
+
+## How to Use
+
+### Starting AIC
+
+```
+You:  /aic
+
+Hermes: Hello, I am the AIC Dispatcher. 
+        The pipeline is currently idle.
+        What task can I help you with today?
+```
+
+### Giving a task (natural language)
+
+```
+You:  bikin website jualan online
+
+Hermes: Task classified: DEVELOP (Full Pipeline)
+        Spawning PM (Aria) for investigation...
+        
+        [Aria runs: generates requirements.json]
+        [Atlas runs: generates design.json]
+        [Leo + Hugo run: implement frontend + backend]
+        [Eve runs: tests everything]
+        [Rex runs: final review]
+        
+        Task complete. 5 files changed, 3 new features.
+        Mau saya commit?
+```
+
+### Checking status
+
+```
+You:  /aic status
+
+Hermes: ┌─ TASK-20260708-200 ──────────────┐
+        │ Status: ACTIVE                    │
+        │ Phase: Implementation             │
+        │ Workers: Leo (working), Hugo (idle)│
+        └───────────────────────────────────┘
+```
+
+### Resuming an interrupted task
+
+```
+You:  aic continue
+
+Hermes: === Resuming TASK-20260708-200 ===
+        Title: E-Commerce Website
+        Phase: Implementation
+        Last report: frontend-output.md (45 lines)
+        
+        Resume this task? [y/N]
+```
+
+### Getting task details
+
+```
+You:  /aic status task TASK-20260708-200
+
+Hermes: ┌─ TASK DETAIL ─────────────────────┐
+        │ Type: develop                     │
+        │ Created: 2026-07-08 14:30         │
+        │ Reports:                          │
+        │   • pm-report.md (120 lines)      │
+        │   • architect-plan.md (85 lines)  │
+        │   • frontend-output.md (45 lines) │
+        │   • backend-output.md (67 lines)  │
+        │ Work Packages: 2/4 complete       │
+        └───────────────────────────────────┘
+```
+
+### Available commands
+
+| Command | What it does |
+|---------|-------------|
+| `/aic` | Activate Dispatcher mode |
+| `/aic status` | Show current pipeline status |
+| `/aic status task <TASK-ID>` | Show detailed task info |
+| `aic continue` | Resume last interrupted task (CLI) |
+| `/aic stop` | Deactivate Dispatcher mode |
+
+---
+
+## Configuration
+
+### .env (auto-generated by setup.sh)
+
+```env
+PROVIDER_ID=your-provider
+MODEL_THINKER=provider/model-name
+MODEL_CRAFTER=provider/model-name
+MODEL_SPRINTER=provider/model-name
+```
+
+### Model tiers
+
+| Tier | Use for | Context window | Workers |
+|------|---------|----------------|---------|
+| **Thinker** | Complex reasoning, architecture | 80% of max | Aria (PM), Atlas (Architect) |
+| **Crafter** | Coding, implementation | 60% of max | Leo, Hugo, Flint, Sage, Luna, Rex |
+| **Sprinter** | Fast tasks, testing | 40% of max | Eve (QA) |
+
+---
+
+## Scripts Reference
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `setup.sh` | First-time setup | `bash scripts/setup.sh` |
+| `preflight.sh` | Pre-flight check + server start | `bash scripts/preflight.sh --auto-start` |
+| `spawn-worker.sh` | Spawn a worker with auto-status | `bash scripts/spawn-worker.sh <worker> <tier> <dir> <prompt>` |
+| `server.js` | Dashboard API server | `node scripts/server.js 6868` |
+| `aic` | CLI tool | `aic continue` |
+| `context-gather.sh` | Gather project context | `bash scripts/context-gather.sh <dir> --tier crafter` |
+
+---
+
+## Project Structure
+
+```
+.hermes/skills/workflows/aic/
+├── SKILL.md                    # Main skill definition
+├── AGENTS.md                   # Workspace rules
+├── aic                         # CLI tool
+├── .env                        # Auto-generated config
+├── scripts/
+│   ├── server.js               # Dashboard API (port 6868)
+│   ├── spawn-worker.sh         # Worker spawner
+│   ├── setup.sh                # First-time setup
+│   ├── preflight.sh            # Pre-flight checks
+│   ├── context-gather.sh       # Context collection
+│   └── aic                     # CLI entry point
+├── dashboard/
+│   ├── src/
+│   │   ├── pages/              # Overview, History, Costs, Config
+│   │   ├── components/         # Pipeline tracker, worker grid
+│   │   └── data/workers.ts     # Worker definitions
+│   └── dist/                   # Built dashboard
+├── .aic/
+│   ├── tasks/                  # Per-task context (TASK-XXX/)
+│   │   ├── context.json        # User requirement
+│   │   ├── state.json          # Phase, status, timestamps
+│   │   └── reports/            # Phase reports
+│   ├── metrics.json            # Token usage data
+│   └── state.json              # Global state
+├── characters/                 # Pixel art worker avatars
+├── references/                 # Design docs, pitfalls, guides
+└── templates/                  # .env.example, opencode config
+```
+
+---
+
+## Known Limitations & Workarounds
+
+### A. General System Issues
+
+| Issue | Why it happens | Workaround |
+|-------|---------------|------------|
+| **Pipeline is sequential** | PM → Architect → Engineers → QA → Governor, always | For parallel work, spawn Frontend + Backend simultaneously (allowed in Implementation phase) |
+| **No undo for code changes** | Workers use `opencode run` which modifies files directly | Use git branching before large tasks; `git diff` after each phase |
+| **Token limits** | Large tasks may hit model context windows | Context auto-truncates at 80/60/40% per tier; use Crafter for implementation |
+| **Setup requires internet** | `npm install`, model fetching, OpenCode CLI install | Pre-download dependencies; use `--offline` flags where possible |
+| **Single server instance** | Only one AIC server per machine (port 6868) | Change port in `server.js` if needed |
+
+### B. Chat / Dispatcher Issues
+
+| Issue | Why it happens | Workaround |
+|-------|---------------|------------|
+| **Dispatcher takes over worker tasks** | AI model sees code and "wants to help" | Strict SOUL prompts enforce role boundaries; `spawn-worker.sh` injects role context automatically |
+| **Dispatcher skips phases** | "This is trivial, just fix it" | API lifecycle guard rejects out-of-order phase execution; 403 error forces correct flow |
+| **Dispatcher forgets to update status** | Manual API calls are error-prone | `spawn-worker.sh` auto-updates worker status (working → complete) and pipeline phase |
+| **Worker doesn't finish before next starts** | Race condition in parallel spawning | `spawn-worker.sh` is blocking — it waits for `opencode run` to exit before returning |
+| **Context bleed between workers** | Worker reads previous worker's output and changes it | Each worker gets only its prompt + project context, not previous worker's modifications |
+| **Governor auto-commits code** | Model ignores "ask user first" rule | Rule 9 in SKILL.md: Governor MUST NOT commit. Dispatcher asks user. Enforced by SOUL prompt. |
+| **Language mismatch** | User speaks Indonesian, worker responds in English | Dispatcher auto-detects language and passes it to worker prompts |
+
+### C. Dashboard / API Issues
+
+| Issue | Why it happens | Workaround |
+|-------|---------------|------------|
+| **Dashboard blank screen in production** | Vite circular chunk dependency with Recharts | Fixed: `recharts` bundled in `vendor` chunk via `vite.config.ts` |
+| **Cache hit rate > 100%** | Wrong formula: `cache / (input + output)` | Fixed: now uses `cache / (cache + input)` |
+| **Pipeline shows all blue when idle** | CSS color for idle = cyan/40 (still blue) | Fixed: idle stages now gray, active = cyan, complete = green |
+| **Task history shows all ACTIVE** | `task-complete` endpoint didn't update state.json | Fixed: `POST /api/task-complete` now writes `status: 'done'` to task folder |
+| **Worker status not syncing** | Shell JSON quotes not escaped in `spawn-worker.sh` | Fixed: proper `\"` escaping in curl payload |
+| **History page empty after feature deploy** | Tasks created before persistence feature | Run new tasks via `/api/task-start`; old tasks won't have context files |
+| **Dashboard doesn't auto-refresh** | SPA polls on interval, not WebSocket | Refresh manually or wait for next poll cycle (configurable) |
+| **Metrics not updating** | Server restarted, in-memory state lost | Metrics persist to `.aic/metrics.json`; reload on server start |
+
+---
+
+## For Contributors
+
+### Adding a new worker
+
+1. Add to `dashboard/src/data/workers.ts` with colors and section
+2. Add to `WORKERS` array in `scripts/server.js`
+3. Add phase mapping in `scripts/spawn-worker.sh` (`PHASE_MAP_<name>`)
+4. Update `SKILL.md` worker table and SOUL prompt
+5. Generate pixel art character: `python3 generate_character.py <name>`
+
+### Adding a new pipeline phase
+
+1. Update `phases` array in `PipelineTracker.tsx`
+2. Update `PHASE_ALLOWED` map in `server.js`
+3. Update `PHASE_MAP` in `spawn-worker.sh`
+4. Update `SKILL.md` pipeline documentation
+
+---
+
+## License
+
+MIT — See [LICENSE](./LICENSE)
+
+---
+
+<p align="center">
+  <i>Built with Hermes Agent by Nous Research</i><br/>
+  <i>AIC originally ported from OpenClaw plugin by TVD</i>
+</p>
