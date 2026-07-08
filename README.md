@@ -148,6 +148,28 @@ Hermes: Target project set successfully. The pipeline is currently idle.
         What task can I help you with today?
 ```
 
+### Handling Large Tasks (Work Packages)
+
+For large or complex tasks, the **Product Manager (Aria)** automatically utilizes **WP Decomposition**. 
+Instead of rushing a massive feature into one prompt, Aria breaks down the project into logical **Work Packages (WPs)**.
+
+```
+You:  build a full-stack HR management system
+
+Hermes: Task classified: DEVELOP (Large Project)
+        Spawning PM (Aria) for decomposition...
+        
+        [Aria breaks the project into 4 WPs]
+        WP-1: Database Schema & Authentication
+        WP-2: Employee Directory API
+        WP-3: Frontend Dashboard UI
+        WP-4: Role-Based Access Control
+        
+        [Hermes runs the full 5-phase pipeline for WP-1]
+        [Once WP-1 is Closeout, Hermes starts the pipeline for WP-2]
+```
+You can view the dependency tree and progress of these WPs in the **History Tab** of the Dashboard.
+
 ### Giving a task (natural language)
 
 ```
