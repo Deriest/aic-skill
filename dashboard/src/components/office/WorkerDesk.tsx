@@ -61,7 +61,7 @@ export const WorkerDesk = memo(function WorkerDesk({ worker, status, engine }: W
           ? 'border-aic-yellow shadow-[0_0_15px_rgba(255,255,0,0.15)] bg-aic-bg-panel/40 animate-pulse'
           : status === 'complete'
           ? 'border-aic-green shadow-[0_0_15px_rgba(0,255,136,0.15)] bg-aic-bg-panel/40 animate-pulse'
-          : 'border-transparent opacity-80 hover:opacity-100'
+          : 'border-gray-500/30 shadow-[0_0_10px_rgba(128,128,128,0.1)] bg-aic-bg-panel/20 animate-pulse opacity-80 hover:opacity-100'
       }`}
       onClick={handleClick}
     >

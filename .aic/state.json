@@ -36,26 +36,26 @@
       "currentTask": null
     },
     "qa": {
-      "status": "idle",
-      "engine": null,
+      "status": "complete",
+      "engine": "opencode",
       "currentTask": null
     },
     "governor": {
-      "status": "idle",
-      "engine": null,
+      "status": "working",
+      "engine": "opencode",
       "currentTask": null
     },
     "dispatcher": {
       "status": "working",
-      "engine": "delegate",
+      "engine": null,
       "currentTask": null
     }
   },
   "currentTask": {
-    "id": "TEST-001",
-    "title": "Test task",
+    "id": "TASK-20260708-024",
+    "title": "Add pulse to idle status",
     "type": "bugfix"
   },
-  "currentPhase": null,
+  "currentPhase": "Documentation",
   "startedAt": 1783481701189
 }
