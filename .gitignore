@@ -26,3 +26,11 @@ status.json
 snapshots/
 cache/
 CHANGELOG.md
+
+# AIC Local Database & History
+.aic/tasks/
+.aic/prompts/
+.aic/state.json
+.aic/metrics.json
+.aic/chat-history.json
+.aic/artifacts/
