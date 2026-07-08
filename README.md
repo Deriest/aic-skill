@@ -115,13 +115,14 @@ cd ~/.hermes/skills/workflows/aic/dashboard && npm install && npm run build
 # It will run a preflight check and auto-start the server for you.
 ```
 
-### What setup.sh does
+### What setup.sh does (6 Steps)
 
-1. Checks dependencies (Hermes, Node, npm, jq, OpenCode)
-2. Auto-detects available AI models from your provider
-3. Lets you pick 3 models: **Thinker** (complex reasoning), **Crafter** (coding), **Sprinter** (fast tasks)
-4. Generates `opencode.jsonc` and `.env` with correct config
-5. Sets context window limits automatically (80/60/40% per tier)
+1. **System Check**: Verifies OS and dependencies (Hermes, Node, npm, jq, OpenCode).
+2. **Provider Setup**: Detects and configures your active AI Provider (e.g., OpenAI, Anthropic, Local).
+3. **Model Fetching**: Dynamically pulls available models from the provider's API.
+4. **Tier Configuration**: Lets you assign specific models for **Thinker**, **Crafter**, and **Sprinter** roles.
+5. **Config Generation**: Generates `opencode.jsonc` and `.env` with proper context window limits.
+6. **Workspace Initialization**: Clones the dashboard UI, installs NPM dependencies, and prepares the environment.
 
 ---
 
@@ -129,11 +130,19 @@ cd ~/.hermes/skills/workflows/aic/dashboard && npm install && npm run build
 
 ### Starting AIC
 
+Activate the Dispatcher mode. This triggers a Preflight check (starting the server) and prompts you to select your target project folder.
+
 ```
 You:  /aic
 
-Hermes: Hello, I am the AIC Dispatcher. 
-        The pipeline is currently idle.
+Hermes: [Preflight Check Running... Server Started]
+        Hello, I am the AIC Dispatcher.
+        Please set your target project folder:
+        ./aic project <path/to/folder>
+
+You:  ./aic project ~/Documents/my-app
+
+Hermes: Workspace symlinked. The pipeline is currently idle.
         What task can I help you with today?
 ```
 
@@ -202,6 +211,7 @@ Hermes: ┌─ TASK DETAIL ─────────────────�
 | Command | What it does |
 |---------|-------------|
 | `/aic` | Activate Dispatcher mode and run **Preflight Check** (auto-checks dependencies, builds dashboard, and starts the API server) |
+| `./aic project <path>` | Link a target project directory to the AIC workspace |
 | `/aic status` | Show current pipeline status |
 | `/aic status task <TASK-ID>` | Show detailed task info |
 | `/aic continue` | Resume last interrupted task |
