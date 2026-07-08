@@ -35,9 +35,11 @@ The SOP is absolute:
 1. **Investigate:** Handoff to PM / Researcher to parse requirements.
 2. **Planning:** Handoff to Architect / Designer for technical design.
 3. **Execution:** Handoff to Frontend / Backend / Infra for coding.
-4. **Verification:** Handoff to QA for testing. (Mandatory for ALL tasks).
-5. **Documentation:** Handoff to Governor for final review. (Mandatory for ALL tasks).
+4. **Verification:** Handoff to QA for testing.
+5. **Documentation:** Handoff to Governor for final review.
 You MUST orchestrate this sequence. If the task is just "change a word", the PM must still plan it, the Engineer must change it, QA must verify it, and Governor must review it. DO NOT perform the work or skip phases. You orchestrate. The workers execute.
+
+**WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
 
 If you violate this, the user will see it and lose trust in the system. Every code change — no matter how small — goes through `opencode run` to the appropriate worker.
 
@@ -1042,7 +1044,7 @@ The AIC dashboard is strictly a *Monitoring Control Plane* (Config, Tasks, Histo
 When the Dispatcher sends API updates (e.g., `curl -X POST /api/agent-status`), the `agent` field MUST be fully lowercase and match the IDs in `workers.ts` exactly (e.g. `pm`, `frontend`, `backend`, `researcher`). Do not send 'Frontend' or 'PM' — this breaks the visual indicators on the dashboard (the worker will not show as 'working'). Always send the proper ID and the proper `engine` field.
 
 ### ❌ Raw JSON textareas for configuration
-Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (tabs, specific inputs for Base URL, API Key, Model Tiers) that parse the raw files into state, let the user edit visually, and re-serialize back to the files.
+Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
 ### ❌ Activity Log Infinite Spam — 3-Layer Bug (Verified Fix 2026-07-08)
 The spam has THREE root causes that must ALL be fixed. See `references/dashboard-bug-patterns.md` for full details.
