@@ -52,10 +52,10 @@
     }
   },
   "currentTask": {
-    "id": "TASK-20260708-024",
-    "title": "Add pulse to idle status",
-    "type": "bugfix"
+    "id": "TEST-NEW",
+    "title": "New task resets all",
+    "type": "test"
   },
-  "currentPhase": "Documentation",
+  "currentPhase": null,
   "startedAt": 1783481701189
 }

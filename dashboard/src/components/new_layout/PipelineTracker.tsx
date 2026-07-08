@@ -1,7 +1,7 @@
 import { DashboardState } from '../../types';
 
 export function PipelineTracker({ state }: { state: DashboardState }) {
-  const phases = ['Investigate', 'Planning', 'Execution', 'Documentation', 'Verification'];
+  const phases = ['Investigate', 'Planning', 'Execution', 'Verification', 'Documentation'];
   
   return (
     <div className="flex flex-col gap-3 h-full font-pixel">
@@ -44,9 +44,10 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
         <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-4 flex-1 shadow-lg flex flex-col relative overflow-hidden">
           <div className="flex flex-col justify-between z-10 flex-1 min-h-0">
             {phases.map((p, idx) => {
-              const isActive = state.currentTask ? p === state.currentPhase : false;
+              const isComplete = state.currentPhase === 'Closeout';
+              const isActive = !isComplete && state.currentTask ? p === state.currentPhase : false;
               const currentIndex = state.currentPhase ? phases.indexOf(state.currentPhase) : -1;
-              const isPast = state.currentTask && currentIndex > -1 && idx < currentIndex;
+              const isPast = isComplete || (state.currentTask && currentIndex > -1 && idx < currentIndex);
               
               let textColor = 'text-aic-accent/40'; // Base idle color
               let icon = '○';
