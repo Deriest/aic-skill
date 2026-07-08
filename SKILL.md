@@ -169,6 +169,41 @@ echo "Implement the login page with email/password form" > /tmp/aic-task.txt
 bash scripts/spawn-worker.sh frontend crafter /path/to/project /tmp/aic-task.txt
 ```
 
+### ❌ CRITICAL: Dispatcher Prompt File Writing Pattern
+
+When the Dispatcher (Hermes) spawns workers through the terminal tool, **inline heredocs WILL FAIL** if the prompt contains backticks, quotes, or special characters. This is because the terminal tool's argument passing corrupts bash heredoc delimiters.
+
+**Symptoms:**
+- `cat << 'EOF' > /tmp/prompt.txt ... EOF` → `Syntax error: end of file unexpected`
+- `bash -c 'cat << "EOF" ...'` → `Syntax error: unexpected EOF`
+- Any heredoc with backtick content → `Syntax error: EOF in backquote substitution`
+
+**CORRECT pattern — always use this:**
+```
+1. Write prompt files using the `write_file` tool (NOT terminal heredocs):
+   write_file(path="/tmp/prompt-pm.txt", content="You are the PM...")
+   write_file(path="/tmp/prompt-arch.txt", content="You are the Architect...")
+   write_file(path="/tmp/prompt-front.txt", content="You are the Frontend Engineer...")
+   write_file(path="/tmp/prompt-qa.txt", content="You are the QA Engineer...")
+   write_file(path="/tmp/prompt-gov.txt", content="You are the Governor...")
+
+2. Call spawn-worker.sh from terminal with those file paths:
+   bash scripts/spawn-worker.sh pm thinker /path/to/project /tmp/prompt-pm.txt
+   bash scripts/spawn-worker.sh architect crafter /path/to/project /tmp/prompt-arch.txt
+   ...
+```
+
+**WRONG patterns — NEVER do these:**
+```bash
+# WRONG: inline heredoc from terminal tool
+cat << 'EOF' > /tmp/prompt.txt
+You are the PM. Read the files...
+EOF
+
+# WRONG: inline prompt via node -e (bypasses spawn-worker.sh, no dashboard status updates)
+node -e "execSync('opencode run ...')"
+```
+
 The script automatically:
 - Reads prompt from file (no bash quote escaping)
 - Runs `context-gather.sh` and prepends project context

@@ -7,12 +7,12 @@
     },
     "researcher": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "designer": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "architect": {
@@ -22,7 +22,7 @@
     },
     "frontend": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "backend": {
@@ -32,7 +32,7 @@
     },
     "infra": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "qa": {
@@ -42,20 +42,20 @@
     },
     "governor": {
       "status": "idle",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "dispatcher": {
       "status": "working",
-      "engine": "delegate",
+      "engine": null,
       "currentTask": null
     }
   },
   "currentTask": {
-    "id": "TASK-20260708-016",
-    "title": "Fix context-gather backtick crash",
-    "type": "bug-infra"
+    "id": "TEST-ALL-001",
+    "title": "Full Worker Spawn Test",
+    "type": "test"
   },
-  "currentPhase": "Documentation",
+  "currentPhase": "Verification",
   "startedAt": 1783481701189
 }

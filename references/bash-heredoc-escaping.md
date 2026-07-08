@@ -1,5 +1,24 @@
 # Pitfall: Bash Heredoc Escaping in Worker Spawn Scripts
 
+## The Problem (FIXED 2026-07-08)
+
+The original `spawn-worker.sh` used `execSync` in its Node.js runner to execute `opencode`. This spawned a shell that interpreted backticks in gathered context as command substitution, causing "Syntax error: end of file unexpected" or "EOF in backquote substitution" (exit 2).
+
+**Root cause:** NOT the heredoc itself (which was already safe with single-quoted delimiter). The bug was `execSync` passing a shell command string that bash interpreted.
+
+**Fix:** Replaced `execSync` with `execFileSync` — passes args as array, no shell involved:
+```javascript
+// BEFORE (broken):
+execSync(`opencode run ${JSON.stringify(prompt)} -m ${model} --auto`, { stdio: 'inherit' });
+
+// AFTER (fixed):
+execFileSync('opencode', ['run', promptFile, '-m', model, '--auto'], { stdio: 'inherit' });
+```
+
+The `--no-context` workaround flag is no longer needed for backtick crashes.
+
+## Heredoc Safe Pattern
+
 When building wrapper scripts (like `spawn-worker.sh`) that write out secondary execution scripts (e.g., Node.js runners) via heredoc, strict escaping rules apply:
 
 1. **Never nest heredocs inside `bash -c` or `eval`**: 
@@ -16,4 +35,7 @@ When building wrapper scripts (like `spawn-worker.sh`) that write out secondary 
    node "$NODE_RUNNER"
    ```
 3. **Payload Passing**:
-   Never inline a prompt payload directly into the string execution of another process if it contains quotes or newlines. Always write the payload to a text file (e.g., `/tmp/prompt.txt`) and have the runner script read it from disk (`fs.readFileSync`).
+   Never inline a prompt payload directly into the string execution of another process if it contains quotes or newlines. Always write the payload to a text file (e.g., `/tmp/prompt.txt`) and have the runner script read it from disk (`execFileSync` passes the file path, not content).
+
+4. **Dispatcher Prompt File Pattern (2026-07-08)**:
+   When the Dispatcher (Hermes) spawns workers, inline `cat << 'EOF'` heredocs from the terminal tool will fail if the prompt contains special characters. Use `write_file` tool to write prompts to `/tmp/prompt-*.txt`, then call `spawn-worker.sh` with those paths.
