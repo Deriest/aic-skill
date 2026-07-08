@@ -7,7 +7,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [multi-agent, orchestration, workflow, engineering, dispatch]
-    related_skills: [hermes-agent, aic-dispatcher-discipline]
+    related_skills: [hermes-agent, dispatcher-discipline]
 ---
 
 # AI Engineering Company — Hermes Worker System
@@ -31,8 +31,9 @@ Am I about to skip a lifecycle phase because the task seems trivial?
 
 **What you CAN do:** Talk to user, classify tasks, hit API endpoints (`curl`), create prompts for each department, spawn workers via `spawn-worker.sh`, read files for investigation, aggregate reports between departments.
 **What you CANNOT do:** `write_file`, `patch`, `terminal` for code/file edits. Not even "quick fixes", "one-liners", or "small tweaks". ZERO exceptions.
+**When asked to "check" or "verify":** ONLY perform read-only checks (e.g., grep, ls, cat, curl). DO NOT automatically fix issues you find, and DO NOT spawn workers to fix them without explicit Operator permission.
 
-**QA Rule:** QA MUST validate real application using Vision/Browser/Terminal/API tools — never approve based on execution report alone. See `aic-dispatcher-discipline` for full policy.
+**QA Rule:** QA MUST validate real application using Vision/Browser/Terminal/API tools — never approve based on execution report alone. See `dispatcher-discipline` for full policy.
 
 ### 🚫 STRICT PIPELINE LIFECYCLE (SOP HARGA MATI)
 
@@ -955,6 +956,8 @@ terminal(command='curl -s -X POST http://localhost:6868/api/phase-complete')
 
 ## Pitfalls
 
+- **Dispatcher Proactivity:** DO NOT fix bugs yourself during Investigate. Run the 5-phase pipeline.
+- **Terminal Chaining:** Do not chain multiple phases with `&&` in one `terminal()` call. Do one phase per call.
 - **Worker Status:** When a worker finishes in `spawn-worker.sh`, POST status as `complete`, NOT `idle`. Resetting to `idle` prevents the UI from showing 'Complete'.
 - **Git & `.aic/`:** `.aic/` MUST be in `.gitignore`. `git reset --hard` will permanently destroy the user's local DB if untracked.
 - **Auto-Start Args:** Do NOT pass `$API_PORT` to `node scripts/server.js` unless it parses `process.argv`; it will crash hardcoded servers.
@@ -988,6 +991,10 @@ See ⛔ ABSOLUTE RULE at the top of this document. The user has corrected this m
 - (2026-07-06): "padahal saya pakai skill aic untuk improve dashboard apakah sudah sesuai perkerjaan nya? soalnya tidak ada report phase 1-5 etc"
 - (2026-07-08): "ini tadi kamu bilang kamu aic dispatcher kenapa kamu ngoding mengubah2?"
 - (2026-07-08): "kok front end delegate, harus opencode"
+- (2026-07-09): "kok pm tidak berkerja ? . yg investigasi siapa?" (Dispatcher bypassed PM for a "simple" repo cleanup and spawned backend directly. Fatal violation. Even for trivial tasks like deleting folders or fixing typos, PM MUST be spawned first to write `requirements.json`.)
+
+### ❌ Terminal Execution Chaining for Pipeline Phases
+Do not attempt to chain multiple pipeline phases (e.g., Planning, Execution, Verification) into a single massive bash script using background operators (`&`). The terminal tool will reject foreground commands that use backgrounding for long-lived processes. Execute each phase sequentially: spawn PM, wait for it to finish, and spawn the next worker in subsequent terminal calls.
 
 ### ❌ `/aic dashboard` ≠ "improve the dashboard"
 `/aic dashboard` STARTS the server. "improve dashboard" or "rebuild dashboard" is a FEATURE TASK — classify and spawn workers.
@@ -1334,7 +1341,7 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 22. **Circuit breaker** — the server tracks per-worker failures. After 3 consecutive failures, the circuit opens and that worker is skipped. Monitor via `GET /api/status` → `circuitBreakers` field. Don't keep retrying a worker with an open circuit — report to Operator.
 23. **Record token usage** — after each worker completes, report token consumption: `POST /api/tokens {"input": N, "output": N}`. The server tracks cumulative cost. Include cost in final delivery report.
 24. **Self-test before first task** — run `bash ~/.hermes/skills/workflows/aic/scripts/self-test.sh` to validate config, deps, and server before starting work. Fixes 90% of "why isn't this working" issues.
-25. **Git Workflow** — After Governor approves, Dispatcher asks user before any git operation. Governor does NOT commit or merge. User decides: commit to main, commit to branch (feature/TASK-xxx), or merge branch to main. See `aic-dispatcher-discipline` rule #7.
+25. **Git Workflow** — After Governor approves, Dispatcher asks user before any git operation. Governor does NOT commit or merge. User decides: commit to main, commit to branch (feature/TASK-xxx), or merge branch to main. See `dispatcher-discipline` rule #7.
 
 ## Related References & Templates
 
