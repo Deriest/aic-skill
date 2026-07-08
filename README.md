@@ -144,7 +144,7 @@ Hermes: [Preflight Check Running... Server Started]
 
 You:  ./aic project ~/Documents/my-app
 
-Hermes: Workspace symlinked. The pipeline is currently idle.
+Hermes: Target project set successfully. The pipeline is currently idle.
         What task can I help you with today?
 ```
 
