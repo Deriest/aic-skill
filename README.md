@@ -10,10 +10,10 @@ AIC transforms Hermes into a full engineering company — with a Dispatcher, PM,
 
 ## Workspace Context
 
-AIC operates on a symlinked workspace architecture to isolate the framework codebase from the target project.
-- **Skill Repository:** `~/.hermes/skills/workflows/aic/`
-- **Active Project Path:** Set dynamically via the `/aic project <name>` command.
-- **Project Symlink:** Automatically mounts to `/home/tvd/aic-skill` pointing to the currently active project folder for unified terminal tool paths.
+AIC cleanly separates its own engine from your target codebase.
+- **Skill Repository (Engine):** `~/.hermes/skills/workflows/aic/` (Where the API server and dashboard live).
+- **Target Project (Your Code):** Can be anywhere on your machine.
+- **Switching Projects:** Use `./aic project <path>` to tell the AIC engine which folder the workers should operate on. The dashboard and task tracking will pivot to monitor that specific active project.
 
 ---
 
@@ -124,7 +124,7 @@ cd ~/.hermes/skills/workflows/aic/dashboard && npm install && npm run build
 3. **Model Fetching**: Dynamically pulls available models from the provider's API.
 4. **Tier Configuration**: Lets you assign specific models for **Thinker**, **Crafter**, and **Sprinter** roles.
 5. **Config Generation**: Generates `opencode.jsonc` and `.env` with proper context window limits.
-6. **Workspace Initialization**: Sets up the symlink architecture and prepares the global namespace. (Note: Project folders are selected later using `./aic project`).
+6. **Workspace Initialization**: Prepares the global namespace and configures the API server bindings.
 
 ---
 
