@@ -113,31 +113,44 @@ case "$cmd" in
     # we exit cleanly. The user will type /aic stop in the chat.
     ;;
 
+  project)
+    ENV_FILE="$SKILL_DIR/.env"
+    WORKSPACE=""
+    if [[ -f "$ENV_FILE" ]]; then
+      WORKSPACE=$(grep "^AIC_PROJECT_DIR=" "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
+    fi
+    if [[ -z "$WORKSPACE" || ! -d "$WORKSPACE" ]]; then
+      echo "  No workspace configured. Run: ./aic setup"
+      exit 1
+    fi
+    ARG="${2:-}"
+    if [[ -z "$ARG" ]]; then
+      echo "  Usage: ./aic project <name>"
+      exit 1
+    fi
+    if [[ ! -d "$WORKSPACE/$ARG" ]]; then
+      echo "  Project not found: $WORKSPACE/$ARG"
+      exit 1
+    fi
+    SELECTED="$WORKSPACE/$ARG/"
+    echo ""
+    echo -e "${GREEN}  Switched to: ${ARG}${NC}"
+    echo "  Path: ${SELECTED}"
+    set_env "AIC_ACTIVE_PROJECT" "$SELECTED" "$ENV_FILE"
+    set_env "AIC_ACTIVE_PROJECT_NAME" "$ARG" "$ENV_FILE"
+    echo "  Ready. Type /aic in Hermes."
+    echo ""
+    ;;
+
   start|"")
     ENV_FILE="$SKILL_DIR/.env"
     WORKSPACE=""
     if [[ -f "$ENV_FILE" ]]; then
       WORKSPACE=$(grep "^AIC_PROJECT_DIR=" "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
     fi
-
     if [[ -z "$WORKSPACE" || ! -d "$WORKSPACE" ]]; then
       echo "  No workspace configured. Run: ./aic setup"
       exit 1
-    fi
-
-    # Direct switch: ./aic <project-name>
-    ARG="${1:-}"
-    if [[ -n "$ARG" && -d "$WORKSPACE/$ARG" ]]; then
-      SELECTED="$WORKSPACE/$ARG/"
-      PROJECT_NAME="$ARG"
-      echo ""
-      echo -e "${GREEN}  Switched to: ${PROJECT_NAME}${NC}"
-      echo "  Path: ${SELECTED}"
-      set_env "AIC_ACTIVE_PROJECT" "$SELECTED" "$ENV_FILE"
-      set_env "AIC_ACTIVE_PROJECT_NAME" "$PROJECT_NAME" "$ENV_FILE"
-      echo "  Ready. Type /aic in Hermes."
-      echo ""
-      exit 0
     fi
 
     # List subfolders
