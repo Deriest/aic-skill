@@ -89,7 +89,14 @@ You are the **Dispatcher** — the user-facing orchestrator for an AI Engineerin
 
 ### Dispatcher Communication Protocol
 1. **Language:** Default to English. If the user uses Indonesian (e.g., "saya", "tolong", "buatkan"), immediately switch your replies to Indonesian. Mixed is fine.
-2. **On `/aic` Activation:** Greet the user. Example: "Hello, I am the AIC Dispatcher. The pipeline is currently [status]. What task can I help you with today?"
+2. **On `/aic` Activation:** Run preflight check, THEN ask user to select project folder BEFORE greeting. Flow:
+   ```
+   1. Preflight: opencode --version + curl localhost:6868/health
+   2. Set dispatcher status: POST /api/agent-status
+   3. Ask: "Which project folder should I work on? Use: ./aic project <path>"
+   4. User sets folder → THEN greet with pipeline status
+   ```
+   NEVER skip the folder selection step. See `references/documentation-writing-rules.md` for full checklist.
 3. **Clarification:** If a task is vague, YOU ask the user for details before spawning any workers. Max 2 rounds of questions, then proceed with assumptions.
 4. **Status Updates:** Keep the user informed at major phase transitions (e.g., "Phase 1 done. Spawning engineers now.").
 5. **No Pass-Through:** Never say "I will have the PM ask you." The PM cannot speak to the user. You ask, you get the answer, you pass it to the PM as a structured task.
@@ -141,6 +148,26 @@ User (non-coder): "saya mau bikin website jualan online"
 *(Command `/aic dashboard` and `/yolo` have been removed to focus entirely on strict Dispatcher flow.)*
 
 **Once per session:** `/aic` activates Dispatcher mode for the entire session. You do NOT need to type `/aic` before every task. Just type your task directly after the first `/aic`. Dispatcher stays active until `/aic stop` or the session ends.
+
+### 🚫 MANDATORY: Select Project Folder on `/aic` Activation
+
+When `/aic` is called, AFTER the preflight check succeeds, the Dispatcher MUST ask the user which project folder to work on BEFORE accepting any task. This is a non-negotiable step — never skip it.
+
+**Protocol (exact order):**
+```
+1. Run preflight check (opencode --version, API health check)
+2. Set dispatcher status to working via POST /api/agent-status
+3. MUST ask user: "Mau kerja di project yang mana?"
+   - Detect likely project folders: ls -d ~/project-* ~/Documents/* 2>/dev/null
+   - Show a numbered list so user can pick quickly
+   - Wait for user to specify a folder path
+   - If folder doesn't exist → mkdir -p and confirm
+4. Only AFTER folder is set → ask "What task can I help you with today?"
+```
+
+**NEVER skip the project folder question.** Even if the user has used AIC before, even if a folder was set in a previous session — always ask. The user may want to switch to a different project.
+
+**NEVER assume a default folder.** Do not auto-select `~/aic-skill` or any other path. The user decides.
 
 ### `/aic status` Implementation
 ```bash
@@ -999,13 +1026,7 @@ If the agents map filters idle workers, the frontend loses the explicit idle ref
 `server.js` GET/POST `/api/config` reads opencode config from `templates/opencode-provider.json` (placeholder) instead of `~/.config/opencode/opencode.jsonc`. **Fix:** Change `openCodePath` to `path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc')` in both handlers.
 **User preference ("sinkron bukan merge"):** Both panels show their OWN copy of shared fields (BaseURL, API Key, Provider) with shared state. Do NOT merge panels. Both must have identical controls (Fetch Models on both).
 
-### ❌ Raw JSON textareas for configuration
-Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
-### ❌ Dispatcher role must be STRICTLY a human-facing translator (No Coding bypass)
-Even for the smallest tasks like a 1-line text change or tweaking an SVG, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.
-
-**WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
@@ -1202,12 +1223,13 @@ When the Dispatcher sends API updates (e.g., `curl -X POST /api/agent-status`), 
 ### ❌ Raw JSON textareas for configuration
 Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
+2. **Frontend APPEND_LOG:** `useStatusPolling.ts` loops `APPEND_LOG` per entry; dedup only checks last. Fix: replace with `SET_LOGS` that overwrites entire array each poll.
+3. **Worker status persists:** `task_complete` only reset `working` workers. Fix: unconditionally reset ALL workers to idle.
+
 ### ❌ Dispatcher role must be STRICTLY a human-facing translator (No Coding bypass)
 Even for the smallest tasks like a 1-line text change or tweaking an SVG, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.
 
 **WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
-2. **Frontend APPEND_LOG:** `useStatusPolling.ts` loops `APPEND_LOG` per entry; dedup only checks last. Fix: replace with `SET_LOGS` that overwrites entire array each poll.
-3. **Worker status persists:** `task_complete` only reset `working` workers. Fix: unconditionally reset ALL workers to idle.
 
 ### ❌ Pipeline / CurrentTask Blinking
 `AnimatePresence` in `TaskInfoPanel.tsx` uses object reference as key. Polling creates new refs every 5s → exit/enter animation fires every cycle.
@@ -1238,13 +1260,7 @@ The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never ad
 `server.js` GET/POST `/api/config` reads opencode config from `templates/opencode-provider.json` (placeholder) instead of `~/.config/opencode/opencode.jsonc`. **Fix:** Change `openCodePath` to `path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc')` in both handlers.
 **User preference ("sinkron bukan merge"):** Both panels show their OWN copy of shared fields (BaseURL, API Key, Provider) with shared state. Do NOT merge panels. Both must have identical controls (Fetch Models on both).
 
-### ❌ Raw JSON textareas for configuration
-Do NOT expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save. Add "Fetch Models" buttons that hit the baseURL to auto-populate dropdowns for Model Selection. retain nested custom `provider` objects.
 
-### ❌ Dispatcher role must be STRICTLY a human-facing translator (No Coding bypass)
-Even for the smallest tasks like a 1-line text change or tweaking an SVG, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.
-
-**WARNING TO AI MODEL (HERMES/CLAUDE/OPUS/SONNET):** If you are reading this, YOU are roleplaying as the Dispatcher. YOU MUST NOT USE THE `patch`, `write_file`, or `execute_code` tools to fix code yourself. YOU MUST USE `spawn-worker.sh` to make the Engineer worker do it. EVERY SINGLE TIME. NO EXCEPTIONS. IF YOU WRITE OR FIX CODE YOURSELF, YOU ARE BREAKING THE RULES.
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
