@@ -42,36 +42,31 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
           <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">PIPELINE</h3>
         </div>
         <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-6 flex-1 shadow-lg flex flex-col relative overflow-hidden">
-          {!state.currentTask ? (
-            <div className="text-aic-text-muted font-pixel text-px-sm italic m-auto z-10 tracking-widest">[ SYSTEM IDLE ]</div>
-          ) : (
-            <div className="flex flex-col gap-6 py-2 z-10">
-              {phases.map((p, idx) => {
-                const isActive = p === state.currentPhase;
-                const currentIndex = phases.indexOf(state.currentPhase || '');
-                const isPast = currentIndex > -1 && idx < currentIndex;
-                
-                let textColor = 'text-aic-text-muted/50';
-                let icon = '○';
-                if (isActive) {
-                  textColor = 'text-aic-accent font-bold drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]';
-                  icon = '●';
-                } else if (isPast) {
-                  textColor = 'text-aic-green drop-shadow-[0_0_5px_rgba(0,255,0,0.5)]';
-                  icon = '✓';
-                }
+          <div className="flex flex-col gap-6 py-2 z-10">
+            {phases.map((p, idx) => {
+              const isActive = state.currentTask ? p === state.currentPhase : false;
+              const currentIndex = state.currentPhase ? phases.indexOf(state.currentPhase) : -1;
+              const isPast = state.currentTask && currentIndex > -1 && idx < currentIndex;
+              
+              let textColor = 'text-aic-accent/40'; // Base idle color
+              let icon = '○';
+              
+              if (isActive) {
+                textColor = 'text-aic-accent font-bold drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]'; // Neon blue
+                icon = '●';
+              } else if (isPast) {
+                textColor = 'text-aic-green drop-shadow-[0_0_8px_rgba(0,255,0,0.8)]'; // Neon green
+                icon = '✓';
+              }
 
-                return (
-                  <div key={p} className={`flex items-center gap-6 font-pixel text-px-base md:text-px-lg transition-all duration-300 ${textColor} ${isActive ? 'scale-105 ml-4' : ''}`}>
-                    <span className="w-8 text-center">{icon}</span>
-                    <span className="uppercase tracking-widest">{p}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          
+              return (
+                <div key={p} className={`flex items-center gap-6 font-pixel text-px-base md:text-px-lg transition-all duration-300 ${textColor} ${isActive ? 'scale-105 ml-4' : ''}`}>
+                  <span className="w-8 text-center">{icon}</span>
+                  <span className="uppercase tracking-widest">{p}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
