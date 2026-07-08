@@ -42,5 +42,23 @@ export const api = {
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch metrics');
     return res.json();
+  },
+
+  getTasks: async (): Promise<any[]> => {
+    const res = await fetch(`${API_BASE}/tasks`);
+    if (!res.ok) throw new Error('Failed to fetch tasks');
+    return res.json();
+  },
+
+  getTaskDetail: async (taskId: string): Promise<any> => {
+    const res = await fetch(`${API_BASE}/tasks/${taskId}`);
+    if (!res.ok) throw new Error('Failed to fetch task');
+    return res.json();
+  },
+
+  getWorkPackages: async (taskId: string): Promise<any[]> => {
+    const res = await fetch(`${API_BASE}/work-packages/${taskId}`);
+    if (!res.ok) return [];
+    return res.json();
   }
 };

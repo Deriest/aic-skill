@@ -5,11 +5,12 @@ import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { OverviewPage } from './pages/OverviewPage';
 import { ConfigPage } from './pages/ConfigPage';
 import { CostsPage } from './pages/CostsPage';
+import { HistoryPage } from './pages/HistoryPage';
 import { CRTOverlay } from './components/layout/CRTOverlay';
 import { useDashboardContext } from './context/DashboardContext';
 
 function DashboardApp() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'costs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'costs' | 'config'>('overview');
   useStatusPolling();
   
   const { state } = useDashboardContext();
@@ -41,6 +42,16 @@ function DashboardApp() {
               OVERVIEW (1)
             </button>
             <button 
+              onClick={() => setActiveTab('history')}
+              className={`font-pixel text-px-base uppercase transition-colors pb-1 ${
+                activeTab === 'history' 
+                  ? 'text-aic-accent border-b-2 border-aic-accent drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]' 
+                  : 'text-aic-text-muted hover:text-white'
+              }`}
+            >
+              HISTORY (2)
+            </button>
+            <button 
               onClick={() => setActiveTab('costs')}
               className={`font-pixel text-px-base uppercase transition-colors pb-1 ${
                 activeTab === 'costs' 
@@ -48,7 +59,7 @@ function DashboardApp() {
                   : 'text-aic-text-muted hover:text-white'
               }`}
             >
-              COSTS (2)
+              COSTS (3)
             </button>
             <button 
               onClick={() => setActiveTab('config')}
@@ -58,7 +69,7 @@ function DashboardApp() {
                   : 'text-aic-text-muted hover:text-white'
               }`}
             >
-              CONFIG (3)
+              CONFIG (4)
             </button>
           </div>
         </div>
@@ -76,6 +87,7 @@ function DashboardApp() {
       <div className="flex flex-1 overflow-hidden z-10 relative">
         <ErrorBoundary>
           {activeTab === 'overview' && <OverviewPage />}
+          {activeTab === 'history' && <HistoryPage />}
           {activeTab === 'costs' && <CostsPage />}
           {activeTab === 'config' && <ConfigPage />}
         </ErrorBoundary>

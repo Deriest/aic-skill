@@ -23,3 +23,28 @@ When modernizing legacy `DashboardContext` (Context API) into direct props mappi
 When resolving Typescript Type overlaps inside React functional components, **DO NOT** use `sed` replacements (e.g. `sed -i 's/status ===/status.status ===/g'`).
 *   **Reason:** `sed` operates line-by-line and will inadvertently destroy ES6 component imports, interface brackets (`{}`), and object spread syntax resulting in broken TSX files (e.g. `TS1005: ';' expected`). 
 *   **Fix:** Use explicit `write_file` replacements or `patch` mode for complex React components to maintain structural integrity.
+
+## 6. Recharts Chart Pitfalls (Session 2026-07-08)
+
+### Vite Circular Chunk → Blank Screen
+`manualChunks` splitting `recharts` into a separate `ui` chunk from `vendor: ['react']` causes circular dependency. Browser refuses the circular JS = blank page. Dev mode (port 6869) works fine because Vite doesn't bundle — only production build (port 6868) breaks. FIX: merge into same chunk: `vendor: ['react', 'react-dom', 'framer-motion', 'recharts']`.
+
+### AreaChart Single Data Point
+Recharts AreaChart with only 1 data point renders as a dot, not a filled area. Use BarChart for categorical/discrete data (worker names). AreaChart is for timeseries with 2+ data points.
+
+### BarChart White Hover Background
+Recharts BarChart default cursor highlights bars on hover with light color clashing dark themes. FIX: `<Tooltip cursor={{ fill: 'transparent' }} />`.
+
+### XAxis Label Auto-Skip
+Recharts auto-skips XAxis labels when too many categories. FIX: `interval={0}` + reduce `tick={{ fontSize: 9 }}`.
+
+### Chart Type Consistency
+User prefers same chart type for all visualizations on a page. Don't mix AreaChart and BarChart without asking.
+
+## 7. Cache Hit Rate Formula
+
+**Wrong**: `cache / (input + output)` → nonsensical % (e.g. 4904%). **Correct**: `cache / (cache + input)` → valid 0-100% ratio.
+
+## 8. Prompt File Location
+
+NEVER save prompt files to `/tmp/` (cleaned up). Always save to `.aic/prompts/` inside the project directory.

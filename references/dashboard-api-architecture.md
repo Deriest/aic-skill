@@ -48,6 +48,24 @@ When `currentPhase === 'Closeout'`, ALL phases show green (task fully complete).
 State stored in `.aic/state.json`. Persists across server restarts.
 After `task-complete`, worker statuses are preserved in state.json until next `task-start`.
 
+## Task Context Persistence (new 2026-07-08)
+
+`POST /api/task-start` now creates `.aic/tasks/TASK-XXX/` with `context.json`, `state.json`, `reports/` dir.
+Phase transitions (`POST /api/task-status`) persist to task `state.json` and save `report` field to `reports/<phase>.md`.
+Worker output auto-saved to `reports/<worker>-output.md` by `spawn-worker.sh`.
+
+## Work Package Decomposition (new 2026-07-08)
+
+`POST /api/work-packages` — saves WP array to `.aic/tasks/TASK-XXX/work-packages.json`.
+`GET /api/work-packages/:taskId` — returns WPs for a task. WP status: `pending | active | complete | blocked`.
+Blocked = `depends_on` has incomplete WPs.
+
+## Dashboard Tabs (2026-07-08)
+
+Tabs: OVERVIEW (1) → HISTORY (2) → COSTS (3) → CONFIG (4)
+- **HistoryPage.tsx** — task list with expand/collapse for WP tree. INTERRUPTED = red `#ff0000` badge (NOT yellow). RESUME button triggers `/api/task-status`. Uses `bg-aic-bg-panel`, `font-pixel`, `text-px-base` per theme.
+- **api/index.ts** — added `getTasks()`, `getTaskDetail(taskId)`, `getWorkPackages(taskId)`.
+
 ## Config Page
 
 Both `.env` and `opencode.jsonc` panels are mirror-identical. Fields: PROVIDER_ID, BASEURL, API_KEY (masked), FETCH_MODELS, MODEL_THINKER/CRAFTER/SPRINTER.

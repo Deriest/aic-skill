@@ -103,6 +103,51 @@ Returns analytics by task type.
 {"feature":{"count":10,"avgTime":"0s","avgSeconds":0,"successRate":1},"chore":{"count":12,...}}
 ```
 
+## Task Context Persistence (2026-07-08)
+
+### POST /api/task-start (updated)
+Now creates `.aic/tasks/TASK-XXX/` directory with:
+```
+.aic/tasks/TASK-XXX/
+  context.json   — {taskId, title, description, classification, userRequirement, createdAt}
+  state.json     — {phase, status, lastActivity, workers}
+  reports/       — folder for phase reports
+```
+Accepts additional optional fields: `description`, `classification`, `userRequirement`.
+
+### POST /api/task-status (updated)
+Now persists phase transitions to task `state.json`. If `report` field provided, saves to `reports/<phase>.md`.
+```json
+{"currentPhase": "planning", "report": "# Planning Phase Report\n..."}
+```
+
+### GET /api/tasks
+List all tasks. Returns merged context + state for each task directory.
+```json
+[{"taskId": "TASK-20260708-299", "title": "...", "phase": "planning", "status": "active", "lastActivity": "...", ...}]
+```
+
+### GET /api/tasks/:id
+Full task detail: `{context, state, reports}` where reports is a list of `.md` filenames.
+
+### GET /api/tasks/:id/context
+Just the `context.json` contents.
+
+## Work Package Decomposition (2026-07-08)
+
+### POST /api/work-packages
+Save WP decomposition from PM to task directory.
+```json
+{"taskId": "TASK-XXX", "packages": [
+  {"wp_id": "WP-01", "title": "...", "description": "...", "priority": "high", "depends_on": [], "status": "complete"},
+  {"wp_id": "WP-02", "title": "...", "description": "...", "priority": "high", "depends_on": ["WP-01"], "status": "pending"}
+]}
+```
+Saved to `.aic/tasks/TASK-XXX/work-packages.json`.
+
+### GET /api/work-packages/:taskId
+Returns work packages array for a task (or `[]` if none).
+
 ## Notes
 - Config reads `.env` at `~/.hermes/skills/workflows/aic/.env`
 - Config reads `opencode.jsonc` at `~/.config/opencode/opencode.jsonc`
