@@ -4,10 +4,10 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
   const phases = ['Investigate', 'Planning', 'Execution', 'Documentation', 'Verification'];
   
   return (
-    <div className="flex flex-col gap-6 h-full font-pixel">
+    <div className="flex flex-col gap-3 h-full font-pixel">
       {/* Current Task */}
       <div className="shrink-0 flex flex-col min-h-[220px]">
-        <div className="flex items-center gap-2 mb-3 shrink-0">
+        <div className="flex items-center gap-2 mb-2 shrink-0">
           <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
           <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">CURRENT TASK</h3>
         </div>
@@ -37,12 +37,12 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
 
       {/* Pipeline & Doodle */}
       <div className="flex-1 flex flex-col min-h-0 relative">
-        <div className="flex items-center gap-2 mb-3 shrink-0">
+        <div className="flex items-center gap-2 mb-2 shrink-0">
           <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
           <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">PIPELINE</h3>
         </div>
         <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-6 flex-1 shadow-lg flex flex-col relative overflow-hidden">
-          <div className="flex flex-col gap-6 py-2 z-10">
+          <div className="flex flex-col gap-4 py-2 z-10">
             {phases.map((p, idx) => {
               const isActive = state.currentTask ? p === state.currentPhase : false;
               const currentIndex = state.currentPhase ? phases.indexOf(state.currentPhase) : -1;
@@ -60,7 +60,7 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
               }
 
               return (
-                <div key={p} className={`flex items-center gap-6 font-pixel text-px-base md:text-px-lg transition-all duration-300 ${textColor} ${isActive ? 'scale-105 ml-4' : ''}`}>
+                <div key={p} className={`flex items-center gap-4 font-pixel text-px-base md:text-px-lg transition-all duration-300 ${textColor} ${isActive ? 'scale-105 ml-4' : ''}`}>
                   <span className="w-8 text-center">{icon}</span>
                   <span className="uppercase tracking-widest">{p}</span>
                 </div>
