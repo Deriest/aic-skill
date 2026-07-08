@@ -1,288 +1,240 @@
-# AIC Multi-Repo & Hierarchical Worker Plan
+# AIC Multi-Repo & Delegation Plan (v2)
 
-## Problem
+## Core Concept: Delegation, Not Specialization
 
-Current AIC is single-tenant:
-- 1 `state.json` → 1 task, 1 pipeline, 1 set of workers
-- Workers are flat (no hierarchy, no delegation)
-- No concept of "which repo is this task for"
-- Everything commits to main (no branch workflow)
-
-## Target Architecture
+The 10 workers (PM, Architect, Frontend, etc.) are **HEAD OF** departments.
+Each HEAD can spawn **N sub-workers with identical capabilities**.
+HEAD distributes tasks by **scope** (files, modules, features), not by skill.
 
 ```
-User
- └── Dispatcher (Hermes)
-      └── Multi-Repo Router
-           ├── Repo A: feature/TASK-001
-           │    ├── PM (HEAD) → spawns: Researcher, Analyst
-           │    ├── Architect (HEAD) → spawns: Designer, DB Specialist
-           │    ├── Frontend Lead (HEAD) → spawns: CSS Dev, React Dev, A11y Tester
-           │    ├── Backend Lead (HEAD) → spawns: API Dev, Auth Specialist
-           │    ├── QA Lead (HEAD) → spawns: Unit Tester, E2E Tester, Security Auditor
-           │    └── Governor (HEAD) → spawns: Compliance Officer
-           │
-           └── Repo B: feature/TASK-002
-                ├── PM (HEAD) → ...
-                └── ...
+Dispatcher (Hermes)
+ ├── PM (HEAD) → spawn N PM-sub → distribute by scope → consolidate report
+ ├── Architect (HEAD) → spawn N Arch-sub → distribute by scope → consolidate report
+ ├── Frontend (HEAD) → spawn N FE-sub → distribute by files → consolidate report
+ ├── Backend (HEAD) → spawn N BE-sub → distribute by modules → consolidate report
+ ├── QA (HEAD) → spawn N QA-sub → distribute by test areas → consolidate report
+ └── Governor (HEAD) → spawn N Gov-sub → distribute by review scope → consolidate report
 ```
 
-## Core Concepts
+## Flow Example
 
-### 1. Repo Registry
+```
+User: "Refactor authentication system"
+
+Dispatcher → PM
+  PM analyzes scope: auth has 5 areas (login, signup, token, session, middleware)
+  PM spawns 5 sub-workers:
+    PM-Sub-1: investigate login flow (login.ts, LoginForm.tsx)
+    PM-Sub-2: investigate signup flow (signup.ts, SignupForm.tsx)
+    PM-Sub-3: investigate token management (jwt.ts, tokenStore.ts)
+    PM-Sub-4: investigate session handling (session.ts, middleware.ts)
+    PM-Sub-5: investigate dependencies (package.json, auth libs)
+  
+  Each sub-worker:
+    - Has SAME tools as PM (read, search, analyze)
+    - Works on assigned scope only
+    - Reports back to PM
+  
+  PM consolidates:
+    - Merges 5 sub-reports into 1 Investigation Report
+    - Identifies cross-cutting concerns
+    - Sends to Dispatcher
+
+Dispatcher → Architect
+  Architect receives consolidated Investigation Report
+  Architect analyzes: 5 areas, 12 files, 3 dependencies
+  Architect spawns 3 sub-workers:
+    Arch-Sub-1: design login + signup refactor
+    Arch-Sub-2: design token + session refactor  
+    Arch-Sub-3: design middleware + dependency updates
+  
+  Architect consolidates → Architecture Report → Dispatcher
+
+Dispatcher → Frontend Lead
+  Frontend receives Architecture Report
+  Frontend spawns 4 sub-workers:
+    FE-Sub-1: implement LoginForm.tsx + SignupForm.tsx
+    FE-Sub-2: implement token hooks + context
+    FE-Sub-3: implement session provider
+    FE-Sub-4: update middleware + tests
+  
+  Frontend consolidates → Implementation Report → Dispatcher
+
+... (same for Backend, QA, Governor)
+```
+
+## When Does HEAD Spawn Sub-Workers?
+
+**Automatic threshold:** If task scope >= 3 files or >= 2 modules, HEAD spawns sub-workers.
+
+**HEAD decision flow:**
+```
+1. HEAD receives task + report from previous phase
+2. HEAD analyzes scope (files, modules, complexity)
+3. If scope >= threshold:
+   a. HEAD defines N scopes (file groups or modules)
+   b. HEAD spawns N sub-workers via spawn-sub.sh
+   c. Each sub-worker gets explicit scope assignment
+   d. HEAD waits for all sub-workers to complete
+   e. HEAD consolidates sub-reports into single report
+4. If scope < threshold:
+   a. HEAD does work directly (no sub-workers)
+   b. HEAD submits report to Dispatcher
+```
+
+## Technical Design
+
+### 1. spawn-sub.sh (new script)
+
+```bash
+#!/usr/bin/env bash
+# Usage: spawn-sub.sh <parent_worker> <sub_id> <tier> <project_dir> <prompt_file>
+# 
+# parent_worker: who spawned this (e.g., "pm")
+# sub_id: unique ID (e.g., "pm-sub-1")
+# tier: thinker/crafter/sprinter (inherits from parent)
+# project_dir: repo path
+# prompt_file: scope-specific prompt
+#
+# Differences from spawn-worker.sh:
+# - Reports back to parent, not to Dispatcher
+# - State tracked under parent's subWorkers array
+# - Same tools/capabilities as parent
+```
+
+### 2. State Model
 
 ```json
-// .aic/repos.json
-{
-  "repos": [
-    {
-      "id": "aic-skill",
-      "name": "AIC Skill",
-      "path": "~/.hermes/skills/workflows/aic",
-      "branch": "main",
-      "active": true
-    },
-    {
-      "id": "my-app",
-      "name": "My Application",
-      "path": "/home/tvd/projects/my-app",
-      "branch": "main",
-      "active": true
-    }
-  ]
-}
-```
-
-### 2. Task State (multi-task)
-
-```json
-// .aic/state.json
 {
   "tasks": {
-    "TASK-20260708-001": {
-      "id": "TASK-20260708-001",
-      "title": "Fix login bug",
+    "TASK-001": {
+      "id": "TASK-001",
+      "title": "Refactor auth",
       "repo": "my-app",
-      "branch": "feature/TASK-20260708-001",
+      "branch": "feature/TASK-001",
       "phase": "Execution",
       "status": "active",
       "workers": {
-        "pm": { "status": "complete", "sub": ["researcher-1"] },
-        "architect": { "status": "complete", "sub": [] },
-        "frontend": { "status": "working", "sub": ["css-dev-1", "react-dev-1"] },
-        "backend": { "status": "idle", "sub": [] },
-        "qa": { "status": "idle", "sub": [] },
-        "governor": { "status": "idle", "sub": [] }
+        "pm": {
+          "status": "complete",
+          "subWorkers": [
+            { "id": "pm-sub-1", "scope": "login flow", "status": "complete" },
+            { "id": "pm-sub-2", "scope": "signup flow", "status": "complete" },
+            { "id": "pm-sub-3", "scope": "token mgmt", "status": "complete" },
+            { "id": "pm-sub-4", "scope": "session", "status": "complete" },
+            { "id": "pm-sub-5", "scope": "dependencies", "status": "complete" }
+          ]
+        },
+        "architect": {
+          "status": "working",
+          "subWorkers": [
+            { "id": "arch-sub-1", "scope": "login+signup design", "status": "working" },
+            { "id": "arch-sub-2", "scope": "token+session design", "status": "working" },
+            { "id": "arch-sub-3", "scope": "middleware+deps", "status": "idle" }
+          ]
+        },
+        "frontend": { "status": "idle", "subWorkers": [] },
+        "backend": { "status": "idle", "subWorkers": [] },
+        "qa": { "status": "idle", "subWorkers": [] },
+        "governor": { "status": "idle", "subWorkers": [] }
       }
-    },
-    "TASK-20260708-002": {
-      "id": "TASK-20260708-002",
-      "title": "Add dark mode",
-      "repo": "aic-skill",
-      "branch": "feature/TASK-20260708-002",
-      "phase": "Planning",
-      "status": "queued",
-      "workers": { ... }
-    }
-  },
-  "globalWorkers": {
-    "dispatcher": { "status": "working", "currentTask": "TASK-20260708-001" }
-  }
-}
-```
-
-### 3. Worker Hierarchy
-
-```json
-// .aic/workers.json — defines who can spawn whom
-{
-  "hierarchy": {
-    "dispatcher": {
-      "spawns": ["pm", "architect", "frontend", "backend", "qa", "governor", "infra"],
-      "tier": "session"
-    },
-    "pm": {
-      "spawns": ["researcher", "analyst"],
-      "tier": "thinker"
-    },
-    "architect": {
-      "spawns": ["designer", "db-specialist", "security-architect"],
-      "tier": "thinker"
-    },
-    "frontend": {
-      "spawns": ["css-dev", "react-dev", "a11y-tester"],
-      "tier": "crafter"
-    },
-    "backend": {
-      "spawns": ["api-dev", "auth-specialist", "db-engineer"],
-      "tier": "crafter"
-    },
-    "qa": {
-      "spawns": ["unit-tester", "e2e-tester", "security-auditor"],
-      "tier": "sprinter"
-    },
-    "governor": {
-      "spawns": ["compliance-officer"],
-      "tier": "crafter"
     }
   }
 }
 ```
 
-## Implementation Plan
+### 3. Dashboard Visualization
 
-### Phase 1: Multi-Repo Foundation (Core)
-
-**Files to change:**
-- `server.js` — multi-task state management
-- `state.json` → array of tasks instead of single task
-- New: `repos.json` — repo registry
-
-**API Changes:**
 ```
-POST /api/repo-register     — register a new repo
-GET  /api/repos              — list registered repos
-POST /api/task-start         — now requires repo ID
-GET  /api/tasks              — list all active tasks
-GET  /api/tasks/:id          — get specific task status
-POST /api/task-queue         — queue task for different repo
+┌──────────────────────────────────────────────┐
+│ Task: Refactor auth    Phase: Execution      │
+│ Repo: my-app    Branch: feature/TASK-001     │
+├──────────────────────────────────────────────┤
+│                                              │
+│  ┌─────────────────────────────────────┐    │
+│  │ PM ✓ complete                       │    │
+│  │  ├─ pm-sub-1 ✓ login flow           │    │
+│  │  ├─ pm-sub-2 ✓ signup flow          │    │
+│  │  ├─ pm-sub-3 ✓ token mgmt          │    │
+│  │  ├─ pm-sub-4 ✓ session              │    │
+│  │  └─ pm-sub-5 ✓ dependencies         │    │
+│  └─────────────────────────────────────┘    │
+│                                              │
+│  ┌─────────────────────────────────────┐    │
+│  │ Architect ● working                 │    │
+│  │  ├─ arch-sub-1 ● login+signup design│    │
+│  │  ├─ arch-sub-2 ● token+session      │    │
+│  │  └─ arch-sub-3 ○ middleware+deps    │    │
+│  └─────────────────────────────────────┘    │
+│                                              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
+│  │ Frontend │ │ Backend  │ │    QA    │    │
+│  │ ○ idle   │ │ ○ idle   │ │ ○ idle   │    │
+│  └──────────┘ └──────────┘ └──────────┘    │
+└──────────────────────────────────────────────┘
 ```
 
-**Key changes:**
-- `currentTask` → `tasks` object (map of task ID → task state)
-- Each task owns its own phase + worker states
-- Workers can be assigned to specific tasks
-- Global workers (dispatcher) shared across tasks
+### 4. Report Consolidation
+
+Each HEAD worker consolidates sub-reports:
+
+```markdown
+## PM Investigation Report (CONSOLIDATED)
+
+### Sub-Worker Reports
+1. **pm-sub-1 (login flow):** Found 3 files, 2 issues...
+2. **pm-sub-2 (signup flow):** Found 2 files, 1 issue...
+3. **pm-sub-3 (token mgmt):** Found 4 files, 5 issues...
+4. **pm-sub-4 (session):** Found 2 files, 0 issues...
+5. **pm-sub-5 (dependencies):** Found 3 outdated libs...
+
+### Cross-Cutting Concerns
+- Token and session are tightly coupled (shared middleware)
+- Login and signup share validation logic
+
+### Acceptance Criteria
+- [ ] All auth flows use centralized token store
+- [ ] Session middleware handles both login and signup
+- [ ] Dependencies updated to latest stable
+```
+
+## Implementation Phases
+
+### Phase 1: Multi-Repo Foundation
+- Repo registry (`repos.json`)
+- Multi-task state (`state.json` → tasks object)
+- API: `/api/repo-register`, `/api/repos`, `/api/tasks`
+- `task-start` requires repo ID
 
 ### Phase 2: Git Branch Workflow
-
-**Files to change:**
-- `spawn-worker.sh` — auto-create branch before spawn
-- `server.js` — track branch per task
-- Governor prompt — no longer commits, asks Dispatcher
-
-**Workflow:**
-```
-1. Dispatcher: git checkout -b feature/TASK-xxx
-2. Worker commits to branch (not main)
-3. Governor reviews (no commit)
-4. Dispatcher asks user:
-   - commit to main?
-   - commit to branch?
-   - merge branch to main?
-5. User answers → Dispatcher executes git
-```
-
-### Phase 3: Hierarchical Workers
-
-**Files to change:**
-- `spawn-worker.sh` — support nested spawning
-- `server.js` — track parent-child worker relationships
-- `workers.json` — hierarchy definition
-- New: `sub-spawn.sh` — HEAD worker spawns sub-worker
-
-**Sub-spawn flow:**
-```
-1. Dispatcher spawns Frontend Lead (HEAD)
-2. Frontend Lead analyzes task scope
-3. If scope >= 3 files:
-   a. Frontend Lead calls sub-spawn.sh
-   b. sub-spawn.sh creates: css-dev-1, react-dev-1
-   c. Each sub-worker gets explicit file assignment
-   d. Sub-workers run in parallel
-4. Frontend Lead collects sub-worker reports
-5. Frontend Lead submits consolidated report to Dispatcher
-```
-
-**State tracking:**
-```json
-{
-  "frontend": {
-    "status": "working",
-    "subWorkers": [
-      { "id": "css-dev-1", "files": ["styles.css", "theme.css"], "status": "complete" },
-      { "id": "react-dev-1", "files": ["Login.tsx"], "status": "working" }
-    ]
-  }
-}
-```
-
-### Phase 4: Dashboard Multi-Repo UI
-
-**New components:**
-- `RepoSelector.tsx` — dropdown/tab to switch between repos
-- `TaskQueue.tsx` — show queued tasks per repo
-- `WorkerTree.tsx` — hierarchical view (HEAD → sub-workers)
-- `BranchStatus.tsx` — show current branch per task
-
-**Layout:**
-```
-┌─────────────────────────────────────────────┐
-│ [Repo A ▼]  [Repo B]  [Repo C]             │ ← RepoSelector
-├─────────────────────────────────────────────┤
-│ Pipeline: Investigate → Plan → Exec → ...   │
-│ Task: "Fix login bug"  Branch: feature/xxx  │
-├─────────────────────────────────────────────┤
-│ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐           │
-│ │ PM  │ │ARCH │ │FE   │ │ QA  │           │
-│ │ Aria│ │Atlas│ │ Leo │ │ Eve │           │
-│ └─────┘ └─────┘ └──┬──┘ └─────┘           │
-│                     │                       │
-│              ┌──────┼──────┐                │
-│              │      │      │                │
-│           ┌─────┐┌─────┐┌─────┐            │
-│           │CSS  ││React││A11y │            │ ← Sub-workers
-│           │Dev 1││Dev 1││Test │            │
-│           └─────┘└─────┘└─────┘            │
-├─────────────────────────────────────────────┤
-│ Task Queue:                                 │
-│  [ ] TASK-002: Add dark mode (Repo B)       │
-│  [ ] TASK-003: Fix API (Repo A)             │
-└─────────────────────────────────────────────┘
-```
-
-## Migration Path
-
-### Step 1: Refactor state.json (non-breaking)
-- Change from flat `{currentTask, workers}` to `{tasks: {}, globalWorkers: {}}`
-- Backward compatible: if `tasks` missing, treat as single-task legacy mode
-
-### Step 2: Add repo registry
-- Create `repos.json`
-- Add `/api/repo-register` and `/api/repos` endpoints
-- `task-start` now accepts `repo` parameter
-
-### Step 3: Git branch integration
-- `spawn-worker.sh` creates branch if not exists
+- Auto-create branch per task (`feature/TASK-xxx`)
 - Workers commit to branch
-- Governor no longer commits
-- Dispatcher asks user for git decisions
+- Governor no-commit (Dispatcher asks user)
+- User controls: commit main, commit branch, merge
 
-### Step 4: Hierarchical spawning
-- Create `workers.json` with hierarchy
-- Create `sub-spawn.sh` for HEAD workers
-- Update state to track parent-child relationships
+### Phase 3: Sub-Worker Spawning
+- `spawn-sub.sh` — same capabilities as parent
+- HEAD analyzes scope, decides N
+- HEAD distributes by file/module groups
+- HEAD waits + consolidates reports
+- State tracks parent-child relationships
 
-### Step 5: Dashboard multi-repo UI
-- Add RepoSelector component
-- Add TaskQueue component
-- Add WorkerTree component
-- Add BranchStatus component
+### Phase 4: Dashboard Multi-Repo + Tree UI
+- RepoSelector (tabs/dropdown)
+- WorkerTree (expandable: HEAD → sub-workers)
+- TaskQueue (pending tasks per repo)
+- BranchStatus (current branch per task)
 
-## Risk Assessment
+## File Changes Summary
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| State migration breaks existing tasks | HIGH | Backward compatible migration, legacy mode fallback |
-| Nested spawning causes process explosion | MEDIUM | Max depth=2 (HEAD → sub), max 3 sub-workers per HEAD |
-| Multi-task concurrency causes race conditions | MEDIUM | Mutex on state.json, task-scoped worker pools |
-| Dashboard complexity explosion | LOW | Incremental UI, start with repo selector only |
-
-## Success Criteria
-
-- [ ] Register 2+ repos, each with independent tasks
-- [ ] Task A in Repo A runs concurrently with Task B in Repo B
-- [ ] Frontend Lead spawns 2 sub-workers for large task
-- [ ] Governor approves without committing
-- [ ] User chooses: commit main, commit branch, or merge
-- [ ] Dashboard shows per-repo pipeline + worker tree
+| File | Change | Phase |
+|------|--------|-------|
+| `server.js` | Multi-task state, repo registry, sub-worker endpoints | 1, 3 |
+| `state.json` | Tasks object, subWorkers arrays | 1, 3 |
+| New: `repos.json` | Repo registry | 1 |
+| New: `spawn-sub.sh` | Sub-worker spawner | 3 |
+| `spawn-worker.sh` | Branch creation, no-commit mode | 2 |
+| `OverviewPage.tsx` | WorkerTree component | 4 |
+| New: `RepoSelector.tsx` | Multi-repo tabs | 4 |
+| New: `TaskQueue.tsx` | Queued tasks list | 4 |
+| New: `BranchStatus.tsx` | Branch info per task | 4 |
