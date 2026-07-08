@@ -956,6 +956,9 @@ terminal(command='curl -s -X POST http://localhost:6868/api/phase-complete')
 
 ## Pitfalls
 
+- **Worker Status:** When a worker finishes in `spawn-worker.sh`, POST status as `complete`, NOT `idle`. Resetting to `idle` prevents the UI from showing 'Complete'.
+- **Git & `.aic/`:** `.aic/` MUST be in `.gitignore`. `git reset --hard` will permanently destroy the user's local DB if untracked.
+- **Auto-Start Args:** Do NOT pass `$API_PORT` to `node scripts/server.js` unless it parses `process.argv`; it will crash hardcoded servers.
 - **`/api/task-start` endpoint was missing (fixed 2026-07-08)** — Dispatcher calls returned `{"error":"not found"}`, `currentTask` never set. The handler now exists: sets `currentTask`, resets workers to idle, clears `currentPhase`.
 - **`task-complete` must NOT reset `currentTask` (fixed 2026-07-08)** — user wants last task visible on dashboard until new task arrives. Only `task-start` clears/replaces `currentTask`.
 - **Haiku (sprinter) confused by complex multi-report prompts** — Governor responded "I see you've provided a file path" when given 4 reports. Fix: use Opus (thinker) for Governor, include explicit action steps.
