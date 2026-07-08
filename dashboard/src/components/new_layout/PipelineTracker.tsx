@@ -13,7 +13,7 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
         </div>
         <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-5 flex-1 shadow-lg relative overflow-hidden flex flex-col">
           {!state.currentTask ? (
-            <span className="text-aic-text-muted font-pixel text-px-sm italic m-auto">NO ACTIVE TASK</span>
+            <span className="text-aic-text-muted font-pixel text-px-sm italic m-auto tracking-widest">[ WAITING FOR TASK ]</span>
           ) : (
             <div className="flex flex-col h-full">
               <div className="flex justify-between items-start mb-2 shrink-0">
@@ -43,7 +43,7 @@ export function PipelineTracker({ state }: { state: DashboardState }) {
         </div>
         <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-6 flex-1 shadow-lg flex flex-col relative overflow-hidden">
           {!state.currentTask ? (
-            <div className="text-aic-text-muted font-pixel text-px-sm italic m-auto z-10">NO PIPELINE</div>
+            <div className="text-aic-text-muted font-pixel text-px-sm italic m-auto z-10 tracking-widest">[ SYSTEM IDLE ]</div>
           ) : (
             <div className="flex flex-col gap-6 py-2 z-10">
               {phases.map((p, idx) => {
