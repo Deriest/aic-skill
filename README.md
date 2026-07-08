@@ -1,66 +1,55 @@
-# AIC — AI Engineering Company
+# AI Engineering Company (AIC)
 
-**Strict 5-Phase AI Orchestration System for Hermes Agent**
+AIC is a multi-agent orchestration framework ported from OpenClaw, allowing you to run a 10-person AI software development firm locally via the Hermes Desktop app.
 
-AIC transforms your Hermes agent into a Dispatcher — a front-facing AI engineering manager. When you assign a task in natural language, the Dispatcher rigorously enforces a strict, **non-negotiable 5-phase lifecycle** (Investigate → Planning → Execution → Documentation → Verification) utilizing specialized AI workers. 
+## The Team
 
-**Zero bypasses. Consistent output. Pure Virtual Office.**
+| # | Role | Name | Tier | Focus |
+|---|------|------|------|-------|
+| 1 | **Dispatcher** (You) | Hermes | Orchestrator | User communication, task classification, pipeline routing. |
+| 2 | **PM** | Aria | Thinker | Natural language translation, user stories, structured specs. |
+| 3 | **Researcher** | Sage | Crafter | Evidence, API docs validation, competitor analysis. |
+| 4 | **Designer** | Luna | Crafter | UX/UI specs, layouts, visual consistency. |
+| 5 | **Architect** | Atlas | Thinker | System design, database schemas, tech stack tradeoffs. |
+| 6 | **Frontend** | Leo | Crafter | React, Vite, Tailwind, UI implementation. |
+| 7 | **Backend** | Hugo | Crafter | Node, Python, APIs, database logic. |
+| 8 | **Infra** | Flint | Crafter | Deployment, CI/CD, Docker, scripts. |
+| 9 | **QA** | Eve | Sprinter | Testing, validation, defect reporting. |
+| 10| **Governor** | Rex | Crafter | Safety, policy compliance, final approval. |
 
----
+## The Pipeline
 
-## 🎯 The 5-Phase Strict Lifecycle 
+Every task strictly follows a 5-phase sequential lifecycle:
+`Investigate` → `Planning` → `Implementation` → `Verification` → `Closeout`
 
-Every task MUST progress through these 5 phases in exact order. The internal API server blocks any worker from operating out of turn.
+## Features
 
-1. **Investigate:** Dispatcher & Researcher analyze the request and read context. *(Engineers blocked)*
-2. **Planning:** PM, Designer, and Architect formulate specifications and requirements. *(Engineers blocked)*
-3. **Execution:** Frontend, Backend, and Infra Engineers write the actual code.
-4. **Documentation:** Engineers finalize docs, READMEs, and changelogs.
-5. **Verification:** QA and Governor test the code and ensure compliance.
+- **Context Persistence:** Tasks are saved to `.aic/tasks/TASK-XXX/` with full phase context and state.
+- **WP Decomposition:** PM can break down large projects into dependency-tracked Work Packages.
+- **Resume Flow:** Interruptions or server crashes are safely preserved. Type `aic continue` to resume.
+- **Token Tracking:** Detailed cost tracking (cache hits, input/output) mapped per worker.
 
-## 🚀 How to Run
+## The Dashboard
 
-```bash
-# 1. Install or clone the repository
-git clone https://github.com/Deriest/aic-skill.git ~/.hermes/skills/workflows/aic
+The Control Plane Dashboard runs locally on port `6868`.
 
-# 2. Start the Virtual Office Dashboard & Server
-cd ~/.hermes/skills/workflows/aic
-./aic dashboard
-```
+### Overview
+Live pipeline tracking and worker grid visualization.
+![Dashboard Overview](./dashboard-overview.png)
 
-Upon starting, the CLI will:
-1. Auto-update from GitHub.
-2. Spin up the Control Plane API & Virtual Office (port `6868`).
-3. Verify your `opencode.jsonc` provider setup.
-4. Greet you via the Dispatcher!
+### History
+Persistent task tracking, interrupted run recovery, and Work Package dependency trees.
+![Dashboard History](./dashboard-history.png)
 
-## 💬 Usage (Agentic Workflow)
+### Costs
+Per-worker token usage, cache hit rate tracking, and time-filtered metrics.
+![Dashboard Costs](./dashboard-costs.png)
 
-After running `./aic dashboard`, **you do not need the CLI anymore.**
-Switch to your Hermes Agent chat:
+## Known Limitations & Mitigation
 
-1. Type `/aic` to activate the Dispatcher.
-2. Chat naturally: *"Tolong buatin fitur login dong."* or *"Fix the styling bug on the header."*
-3. The Dispatcher (Hermes) will respond in your language and start orchestrating the workers.
-4. Watch the progress live on the **Virtual Office Dashboard (http://localhost:6868)**.
-
----
-
-## 🏢 Dashboard: Pure Virtual Office
-
-The dashboard is intentionally stripped down to keep things simple:
-- **Office Floor:** Visual representation of which worker is currently 'working', 'idle', or 'blocked'.
-- **Pipeline Tracker:** Live status showing exactly which of the 5 phases the current task is in.
-- **Config Editor:** Live `.env` and `opencode.jsonc` modifier (change providers on the fly without restarting).
-
-*No noisy activity logs, no redundant pages. Just the essential control plane.*
-
-## ⚙️ Dependencies
-
-- Hermes Agent
-- OpenCode CLI (`npm i -g @opencode/cli`)
-- Node.js (v18+)
-
-## 📜 License
-MIT
+| Issue | Workaround |
+|-------|------------|
+| **Worker Context Bleed** (Worker tries to do another worker's job) | The Dispatcher (`spawn-worker.sh`) injects strict Role bounding (SOUL prompts) per worker. Do not manually spawn workers using `delegate_task`; always use `spawn-worker.sh` so role boundaries are enforced. |
+| **Pipeline bypass** (Skipping PM/Architect for "simple" bugs) | The API rejects Out-of-Order execution. A bugfix must still pass through PM (for regression notes) and QA (for validation). Enforced by `/api/agent-status` lifecycle guard. |
+| **Missing Context.json on Resume** | Older tasks (pre-persistence feature) won't have context. Run new tasks via `/api/task-start`. |
+| **Dashboard Blank Screen in Prod** | Rollup circular dependency with Recharts. Fixed via Vite vendor chunking in `vite.config.ts`. Do not import heavy UI libraries dynamically. |
