@@ -35,9 +35,9 @@ The SOP is absolute:
 1. **Investigate:** Handoff to PM / Researcher to parse requirements.
 2. **Planning:** Handoff to Architect / Designer for technical design.
 3. **Execution:** Handoff to Frontend / Backend / Infra for coding.
-4. **Verification:** Handoff to QA for testing.
-5. **Documentation:** Handoff to Governor for final review.
-You MUST orchestrate this sequence. If the task is just "change a word", the PM must still plan it, the Engineer must change it, and QA must verify it. DO NOT perform the work or skip phases. You orchestrate. The workers execute.
+4. **Verification:** Handoff to QA for testing. (Mandatory for ALL tasks).
+5. **Documentation:** Handoff to Governor for final review. (Mandatory for ALL tasks).
+You MUST orchestrate this sequence. If the task is just "change a word", the PM must still plan it, the Engineer must change it, QA must verify it, and Governor must review it. DO NOT perform the work or skip phases. You orchestrate. The workers execute.
 
 If you violate this, the user will see it and lose trust in the system. Every code change — no matter how small — goes through `opencode run` to the appropriate worker.
 
@@ -914,6 +914,7 @@ If the agents map filters idle workers, the frontend loses the explicit idle ref
 
 ### ❌ Dispatcher role must be STRICTLY a human-facing translator
 See ⛔ ABSOLUTE RULE at the top. User corrections archived there.
+*(Update 2026-07-08: Even for the smallest tasks like a 1-line text change, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.)*
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
@@ -1057,20 +1058,22 @@ The spam has THREE root causes that must ALL be fixed. See `references/dashboard
 `MERGE_STATUS` reducer merges agents with existing state. If a worker was ever set to `working` and not explicitly reset, it persists across polls.
 **Fix:** `task_complete` must unconditionally reset ALL workers. See `references/dashboard-bug-patterns.md` #4.
 
-### ❌ Dispatcher Status triggers [reset] spam
-Setting `{"agent":"dispatcher","status":"working"}` caused spam. Root cause (verified 2026-07-07): zombie `watchdogd` background process + stale state cache.
-**Fix:** Kill rogue processes (`pkill -9 -f watchdog; pkill -9 curl`), delete `.aic/state.json` and `.aic/audit.json`, restart dashboard. Dispatcher stays `WORKING` during `/aic` session.
+### ❌ Current Task & Pipeline Placeholder Text
+When the pipeline is idle (no active task running), the UI uses pixel-art placeholder text (`[ WAITING FOR TASK ]` and `[ SYSTEM IDLE ]`) rather than empty boxes.
+**Fix:** The pipeline state and task details are fully data-driven from the backend API `/api/status`. The Dispatcher does not need to manually generate or spoof task text during idle periods; the UI handles the placeholders inherently. (Verified 2026-07-08: Pipeline phases are now always visible with neon blue/green states, even when idle.)
 
 ### ❌ Node server crashes with ENOENT during Dashboard Rebuilds
 When running `npm run build` in the Vite dashboard directory, the `dist/index.html` file is temporarily deleted. If the backend `server.js` receives a request and attempts an SPA fallback at that exact moment, reading the missing file throws an unhandled `ENOENT` exception, silently killing the background server.
 **Fix:** The static file handler in `server.js` must double-check `if (!fs.existsSync(filePath))` on the fallback `index.html` and return an HTTP 503 gracefully (e.g., "Dashboard is building") instead of crashing.
 
-### ❌ Dashboard UI Bloat (Fixed Pipeline/Grid Overflow)
+### ❌ Dashboard UI Bloat & Alignment (Config Page & Overview)
 The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never add Chat UIs, Activity Logs, Task Input forms, or stand-alone `/workers` pages to the dashboard. The Dispatcher (Hermes TUI) handles all communication.
-**Fix:** Keep the dashboard focused on visual state polling (via `/api/status`) and basic config editing (via `/api/config`). See `references/dashboard-architecture.md`.
+**Fix (Config Page 2026-07-08):** Do not expose raw `.env` or `opencode.jsonc` files as plain `<textarea>` inputs for configuration. They are error-prone and unintuitive. Always build structured form UIs (side-by-side grids, specific inputs for Base URL, API Key) that parse the raw files into state, let the user edit visually, and re-serialize back to the files on save.
+**Fix (Overview 2026-07-08):** Keep spacing tight between the navbar and the main content boxes. Remove redundant title text like "OVERVIEW" to maximize vertical space for the pixel-art assets. Use flexbox centering to align icons (▶) perfectly with text baselines, and enforce SVG constraints (`preserveAspectRatio="xMidYMid slice"`) to prevent animation spill-over.
 
 ### ❌ Dispatcher role must be STRICTLY a human-facing translator
 See ⛔ ABSOLUTE RULE at the top. User corrections archived there.
+*(Update 2026-07-08: Even for the smallest tasks like a 1-line text change, NEVER fast-forward or bypass the 5-phase strict lifecycle. You must go through Investigate, Planning, Execution, Verification, and Documentation with their respective workers. Bypassing ruins the orchestration logic and trust in the pipeline.)*
 
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
@@ -1129,12 +1132,7 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 15. **Retry on failure** — max 5 retries with exponential backoff (5s, 10s, 20s, 40s, 80s). Report each retry. If all fail → report to Operator.
 16. **Batch PM + Architect** — for feature/architecture types, spawn both in parallel (`background=true`). PM writes `requirements.md`, Architect writes `ARCHITECTURE.md`. Wait for both before next phase.
 17. **Coding worker split** — when task scope >= 3 files, Frontend/Backend can be SPLIT into 2-3 sub-agents with explicit file assignments. Max 3 concurrent.
-18. **Governor skip for visual/trivial tasks** — skip Governor when:
-    - task.type == "feature-visual" (UI/color/layout changes only)
-    - task.type == "bugfix-trivial" (typos, spacing, one-liner fixes)
-    - task.type == "documentation" (README, comments, docstrings)
-    - QA PASS = auto-approve for these types
-    - Governor still mandatory for: security-sensitive tasks, infrastructure, auth, database, deploy
+18. **QA & Governor are MANDATORY** — NEVER skip QA or Governor. Every task, regardless of type (even feature-visual or trivial bugfix), MUST pass through Verification (QA) and Documentation (Governor) before closing.
 19. **Context pre-paste** — before spawning workers, gather project context: `bash ~/.hermes/skills/workflows/aic/scripts/context-gather.sh <project_dir> --tier <thinker|crafter|sprinter>`. Tier sets context depth + cap automatically. Pipe output into the CONTEXT field of the task handoff.
 20. **Use the task queue** — when a task is active and user sends another, enqueue it (`POST /api/task-enqueue` with priority). Do NOT reject or lose user requests. Auto-dequeue starts the next task when current completes.
 21. **Snapshot before editing** — before Engineers start modifying files, run `bash ~/.hermes/skills/workflows/aic/scripts/rollback.sh snapshot <TASK_ID> <file1> [file2...]`. On pipeline failure, `rollback.sh restore <TASK_ID>`. On success, `rollback.sh cleanup <TASK_ID>`.
@@ -1147,6 +1145,7 @@ For the AIC improvement roadmap, see **`references/aic-roadmap.md`**.
 - **`references/dashboard-pitfalls.md`** — State sync, UI crash prevention, and API polling constraints for the React/Node dashboard.
 - **`references/dashboard-pitfalls.md`** — State sync, UI crash prevention, and API polling constraints for the React/Node dashboard.
 - **`references/dashboard-bug-patterns.md`** — Known bugs and fixes for the AIC dashboard: idle stuck, log dedup, UI layout. Component quick reference and port mapping (Vite=6969, API=6868).
+- **`references/ui-server-pitfalls.md`** — Crucial fixes for Node.js ENOENT crashes during Vite builds, SVG preserveAspectRatio scaling, and optical alignment tricks.
 - **`references/pitfalls-history.md`** — Full historical anecdotes and detailed troubleshooting stories behind all Pitfalls rules.
 - **`references/opencode-custom-provider.md`** — OpenCode custom provider configuration for OpenAI-compatible proxies.
 - **`scripts/test-api.sh`** — Smoke tests for the Status API (25 assertions, all 9 endpoints). Run: `bash scripts/test-api.sh`. Requires server on port 6868.
