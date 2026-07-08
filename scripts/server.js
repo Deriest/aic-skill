@@ -158,11 +158,11 @@ const server = http.createServer(async (req, res) => {
     if (data.status === 'working' && agent !== 'dispatcher') {
       const phase = (state.currentPhase || '').toLowerCase();
       const PHASE_ALLOWED = {
-        investigate:    ['researcher'],
-        planning:       ['researcher', 'pm', 'designer', 'architect'],
-        execution:      ['researcher', 'pm', 'designer', 'architect', 'frontend', 'backend', 'infra'],
-        documentation:  ['researcher', 'pm', 'designer', 'architect', 'frontend', 'backend', 'infra'],
-        verification:   ['researcher', 'pm', 'designer', 'architect', 'frontend', 'backend', 'infra', 'qa', 'governor'],
+        investigate:    ['pm', 'researcher'],
+        planning:       ['pm', 'researcher', 'designer', 'architect'],
+        execution:      ['pm', 'researcher', 'designer', 'architect', 'frontend', 'backend', 'infra'],
+        documentation:  ['pm', 'researcher', 'designer', 'architect', 'frontend', 'backend', 'infra', 'governor'],
+        verification:   ['pm', 'researcher', 'designer', 'architect', 'frontend', 'backend', 'infra', 'qa', 'governor'],
       };
       const allowed = PHASE_ALLOWED[phase];
       if (!allowed) {
