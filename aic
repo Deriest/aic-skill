@@ -114,7 +114,6 @@ case "$cmd" in
     ;;
 
   start|"")
-    # Read workspace path from .env
     ENV_FILE="$SKILL_DIR/.env"
     WORKSPACE=""
     if [[ -f "$ENV_FILE" ]]; then
@@ -124,6 +123,21 @@ case "$cmd" in
     if [[ -z "$WORKSPACE" || ! -d "$WORKSPACE" ]]; then
       echo "  No workspace configured. Run: ./aic setup"
       exit 1
+    fi
+
+    # Direct switch: ./aic <project-name>
+    ARG="${1:-}"
+    if [[ -n "$ARG" && -d "$WORKSPACE/$ARG" ]]; then
+      SELECTED="$WORKSPACE/$ARG/"
+      PROJECT_NAME="$ARG"
+      echo ""
+      echo -e "${GREEN}  Switched to: ${PROJECT_NAME}${NC}"
+      echo "  Path: ${SELECTED}"
+      set_env "AIC_ACTIVE_PROJECT" "$SELECTED" "$ENV_FILE"
+      set_env "AIC_ACTIVE_PROJECT_NAME" "$PROJECT_NAME" "$ENV_FILE"
+      echo "  Ready. Type /aic in Hermes."
+      echo ""
+      exit 0
     fi
 
     # List subfolders
