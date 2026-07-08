@@ -26,8 +26,18 @@ Am I about to use delegate_task for coding work?
   → NO  = Proceed.
 ```
 
-**What you CAN do:** Talk to user, classify tasks, hit API endpoints (`curl`), spawn workers via `opencode run`, read files for investigation.
+**What you CAN do:** Talk to user, classify tasks, hit API endpoints (`curl`), spawn workers via `opencode run` (or `spawn-worker.sh`), read files for investigation.
 **What you CANNOT do:** `write_file`, `patch`, `terminal` for code/file edits, `delegate_task` for coding. Not even "quick fixes", "one-liners", or "small tweaks". ZERO exceptions.
+
+### 🚫 STRICT PIPELINE LIFECYCLE (SOP HARGA MATI)
+You are strictly forbidden from skipping lifecycle phases, bypassing workers, or performing "shortcut" executions yourself, regardless of how trivial or small the user's request seems.
+The SOP is absolute:
+1. **Investigate:** Handoff to PM / Researcher to parse requirements.
+2. **Planning:** Handoff to Architect / Designer for technical design.
+3. **Execution:** Handoff to Frontend / Backend / Infra for coding.
+4. **Verification:** Handoff to QA for testing.
+5. **Documentation:** Handoff to Governor for final review.
+You MUST orchestrate this sequence. If the task is just "change a word", the PM must still plan it, the Engineer must change it, and QA must verify it. DO NOT perform the work or skip phases. You orchestrate. The workers execute.
 
 If you violate this, the user will see it and lose trust in the system. Every code change — no matter how small — goes through `opencode run` to the appropriate worker.
 
@@ -116,8 +126,19 @@ If `.env` does not exist, run setup: `bash ~/.hermes/skills/workflows/aic/script
 
 The setup script auto-fetches models from the proxy `/v1/models` endpoint, lets the user pick 3 models, and generates both `opencode.jsonc` and `.env`.
 
+**Second Brain / Knowledge Management (YAGNI):** Do not build complex RAG or vector DBs for worker knowledge. Place markdown files in `docs/` or `.aic/brain/` within the project. The `context-gather.sh` script automatically reads them and feeds them to workers as context.
 
-## Graceful Degradation
+### ❌ Automatic Context Limits Overrides
+`detect-context.sh` runs automatically during setup. It queries the proxy's API for the model's actual max context (or uses a fallback table), and writes exact token limits into `.env` (e.g. `AIC_CTX_THINKER_KB=800000`) based on 80/60/40% proportions.
+**Important:** Do NOT allow manual edits to `.env` to override the auto-detection logic unless the Operator explicitly asks for manual limits. The system is designed to be "full otomatis". If the user says "supaya otomatis, tidak boleh diubah-ubah", explain that `setup.sh` handles it automatically and the generated `.env` limits are final and safe.
+
+### ❌ Dashboard Auto-Start & Port 6868
+The AIC control plane dashboard is served statically from `server.js` on port `6868`. Port `6969` (Vite) is strictly for development and has been removed from production configurations.
+**Fix:** The `preflight.sh --auto-start` script now automatically opens `http://localhost:6868` in the OS browser upon successful server boot. Never direct the user to use port `6969` or ask why the dashboard didn't open — `preflight.sh` handles it.
+
+### ❌ Current Task & Pipeline Placeholder Text
+When the pipeline is idle (no active task running), the UI uses pixel-art placeholder text (`[ WAITING FOR TASK ]` and `[ SYSTEM IDLE ]`) rather than empty boxes.
+**Fix:** The pipeline state and task details are fully data-driven from the backend API `/api/status`. The Dispatcher does not need to manually generate or spoof task text during idle periods; the UI handles the placeholders inherently.
 
 If OpenCode is **NOT** installed:
 - **Thinking-only workers** (PM, Architect, Researcher, Designer, Governor) → spawn via `delegate_task` (no file I/O, analysis/specs only)
@@ -160,7 +181,7 @@ The script automatically:
 bash scripts/preflight.sh --auto-start
 ```
 
-Checks and auto-fixes: opencode installed, .env exists (runs setup.sh if missing), API server running (starts if down), dashboard built (builds if missing).
+Checks and auto-fixes: opencode installed, .env exists (runs setup.sh if missing), API server running (starts if down), dashboard built (builds if missing), and auto-opens the Dashboard in the default browser at port 6868.
 
 ### Multi-OS Support
 
@@ -727,8 +748,7 @@ The dashboard is a **full Control Plane** — React 18 + Vite 5 + TailwindCSS 3 
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| **Vite dev server** | **6969** | Serves the React UI |
-| **Status API** (Node) | 6868 | Serves all API endpoints |
+| **API & Dashboard** | **6868** | Node.js backend serving both API endpoints and the compiled React UI (`/dist`). |
 
 ### Pages
 
@@ -748,15 +768,14 @@ The dashboard is a **full Control Plane** — React 18 + Vite 5 + TailwindCSS 3 
 
 ```python
 # 1. Kill existing servers, install deps, start both, open browser
-terminal(command='fuser -k 6868/tcp 2>/dev/null; fuser -k 6969/tcp 2>/dev/null; echo "ports cleared"')
+terminal(command='fuser -k 6868/tcp 2>/dev/null; echo "ports cleared"')
 terminal(command='cd ~/.hermes/skills/workflows/aic/dashboard && [ -d node_modules ] || npm install')
 # CRITICAL: Use nohup to prevent background processes from being killed by SIGHUP/SIGTERM when shell resets
 terminal(command='nohup node ~/.hermes/skills/workflows/aic/scripts/server.js > /tmp/aic-api.log 2>&1 &', background=True)
-terminal(command='nohup npx vite --port 6969 > /tmp/aic-vite.log 2>&1 &', workdir='~/.hermes/skills/workflows/aic/dashboard', background=True)
-terminal(command='sleep 3 && (xdg-open http://localhost:6969 2>/dev/null || open http://localhost:6969 2>/dev/null || echo "Open http://localhost:6969")')
+terminal(command='sleep 3 && (xdg-open http://localhost:6868 2>/dev/null || open http://localhost:6868 2>/dev/null || echo "Open http://localhost:6868")')
 ```
 
-Dashboard: **http://localhost:6969** | API: http://localhost:6868/api/status
+Dashboard: **http://localhost:6868** | API: http://localhost:6868/api/status
 
 **Orchestrator Chat:** The web chat has been removed per user preference. All task orchestration, planning, and task generation MUST occur inside the native Hermes CLI/TUI desktop app. Do NOT direct users to use the dashboard for chatting or creating tasks. The dashboard is strictly a read-only Control Plane monitor.
 
@@ -899,7 +918,7 @@ See ⛔ ABSOLUTE RULE at the top. User corrections archived there.
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
 **Fix (2026-07-08):** To force the responsive SVG to stretch fully horizontally across the right column without vertical distortion, set `viewBox="0 0 400 96"` (or a similarly wide aspect ratio like `viewBox="0 0 240 96"`), draw a wide room background (e.g. `width="400"`), spread the room items horizontally inside the SVG (window on the far left, desk in the center, server rack/diagrams on the far right), and render the SVG with `preserveAspectRatio="none"` or `preserveAspectRatio="xMinYMax meet"` inside a wrapper containing `w-full h-[280px] shrink-0`.
-If the user requests it to align with cards like the Stats Bar, wrap it inside a card with a border (`bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative h-[280px]`). Ensure any floating elements/computers that clutter the interface are disabled or set to `null` to avoid overlap or visuals that block characters.
+If the user requests it to align with cards like the Stats Bar, wrap it inside a card with a border (`bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative h-[280px]`). Ensure any floating elements/computers that clutter the interface are disabled or set to `null` to avoid overlap or visuals that block characters. Always enforce SVG overflow constraints via inline styling (`style={{ width: "100%", height: "100%", objectFit: "cover" }}`) so animations or vectors never clip through or exceed their parent boxes.
 
 ### ❌ Computer melayang di atas worker
 Jika komputer melayang di atas kepala/meja worker terasa mengganggu dan user meminta untuk menghapusnya ("saya gamau ada komputer melayang di atas worker"), modifikasi `DeskComputer.tsx` agar mengembalikan `null` atau kosongkan kontainer monitor/keyboard melayang tersebut agar visual di panel Virtual Office bersih dan hanya menyisakan meja pekerja saja.
@@ -985,8 +1004,17 @@ Thinker head → Crafter sub-worker. Crafter head → Sprinter sub-worker. Excep
 ### ❌ context-gather.sh --tier is not optional
 Always pass `--tier thinker|crafter|sprinter` to match the worker being spawned. Without it, defaults to crafter. Tier caps are read from `.env` (set by `detect-context.sh` during setup): `AIC_CTX_THINKER_KB`, `AIC_CTX_CRAFTER_KB`, `AIC_CTX_SPRINTER_KB`. If `.env` doesn't have these, fallback: thinker=128KB, crafter=64KB, sprinter=32KB.
 
-### ❌ Context limits are auto-detected, not hardcoded
-`detect-context.sh` queries the model's actual context window (from API or known-model table) and calculates proportional limits: Thinker=80%, Crafter=60%, Sprinter=40%. This runs during setup. Never hardcode context limits — different users have different models (1M Gemini vs 128K GPT-4o vs 64K free tier). The `.env` file stores `AIC_CTX_*_KB` values that `context-gather.sh` reads at runtime.
+### ❌ Automatic Context Limits Overrides
+`detect-context.sh` runs automatically during setup. It queries the proxy's API for the model's actual max context (or uses a fallback table), and writes exact token limits into `.env` (e.g. `AIC_CTX_THINKER_KB=800000`) based on 80/60/40% proportions.
+**Important:** Do NOT allow manual edits to `.env` to override the auto-detection logic unless the Operator explicitly asks for manual limits. The system is designed to be "full otomatis". If the user says "supaya otomatis, tidak boleh diubah-ubah", explain that `setup.sh` handles it automatically and the generated `.env` limits are final and safe.
+
+### ❌ Dashboard Auto-Start & Port 6868
+The AIC control plane dashboard is served statically from `server.js` on port `6868`. Port `6969` (Vite) is strictly for development and has been removed from production configurations.
+**Fix:** The `preflight.sh --auto-start` script now automatically opens `http://localhost:6868` in the OS browser upon successful server boot. Never direct the user to use port `6969` or ask why the dashboard didn't open — `preflight.sh` handles it.
+
+### ❌ Current Task & Pipeline Placeholder Text
+When the pipeline is idle (no active task running), the UI uses pixel-art placeholder text (`[ WAITING FOR TASK ]` and `[ SYSTEM IDLE ]`) rather than empty boxes.
+**Fix:** The pipeline state and task details are fully data-driven from the backend API `/api/status`. The Dispatcher does not need to manually generate or spoof task text during idle periods; the UI handles the placeholders inherently.
 
 ### ❌ Shell scripts that produce machine-readable output: stdout=JSON, stderr=human
 When a script needs both human-readable progress AND machine-parseable output, send human output to stderr (`echo "..." >&2`) and JSON to stdout. This lets callers capture clean JSON via `$()` while still showing progress interactively. `detect-context.sh` uses this pattern. Don't mix them — `tail -1` on multiline JSON output will only get the closing `}`.
@@ -1033,6 +1061,10 @@ The spam has THREE root causes that must ALL be fixed. See `references/dashboard
 Setting `{"agent":"dispatcher","status":"working"}` caused spam. Root cause (verified 2026-07-07): zombie `watchdogd` background process + stale state cache.
 **Fix:** Kill rogue processes (`pkill -9 -f watchdog; pkill -9 curl`), delete `.aic/state.json` and `.aic/audit.json`, restart dashboard. Dispatcher stays `WORKING` during `/aic` session.
 
+### ❌ Node server crashes with ENOENT during Dashboard Rebuilds
+When running `npm run build` in the Vite dashboard directory, the `dist/index.html` file is temporarily deleted. If the backend `server.js` receives a request and attempts an SPA fallback at that exact moment, reading the missing file throws an unhandled `ENOENT` exception, silently killing the background server.
+**Fix:** The static file handler in `server.js` must double-check `if (!fs.existsSync(filePath))` on the fallback `index.html` and return an HTTP 503 gracefully (e.g., "Dashboard is building") instead of crashing.
+
 ### ❌ Dashboard UI Bloat (Fixed Pipeline/Grid Overflow)
 The dashboard must remain a "Pure Virtual Office" and Pipeline Tracker. Never add Chat UIs, Activity Logs, Task Input forms, or stand-alone `/workers` pages to the dashboard. The Dispatcher (Hermes TUI) handles all communication.
 **Fix:** Keep the dashboard focused on visual state polling (via `/api/status`) and basic config editing (via `/api/config`). See `references/dashboard-architecture.md`.
@@ -1043,7 +1075,7 @@ See ⛔ ABSOLUTE RULE at the top. User corrections archived there.
 ### ❌ Pixel-Art Workspace Scene constraints
 The Workspace Scene (illustrative retro room SVG) must NOT have card wrappers, headers, or any title text (it must be a bare image/gif only). Its height must be constrained to align perfectly with the "IDLE" statistics box (roughly ~100px max, or matching the user's screenshots boundaries), and it should scale/fill horizontally to span the width of the right column container. Always check this alignment during the Investigation phase.
 **Fix (2026-07-08):** To force the responsive SVG to stretch fully horizontally across the right column without vertical distortion, set `viewBox="0 0 400 96"` (or a similarly wide aspect ratio like `viewBox="0 0 240 96"`), draw a wide room background (e.g. `width="400"`), spread the room items horizontally inside the SVG (window on the far left, desk in the center, server rack/diagrams on the far right), and render the SVG with `preserveAspectRatio="none"` or `preserveAspectRatio="xMinYMax meet"` inside a wrapper containing `w-full h-[280px] shrink-0`.
-If the user requests it to align with cards like the Stats Bar, wrap it inside a card with a border (`bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative h-[280px]`). Ensure any floating elements/computers that clutter the interface are disabled or set to `null` to avoid overlap or visuals that block characters.
+If the user requests it to align with cards like the Stats Bar, wrap it inside a card with a border (`bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative h-[280px]`). Ensure any floating elements/computers that clutter the interface are disabled or set to `null` to avoid overlap or visuals that block characters. Always enforce SVG overflow constraints via inline styling (`style={{ width: "100%", height: "100%", objectFit: "cover" }}`) so animations or vectors never clip through or exceed their parent boxes.
 
 ### ❌ Computer melayang di atas worker
 Jika komputer melayang di atas kepala/meja worker terasa mengganggu dan user meminta untuk menghapusnya ("saya gamau ada komputer melayang di atas worker"), modifikasi `DeskComputer.tsx` agar mengembalikan `null` atau kosongkan kontainer monitor/keyboard melayang tersebut agar visual di panel Virtual Office bersih dan hanya menyisakan meja pekerja saja.
@@ -1057,6 +1089,7 @@ When converting standard web components to pixel-art equivalents, spacing and gr
 1. Always enforce `flex-1 h-full min-h-0` for parent containers to enforce a strict full-height, no-scroll screen view. 
 2. For WorkerGrids, disable `flex-wrap` by substituting `flex justify-center w-full max-w-full` explicitly so items like 'QA' stay uniformly aligned inside their parent tier rather than falling to a new line.
 3. Use absolute positioning appropriately anchored to desk layers when placing dynamic floating SVGs or ASCII art, tracking dimensions relative to `h-[200px]` containers.
+4. **Visual Elements vs Text Baseline:** When placing SVG/icon elements (like an arrow or pixel indicator) inline with text, never rely on standard text baselines as it causes vertical misalignment. ALWAYS wrap the icon in a `flex items-center justify-center` span so it explicitly shares the same horizontal axis as the text.
 
 ### ❌ Workers Page is Redundant
 Do not build or maintain a standalone `/workers` page. The Overview page serves as the primary dashboard for viewing all worker states.
