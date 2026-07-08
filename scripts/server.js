@@ -10,6 +10,7 @@ const path = require('path');
 
 const SKILL_DIR = path.join(__dirname, '..');
 const STATE_FILE = path.join(SKILL_DIR, '.aic', 'state.json');
+const METRICS_FILE = path.join(SKILL_DIR, '.aic', 'metrics.json');
 const ENV_FILE = path.join(SKILL_DIR, '.env');
 
 // Parse .env file into object
@@ -262,6 +263,111 @@ const server = http.createServer(async (req, res) => {
     state = defaultState();
     saveState();
     return send(res, 200, { success: true });
+  }
+
+  // GET /api/metrics — get metrics with optional filtering
+  if (req.method === 'GET' && pathname === '/api/metrics') {
+    try {
+      const fromParam = url.searchParams.get('from');
+      const toParam = url.searchParams.get('to');
+      const tierParam = url.searchParams.get('tier') || 'all';
+      
+      let metrics = [];
+      if (fs.existsSync(METRICS_FILE)) {
+        metrics = JSON.parse(fs.readFileSync(METRICS_FILE, 'utf8'));
+      }
+      
+      // Filter by date range
+      if (fromParam) {
+        const fromDate = new Date(fromParam);
+        metrics = metrics.filter(m => new Date(m.timestamp) >= fromDate);
+      }
+      if (toParam) {
+        const toDate = new Date(toParam);
+        toDate.setHours(23, 59, 59, 999);
+        metrics = metrics.filter(m => new Date(m.timestamp) <= toDate);
+      }
+      
+      // Filter by tier
+      if (tierParam !== 'all') {
+        metrics = metrics.filter(m => m.tier === tierParam);
+      }
+      
+      // Calculate summary
+      const summary = {
+        totalRequests: metrics.length,
+        totalInput: metrics.reduce((sum, m) => sum + (m.tokens?.input || 0), 0),
+        totalOutput: metrics.reduce((sum, m) => sum + (m.tokens?.output || 0), 0),
+        totalCache: metrics.reduce((sum, m) => sum + (m.tokens?.cacheRead || 0), 0),
+        cacheHitRate: 0,
+        byWorker: {},
+        byDay: {}
+      };
+      
+      if (summary.totalInput + summary.totalOutput > 0) {
+        summary.cacheHitRate = summary.totalCache / (summary.totalInput + summary.totalOutput);
+      }
+      
+      // Group by worker
+      for (const m of metrics) {
+        if (!summary.byWorker[m.worker]) {
+          summary.byWorker[m.worker] = { requests: 0, input: 0, output: 0, cache: 0 };
+        }
+        summary.byWorker[m.worker].requests++;
+        summary.byWorker[m.worker].input += m.tokens?.input || 0;
+        summary.byWorker[m.worker].output += m.tokens?.output || 0;
+        summary.byWorker[m.worker].cache += m.tokens?.cacheRead || 0;
+      }
+      
+      // Group by day
+      for (const m of metrics) {
+        const day = m.timestamp.slice(0, 10);
+        if (!summary.byDay[day]) {
+          summary.byDay[day] = { requests: 0, input: 0, output: 0, cache: 0 };
+        }
+        summary.byDay[day].requests++;
+        summary.byDay[day].input += m.tokens?.input || 0;
+        summary.byDay[day].output += m.tokens?.output || 0;
+        summary.byDay[day].cache += m.tokens?.cacheRead || 0;
+      }
+      
+      return send(res, 200, { metrics, summary });
+    } catch (err) {
+      return send(res, 500, { error: err.message });
+    }
+  }
+
+  // POST /api/metrics — record a new metric
+  if (req.method === 'POST' && pathname === '/api/metrics') {
+    try {
+      const data = await readBody(req);
+      const metric = {
+        id: `metric-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: new Date().toISOString(),
+        worker: data.worker,
+        tier: data.tier,
+        model: data.model,
+        taskId: data.taskId,
+        tokens: data.tokens || { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+        durationSec: data.durationSec || 0
+      };
+      
+      // Read existing metrics or create new array
+      let metrics = [];
+      if (fs.existsSync(METRICS_FILE)) {
+        metrics = JSON.parse(fs.readFileSync(METRICS_FILE, 'utf8'));
+      }
+      
+      metrics.push(metric);
+      
+      // Save metrics
+      fs.mkdirSync(path.dirname(METRICS_FILE), { recursive: true });
+      fs.writeFileSync(METRICS_FILE, JSON.stringify(metrics, null, 2));
+      
+      return send(res, 200, { success: true, metric });
+    } catch (err) {
+      return send(res, 500, { error: err.message });
+    }
   }
 
   // Static files (dashboard dist)

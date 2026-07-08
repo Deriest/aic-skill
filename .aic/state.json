@@ -2,7 +2,7 @@
   "workers": {
     "pm": {
       "status": "complete",
-      "engine": null,
+      "engine": "opencode",
       "currentTask": null
     },
     "researcher": {
@@ -22,7 +22,7 @@
     },
     "frontend": {
       "status": "complete",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "backend": {
@@ -37,12 +37,12 @@
     },
     "qa": {
       "status": "complete",
-      "engine": "opencode",
+      "engine": null,
       "currentTask": null
     },
     "governor": {
-      "status": "complete",
-      "engine": "opencode",
+      "status": "idle",
+      "engine": null,
       "currentTask": null
     },
     "dispatcher": {
@@ -52,9 +52,9 @@
     }
   },
   "currentTask": {
-    "id": "TASK-20260708-025",
-    "title": "Add worker display names",
-    "type": "feature"
+    "id": "TASK-20260708-118",
+    "title": "Token Cost Dashboard",
+    "type": "general"
   },
   "currentPhase": "Closeout",
   "startedAt": 1783481701189

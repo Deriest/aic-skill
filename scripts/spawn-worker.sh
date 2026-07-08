@@ -77,10 +77,11 @@ curl -sf -X POST "$API_URL/api/agent-status" \
 
 echo "=== Spawning $WORKER (tier=$TIER, model=$MODEL, timeout=${TIMEOUT}s) ==="
 
-# Run opencode — cross-platform safe
+# Run opencode — cross-platform safe, capture output for metrics
 EXIT_CODE=0
+METRICS_OUTPUT=""
 if command -v opencode &>/dev/null; then
-  # Use node wrapper for maximum escaping safety
+  # Use node wrapper for maximum escaping safety, capture stdout for metrics
   NODE_RUNNER=$(mktemp "${TMPDIR:-/tmp}/aic-run-XXXXXX.js")
   cat << 'NODESCRIPT' > "$NODE_RUNNER"
 const { execFileSync } = require('child_process');
@@ -88,17 +89,61 @@ const fs = require('fs');
 const promptFile = process.argv[2];
 const model = process.argv[3];
 const cwd = process.argv[4];
+const timeout = parseInt(process.argv[5] || '300') * 1000;
 try {
-  execFileSync('opencode', ['run', promptFile, '-m', model, '--auto'], {
-    stdio: 'inherit',
+  const result = execFileSync('opencode', ['run', promptFile, '-m', model, '--auto', '--format', 'json'], {
     cwd: cwd,
-    timeout: parseInt(process.argv[5] || '300') * 1000,
+    timeout: timeout,
+    encoding: 'utf8',
   });
+  // Write output to temp file for token extraction
+  const outputFile = process.argv[6];
+  if (outputFile) fs.writeFileSync(outputFile, result);
 } catch (e) {
+  // Still capture stdout from error for token extraction
+  if (e.stdout) {
+    const outputFile = process.argv[6];
+    if (outputFile) fs.writeFileSync(outputFile, e.stdout);
+  }
   process.exit(e.status || 1);
 }
 NODESCRIPT
-  node "$NODE_RUNNER" "$PROMPT_FILE" "$MODEL" "$PROJECT_DIR" "$TIMEOUT" || EXIT_CODE=$?
+  OUTPUT_FILE=$(mktemp "${TMPDIR:-/tmp}/aic-output-XXXXXX.txt")
+  node "$NODE_RUNNER" "$PROMPT_FILE" "$MODEL" "$PROJECT_DIR" "$TIMEOUT" "$OUTPUT_FILE" || EXIT_CODE=$?
+  
+  # Extract tokens from captured output
+  if [[ -f "$OUTPUT_FILE" ]]; then
+    # Parse step_finish events for token counts
+    INPUT_TOKENS=$(grep -o '"input":[0-9]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
+    OUTPUT_TOKENS=$(grep -o '"output":[0-9]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
+    REASONING_TOKENS=$(grep -o '"reasoning":[0-9]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
+    CACHE_READ=$(grep -o '"read":[0-9]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
+    CACHE_WRITE=$(grep -o '"write":[0-9]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
+    COST=$(grep -o '"cost":[0-9.]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
+    
+    # Send metrics to API
+    if [[ -n "$INPUT_TOKENS" ]] && [[ "$INPUT_TOKENS" != "0" ]]; then
+      TOTAL_TOKENS=$((${INPUT_TOKENS:-0} + ${OUTPUT_TOKENS:-0} + ${REASONING_TOKENS:-0}))
+      curl -sf -X POST "$API_URL/api/metrics" \
+        -H "Content-Type: application/json" \
+        -d "{
+          \"worker\": \"$WORKER\",
+          \"tier\": \"$TIER\",
+          \"model\": \"$MODEL\",
+          \"tokens\": {
+            \"input\": ${INPUT_TOKENS:-0},
+            \"output\": ${OUTPUT_TOKENS:-0},
+            \"reasoning\": ${REASONING_TOKENS:-0},
+            \"cacheRead\": ${CACHE_READ:-0},
+            \"cacheWrite\": ${CACHE_WRITE:-0},
+            \"total\": $TOTAL_TOKENS
+          },
+          \"durationSec\": 0
+        }" > /dev/null 2>&1 || true
+    fi
+    rm -f "$OUTPUT_FILE"
+  fi
+  
   rm -f "$NODE_RUNNER"
 else
   echo "ERROR: opencode not installed. Run: npm i -g opencode-ai@latest" >&2
