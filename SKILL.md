@@ -947,14 +947,11 @@ When building/modifying the React dashboard, the TypeScript interfaces in `src/t
 
 ### ❌ OpenCode CLI string escape crashes (`Unexpected server error`)
 When the `opencode run "..."` command is passed a massive, multi-line prompt containing single/double quotes, bash parser and OpenCode can crash abruptly (often returning `Unexpected server error` or throwing the help menu).
-**Fix:** Never pass the raw prompt directly in `opencode run "prompt"`. Always write the prompt to a temp text file using `cat << 'EOF' > /tmp/prompt.txt`, then run `opencode run "$(cat /tmp/prompt.txt)"`.
-**Wait!** If `opencode run "$(cat /tmp/prompt.txt)"` also fails with syntax/help menu errors, use a Node.js `execSync` wrapper to spawn it safely:
+**Fix:** Never pass the raw prompt directly in `opencode run "prompt"`. Instead, use `scripts/spawn-worker.sh` which handles prompt extraction, context gathering, and safe execution using a Node.js `execSync` wrapper. If you must spawn manually, always write the prompt to a temp text file, then run a Node.js `execSync` wrapper to spawn it safely:
 ```javascript
-cat << 'EOF' > /tmp/run.js
 const { execSync } = require('child_process');
-execSync('opencode run "$(cat /tmp/prompt.txt)" -m ' + process.env.MODEL_CRAFTER + ' --auto', { stdio: 'inherit' });
-EOF
-node /tmp/run.js
+const prompt = require('fs').readFileSync('/tmp/prompt.txt', 'utf8');
+execSync(`opencode run ${JSON.stringify(prompt)} -m ${process.env.MODEL_CRAFTER} --auto`, { stdio: 'inherit' });
 ```
 
 ### ❌ OpenCode auto-rejects reads of sensitive files (.env, credentials, API keys)
