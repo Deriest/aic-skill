@@ -70,6 +70,24 @@ if [[ "$SKIP_CONTEXT" == false ]] && [[ -x "$SCRIPT_DIR/context-gather.sh" ]]; t
   fi
 fi
 
+# Map worker to pipeline phase
+PHASE_MAP_pm="Investigate"
+PHASE_MAP_architect="Planning"
+PHASE_MAP_researcher="Implementation"
+PHASE_MAP_designer="Implementation"
+PHASE_MAP_frontend="Implementation"
+PHASE_MAP_backend="Implementation"
+PHASE_MAP_infra="Implementation"
+PHASE_MAP_qa="Verification"
+PHASE_MAP_governor="Review"
+PHASE_VAR="PHASE_MAP_$WORKER"
+CURRENT_PHASE="${!PHASE_VAR:-unknown}"
+
+# Update pipeline phase
+curl -sf -X POST "$API_URL/api/task-status" \
+  -H "Content-Type: application/json" \
+  -d "{\"currentPhase\":\"$CURRENT_PHASE\"}" > /dev/null 2>&1 || true
+
 # Set worker status to working
 curl -sf -X POST "$API_URL/api/agent-status" \
   -H "Content-Type: application/json" \
@@ -141,24 +159,38 @@ NODESCRIPT
           \"durationSec\": 0
         }" > /dev/null 2>&1 || true
     fi
+    # Save output to task reports directory before cleanup
+    TASK_ID=$(curl -sf "$API_URL/api/status" 2>/dev/null | grep -o '"id":"TASK-[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+    if [[ -n "$TASK_ID" ]]; then
+      REPORT_DIR="$SKILL_DIR/.aic/tasks/$TASK_ID/reports"
+      mkdir -p "$REPORT_DIR"
+      cp "$OUTPUT_FILE" "$REPORT_DIR/${WORKER}-output.md" 2>/dev/null || true
+    fi
     rm -f "$OUTPUT_FILE"
   fi
-  
+
   rm -f "$NODE_RUNNER"
 else
   echo "ERROR: opencode not installed. Run: npm i -g opencode-ai@latest" >&2
   EXIT_CODE=1
 fi
 
-# Set worker status back to idle
-curl -sf -X POST "$API_URL/api/agent-status" \
-  -H "Content-Type: application/json" \
-  -d "{\"agent\":\"$WORKER\",\"status\":\"idle\"}" > /dev/null 2>&1 || true
-
 # Cleanup temp files
 [[ "${CLEANUP_PROMPT:-false}" == true ]] && rm -f "$PROMPT_FILE"
 
 if [[ $EXIT_CODE -eq 0 ]]; then
+  curl -sf -X POST "$API_URL/api/agent-status" \
+    -H "Content-Type: application/json" \
+    -d "{\"agent\":\"$WORKER\",\"status\":\"complete\"}" > /dev/null 2>&1 || true
+  # Auto-mark task done when last phase worker (governor) completes
+  if [[ "$WORKER" == "governor" ]]; then
+    TASK_ID=$(curl -sf "$API_URL/api/status" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('currentTask',{}).get('id',''))" 2>/dev/null || echo "")
+    if [[ -n "$TASK_ID" ]]; then
+      curl -sf -X POST "$API_URL/api/task-complete" \
+        -H "Content-Type: application/json" \
+        -d "{\"taskId\":\"$TASK_ID\"}" > /dev/null 2>&1 || true
+    fi
+  fi
   echo "=== $WORKER completed successfully ==="
 else
   echo "=== $WORKER failed (exit $EXIT_CODE) ===" >&2

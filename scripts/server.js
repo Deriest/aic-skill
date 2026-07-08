@@ -11,7 +11,27 @@ const path = require('path');
 const SKILL_DIR = path.join(__dirname, '..');
 const STATE_FILE = path.join(SKILL_DIR, '.aic', 'state.json');
 const METRICS_FILE = path.join(SKILL_DIR, '.aic', 'metrics.json');
+const TASKS_DIR = path.join(SKILL_DIR, '.aic', 'tasks');
 const ENV_FILE = path.join(SKILL_DIR, '.env');
+
+// Task persistence helpers
+function ensureTaskDir(taskId) {
+  const taskDir = path.join(TASKS_DIR, taskId);
+  fs.mkdirSync(path.join(taskDir, 'reports'), { recursive: true });
+  return taskDir;
+}
+function getTaskIds() {
+  try { return fs.readdirSync(TASKS_DIR).filter(d => d.startsWith('TASK-')); }
+  catch { return []; }
+}
+function readTaskContext(taskId) {
+  try { return JSON.parse(fs.readFileSync(path.join(TASKS_DIR, taskId, 'context.json'), 'utf8')); }
+  catch { return null; }
+}
+function readTaskState(taskId) {
+  try { return JSON.parse(fs.readFileSync(path.join(TASKS_DIR, taskId, 'state.json'), 'utf8')); }
+  catch { return null; }
+}
 
 // Parse .env file into object
 function loadEnv() {
@@ -140,8 +160,9 @@ const server = http.createServer(async (req, res) => {
       const now = new Date();
       const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
       const seq = String(Math.floor(Math.random() * 900) + 100);
+      const taskId = data.id || `TASK-${ymd}-${seq}`;
       state.currentTask = {
-        id: data.id || `TASK-${ymd}-${seq}`,
+        id: taskId,
         title: data.title || 'Untitled Task',
         type: data.type || 'general'
       };
@@ -152,6 +173,18 @@ const server = http.createServer(async (req, res) => {
           state.workers[w] = { status: 'idle', engine: null, currentTask: null };
         }
       }
+      // Create task directory with context + state
+      const taskDir = ensureTaskDir(taskId);
+      fs.writeFileSync(path.join(taskDir, 'context.json'), JSON.stringify({
+        taskId, title: data.title || 'Untitled Task',
+        description: data.description || '',
+        classification: data.classification || data.type || 'general',
+        userRequirement: data.userRequirement || data.description || '',
+        createdAt: new Date().toISOString()
+      }, null, 2));
+      fs.writeFileSync(path.join(taskDir, 'state.json'), JSON.stringify({
+        phase: null, status: 'active', lastActivity: new Date().toISOString(), workers: []
+      }, null, 2));
       saveState();
       return send(res, 200, { success: true, currentTask: state.currentTask });
     }
@@ -172,6 +205,18 @@ const server = http.createServer(async (req, res) => {
       state.currentTask = data.currentTask;
     }
     if (data.currentPhase !== undefined) state.currentPhase = data.currentPhase;
+    // Persist phase transition to task state
+    if (state.currentTask?.id && data.currentPhase !== undefined) {
+      try {
+        const ts = readTaskState(state.currentTask.id) || {};
+        ts.phase = data.currentPhase;
+        ts.lastActivity = new Date().toISOString();
+        if (data.report) {
+          fs.writeFileSync(path.join(TASKS_DIR, state.currentTask.id, 'reports', `${data.currentPhase}.md`), data.report);
+        }
+        fs.writeFileSync(path.join(TASKS_DIR, state.currentTask.id, 'state.json'), JSON.stringify(ts, null, 2));
+      } catch {}
+    }
     saveState();
     return send(res, 200, { success: true, currentTask: state.currentTask, currentPhase: state.currentPhase });
   }
@@ -250,12 +295,24 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { success: true, worker: state.workers[agent] });
   }
 
-  // POST /api/task-complete — mark task done, keep worker statuses visible
+  // POST /api/task-complete — mark task done
   if (req.method === 'POST' && pathname === '/api/task-complete') {
+    const data = await readBody(req);
+    const tid = data.taskId || state.currentTask?.id;
+    if (tid) {
+      const taskDir = path.join(TASKS_DIR, tid);
+      const stateFile = path.join(taskDir, 'state.json');
+      if (fs.existsSync(stateFile)) {
+        const ts = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+        ts.status = 'done';
+        ts.lastActivity = new Date().toISOString();
+        fs.writeFileSync(stateFile, JSON.stringify(ts, null, 2));
+      }
+    }
     // Don't reset workers — let them stay 'complete' so dashboard shows who did what
     // Workers reset to idle on next task-start
     saveState();
-    return send(res, 200, { success: true });
+    return send(res, 200, { success: true, status: 'done' });
   }
 
   // POST /api/reset — clear all workers to idle
@@ -368,6 +425,54 @@ const server = http.createServer(async (req, res) => {
     } catch (err) {
       return send(res, 500, { error: err.message });
     }
+  }
+
+  // GET /api/tasks — list all tasks
+  if (req.method === 'GET' && pathname === '/api/tasks') {
+    const ids = getTaskIds();
+    const tasks = ids.map(id => {
+      const ctx = readTaskContext(id) || {};
+      const st = readTaskState(id) || {};
+      return { taskId: id, ...ctx, ...st };
+    });
+    return send(res, 200, tasks);
+  }
+
+  // GET /api/tasks/:id — task details + context
+  if (req.method === 'GET' && pathname.match(/^\/api\/tasks\/TASK-[\w-]+$/)) {
+    const id = pathname.split('/').pop();
+    const ctx = readTaskContext(id);
+    const st = readTaskState(id);
+    if (!ctx && !st) return send(res, 404, { error: 'task not found' });
+    let reports = [];
+    try { reports = fs.readdirSync(path.join(TASKS_DIR, id, 'reports')).filter(f => f.endsWith('.md')); } catch {}
+    return send(res, 200, { context: ctx, state: st, reports });
+  }
+
+  // GET /api/tasks/:id/context — just context.json
+  if (req.method === 'GET' && pathname.match(/^\/api\/tasks\/TASK-[\w-]+\/context$/)) {
+    const id = pathname.split('/')[3];
+    const ctx = readTaskContext(id);
+    if (!ctx) return send(res, 404, { error: 'not found' });
+    return send(res, 200, ctx);
+  }
+
+  // POST /api/work-packages — save WP decomposition
+  if (req.method === 'POST' && pathname === '/api/work-packages') {
+    const data = await readBody(req);
+    if (!data.taskId) return send(res, 400, { error: 'missing taskId' });
+    const taskDir = ensureTaskDir(data.taskId);
+    fs.writeFileSync(path.join(taskDir, 'work-packages.json'), JSON.stringify(data.packages, null, 2));
+    return send(res, 200, { success: true });
+  }
+
+  // GET /api/work-packages/:taskId — get WPs for a task
+  if (req.method === 'GET' && pathname.match(/^\/api\/work-packages\/TASK-[\w-]+$/)) {
+    const taskId = pathname.split('/').pop();
+    try {
+      const wps = JSON.parse(fs.readFileSync(path.join(TASKS_DIR, taskId, 'work-packages.json'), 'utf8'));
+      return send(res, 200, wps);
+    } catch { return send(res, 200, []); }
   }
 
   // Static files (dashboard dist)
