@@ -24,8 +24,7 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         manualChunks: {
-          vendor: ['react', 'react-dom', 'framer-motion'],
-          ui: ['recharts']
+          vendor: ['react', 'react-dom', 'framer-motion', 'recharts']
         }
       }
     }
