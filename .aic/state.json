@@ -41,7 +41,7 @@
       "currentTask": null
     },
     "governor": {
-      "status": "working",
+      "status": "complete",
       "engine": "opencode",
       "currentTask": null
     },
@@ -56,6 +56,6 @@
     "title": "Add worker display names",
     "type": "feature"
   },
-  "currentPhase": "Documentation",
+  "currentPhase": "Closeout",
   "startedAt": 1783481701189
 }
