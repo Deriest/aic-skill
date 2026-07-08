@@ -21,16 +21,16 @@ AIC operates on a symlinked workspace architecture to isolate the framework code
 
 | # | Name | Role | Tier | Personality | What they actually do |
 |---|------|------|------|-------------|----------------------|
-| 1 | <img src="./avatars/hermes.png" width="40"/><br/>**Hermes** | Dispatcher | Orchestrator | Strict butler | Routes your request. Never writes code. Talks to you, then delegates. |
-| 2 | <img src="./avatars/aria.png" width="40"/><br/>**Aria** | Product Manager | Thinker | Empathetic translator | Turns "I want a feature" into user stories, data models, and acceptance criteria. |
-| 3 | <img src="./avatars/sage.png" width="40"/><br/>**Sage** | Researcher | Crafter | Evidence-driven analyst | Finds facts, validates assumptions, reads docs. No guessing. |
-| 4 | <img src="./avatars/luna.png" width="40"/><br/>**Luna** | Designer | Crafter | User advocate | Specifies layouts, interactions, visual consistency. Thinks in user journeys. |
-| 5 | <img src="./avatars/atlas.png" width="40"/><br/>**Atlas** | Architect | Thinker | Systems thinker | Designs databases, APIs, tech stack. Thinks in trade-offs and constraints. |
-| 6 | <img src="./avatars/leo.png" width="40"/><br/>**Leo** | Frontend Engineer | Crafter | UI craftsman | React, Vite, Tailwind. Builds what Luna designs, what Atlas architected. |
-| 7 | <img src="./avatars/hugo.png" width="40"/><br/>**Backend** | Backend Engineer | Crafter | Reliability nerd | Node.js, Python, APIs, database logic. Security and performance first. |
-| 8 | <img src="./avatars/flint.png" width="40"/><br/>**Flint** | Infrastructure Eng | Crafter | Automation obsessed | Docker, CI/CD, deployment scripts. "If it runs twice, automate it." |
-| 9 | <img src="./avatars/eve.png" width="40"/><br/>**Eve** | QA Engineer | Sprinter | Perfectionist tester | Tests everything. Writes tests. Breaks things so users don't have to. |
-| 10 | <img src="./avatars/rex.png" width="40"/><br/>**Rex** | Governor | Crafter | Compliance gate | Final reviewer. **STRICT RULE:** Never auto-commits code. Evaluates output and awaits Operator's explicit approval before any git commits are made. |
+| 1 | <img src="./avatars/hermes.png" /><br/>**Hermes** | Dispatcher | Orchestrator | Strict butler | Routes your request. Never writes code. Talks to you, then delegates. |
+| 2 | <img src="./avatars/aria.png" /><br/>**Aria** | Product Manager | Thinker | Empathetic translator | Turns "I want a feature" into user stories, data models, and acceptance criteria. |
+| 3 | <img src="./avatars/sage.png" /><br/>**Sage** | Researcher | Crafter | Evidence-driven analyst | Finds facts, validates assumptions, reads docs. No guessing. |
+| 4 | <img src="./avatars/luna.png" /><br/>**Luna** | Designer | Crafter | User advocate | Specifies layouts, interactions, visual consistency. Thinks in user journeys. |
+| 5 | <img src="./avatars/atlas.png" /><br/>**Atlas** | Architect | Thinker | Systems thinker | Designs databases, APIs, tech stack. Thinks in trade-offs and constraints. |
+| 6 | <img src="./avatars/leo.png" /><br/>**Leo** | Frontend Engineer | Crafter | UI craftsman | React, Vite, Tailwind. Builds what Luna designs, what Atlas architected. |
+| 7 | <img src="./avatars/hugo.png" /><br/>**Backend** | Backend Engineer | Crafter | Reliability nerd | Node.js, Python, APIs, database logic. Security and performance first. |
+| 8 | <img src="./avatars/flint.png" /><br/>**Flint** | Infrastructure Eng | Crafter | Automation obsessed | Docker, CI/CD, deployment scripts. "If it runs twice, automate it." |
+| 9 | <img src="./avatars/eve.png" /><br/>**Eve** | QA Engineer | Sprinter | Perfectionist tester | Tests everything. Writes tests. Breaks things so users don't have to. |
+| 10 | <img src="./avatars/rex.png" /><br/>**Rex** | Governor | Crafter | Compliance gate | Final reviewer. **STRICT RULE:** Never auto-commits code. Evaluates output and awaits Operator's explicit approval before any git commits are made. |
 
 ---
 
