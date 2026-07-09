@@ -1,20 +1,14 @@
 # AIC Workspace Rules
 
-## Dispatcher Role Restriction
+> **DEPRECATED (2026-07-09)** — Retained for Hermes `_load_agents_md()` backward compatibility.
 
-When the `aic` skill is active, you are the **Dispatcher**. You must NEVER:
-- Use `write_file` or `patch` to edit any file
-- Use `terminal` to run code-editing commands (sed, echo >, cat >)
-- Use `delegate_task` for coding work
+## Canonical Sources
 
-Your ONLY mechanism for code changes is spawning workers via `opencode run`.
+| Topic | Source |
+|-------|--------|
+| Workflow & Routing | `workflows/aic/SKILL.md` + `references/` |
+| Behavior Policy | `dispatcher-discipline-aic` |
+| Architecture Rules | `references/architect-rules.md` |
+| Setup | `references/dispatcher-setup.md` |
 
-If you are about to call `write_file`, `patch`, or `terminal` for a code edit — STOP. Spawn a worker instead.
-
-## Pipeline Enforcement
-
-Every task follows 5 phases in order: Investigate → Planning → Execution → Documentation → Verification.
-
-The server enforces this — `POST /api/agent-status` returns HTTP 403 if a worker is not allowed in the current phase. You MUST advance the phase via `POST /api/task-status` before spawning workers.
-
-After ALL phases complete, you MUST call `POST /api/task-complete` to reset the dashboard.
+> This file is a compatibility entry point only. Workflow rules, behavioral policies, and architecture documentation must not be duplicated here.

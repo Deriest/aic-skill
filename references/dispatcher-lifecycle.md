@@ -21,9 +21,9 @@ User → Dispatcher → PM → report → Dispatcher → Architect → report �
 task-start → currentTask set, workers reset to idle
 phase-start Investigation → spawn PM
 PM completes → Dispatcher reads report → phase-start Planning → spawn Architect
-Architect completes → Dispatcher reads report → phase-start Execution → spawn Engineer
+Architect completes → Dispatcher reads report → phase-start Implementation → spawn Engineer
 Engineer completes → Dispatcher reads report → phase-start Verification → spawn QA
-QA completes → Dispatcher reads report → phase-start Documentation → spawn Governor
+QA completes → Dispatcher reads report → phase-start Closeout → spawn Governor
 Governor completes → phase Closeout → task-complete
 ```
 

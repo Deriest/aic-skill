@@ -303,7 +303,7 @@ When the user invokes `/aic` and a new task starts, the Dispatcher historically 
 **Root cause:** `state.phase` was a free-form string — any caller could write `phase: "PM (Translation)"` and then immediately set `backend: working` with no server-side check. The state machine existed in docs only, not in code.
 
 **Fix (2026-07-07):** Added a 5-phase **outer task lifecycle** state machine in `scripts/server.js` that wraps (does not replace) the 6-phase worker workflow:
-- `Investigate` → `Planning` → `Implementation` → `Documentation` → `Closeout`
+- `Investigate` → `Planning` → `Implementation → Verification → Closeout`
 - `LIFECYCLE_PHASES` + `LIFECYCLE_ALLOWED_WORKERS` constant at top of `server.js`
 - `POST /api/task-start` now ALWAYS sets `state.workflow.current = "Investigate"` and resets ALL workers to idle (no auto-spawn)
 - `POST /api/agent-status` with `status: "working"` returns HTTP 403 if the worker is not in the allowed set for the current lifecycle phase (engineers forbidden in Investigate/Planning; governor only in Closeout)

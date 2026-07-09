@@ -112,7 +112,7 @@ Dispatcher → Frontend Lead
       "title": "Refactor auth",
       "repo": "my-app",
       "branch": "feature/TASK-001",
-      "phase": "Execution",
+      "phase": "Implementation",
       "status": "active",
       "workers": {
         "pm": {
@@ -147,7 +147,7 @@ Dispatcher → Frontend Lead
 
 ```
 ┌──────────────────────────────────────────────┐
-│ Task: Refactor auth    Phase: Execution      │
+│ Task: Refactor auth    Phase: Implementation      │
 │ Repo: my-app    Branch: feature/TASK-001     │
 ├──────────────────────────────────────────────┤
 │                                              │

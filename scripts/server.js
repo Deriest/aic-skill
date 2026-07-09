@@ -294,7 +294,7 @@ const server = http.createServer(async (req, res) => {
           error: `Worker "${agent}" is not allowed in phase "${state.currentPhase}". Advance the phase first via POST /api/task-status.`,
           currentPhase: state.currentPhase,
           allowedWorkers: allowed,
-          hint: `POST /api/task-status {"currentPhase":"${phase === 'investigate' ? 'Planning' : phase === 'planning' ? 'Execution' : 'Verification'}"}`,
+          hint: `POST /api/task-status {"currentPhase":"${phase === 'investigate' ? 'Planning' : phase === 'planning' ? 'Implementation' : 'Verification'}"}`,
         });
       }
     }

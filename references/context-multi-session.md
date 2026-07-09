@@ -67,7 +67,7 @@ Session 2: PM spawn 2 PM-sub untuk TASK-002
       "path": "/home/tvd/floorvs",
       "title": "Fix login bug",
       "branch": "feature/TASK-001",
-      "phase": "Execution",
+      "phase": "Implementation",
       "workers": {
         "pm": { "status": "working", "sub": ["pm-sub-1", "pm-sub-2", "pm-sub-3"] },
         "architect": { "status": "complete", "sub": [] },
