@@ -92,6 +92,14 @@ function DashboardApp() {
           {activeTab === 'config' && <ConfigPage />}
         </ErrorBoundary>
       </div>
+
+      {/* CRT Scanline Overlay */}
+      <div className="pointer-events-none fixed inset-0 z-50 opacity-[0.03]" 
+           style={{ background: 'repeating-linear-gradient(0deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 1) 1px, transparent 1px, transparent 2px)' }}>
+      </div>
+      <div className="pointer-events-none fixed inset-0 z-50 opacity-[0.2]" 
+           style={{ background: 'radial-gradient(circle at center, transparent 50%, rgba(0, 0, 0, 0.6) 100%)' }}>
+      </div>
     </div>
   );
 }

@@ -1,57 +1,62 @@
 import { OfficeFloor } from '../components/office/OfficeFloor';
 import { PipelineTracker } from '../components/new_layout/PipelineTracker';
-import { WorkspaceScene } from '../components/new_layout/WorkspaceScene';
 import { useDashboardContext } from '../context/DashboardContext';
+import { WORKERS } from '../data/workers';
 
 export function OverviewPage() {
   const { state } = useDashboardContext();
+  
+  // Progress Bar logic (excludes Global/Dispatcher)
+  const required = WORKERS.filter(w => w.phase !== 'Global');
+  const completeRequired = required.filter(w => { const ws = state.workers?.[w.id]; return ws?.status === 'complete' && (!ws?.subWorkers || ws.subWorkers.every(s => s.status === 'complete')) && state.pmReview?.phase !== w.phase; }).length;
+  const pct = required.length > 0 ? Math.round(completeRequired / required.length * 100) : 0;
 
-  const active = Object.values(state.workers).filter(w => w.status === 'working').length;
-  const complete = Object.values(state.workers).filter(w => w.status === 'complete').length;
-  const idle = Object.values(state.workers).filter(w => w.status === 'idle').length;
+  // Worker Statistics logic (includes all 15 Head Workers)
+  const working = WORKERS.filter(w => { const ws = state.workers?.[w.id]; return ws?.status === 'working' || ws?.subWorkers?.some(s => s.status === 'working'); }).length;
+  const complete = WORKERS.filter(w => { const ws = state.workers?.[w.id]; return ws?.status === 'complete' && (!ws?.subWorkers || ws.subWorkers.every(s => s.status === 'complete')) && state.pmReview?.phase !== w.phase; }).length;
+  const idle = WORKERS.filter(w => { const ws = state.workers?.[w.id]; return !ws || ws.status === 'idle'; }).length;
 
   return (
-    <div className="flex flex-col h-full w-full p-4 min-h-0">
-      
-      <div className="flex flex-1 gap-4 min-h-0 relative">
-        {/* Main Content (Left) */}
-        <div className="flex-[2] flex flex-col min-w-0 gap-3 h-full">
-          {/* Virtual Office Box */}
-          <div className="flex-1 bg-aic-bg-panel border-2 border-aic-border/50 rounded p-1 shadow-lg overflow-hidden flex flex-col min-h-0">
-             {state.currentTask && (
-               <div className="px-3 py-2 font-pixel text-px-sm flex items-center gap-3 border-b border-aic-border/30">
-                 <span className="text-aic-yellow">[{state.currentTask.id}]</span>
-                 <span className="text-aic-text-primary truncate">{state.currentTask.title}</span>
-                 <span className="text-aic-accent ml-auto">{state.currentPhase}</span>
-               </div>
-             )}
-             <OfficeFloor />
-          </div>
-
-          {/* Stats Bar */}
-          <div className="grid grid-cols-3 gap-3 shrink-0 font-pixel h-[100px] relative">
-            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-2">
-              <span className="text-3xl text-aic-accent mb-1">{active}</span>
-              <span className="text-px-sm text-aic-text-muted uppercase tracking-widest">ACTIVE</span>
-            </div>
-            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-2">
-              <span className="text-3xl text-aic-green mb-1">{complete}</span>
-              <span className="text-px-sm text-aic-text-muted uppercase tracking-widest">COMPLETE</span>
-            </div>
-            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center py-2 relative">
-              <span className="text-3xl text-aic-text-muted mb-1">{idle}</span>
-              <span className="text-px-sm text-aic-text-muted uppercase tracking-widest">IDLE</span>
-            </div>
+    <div className="flex flex-col h-screen w-full p-3 min-h-0 overflow-hidden bg-aic-bg-dark">
+      <div className="flex flex-1 gap-3 min-h-0">
+        {/* Left: Virtual Office */}
+        <div className="flex-[2] flex flex-col min-w-0 h-full">
+          <div className="h-[94.5%] bg-aic-bg-panel border-2 border-aic-border/50 rounded shadow-lg overflow-hidden flex flex-col min-h-0">
+            <OfficeFloor />
           </div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="flex-1 flex flex-col gap-3 h-full min-w-[400px] overflow-hidden">
-          <div className="flex-1 min-h-0">
-            <PipelineTracker state={state} />
+        {/* Right: Pipeline + Gate + Stats + Image */}
+        <div className="flex-[1.2] flex flex-col h-full min-w-[360px] overflow-hidden gap-2">
+          {/* Top: Pipeline & Runtime Gate */}
+          <div className="flex-none">
+            <PipelineTracker state={state} taskProgress={pct} />
           </div>
-          <div className="h-[280px] w-full shrink-0 bg-aic-bg-panel border-2 border-aic-border/50 rounded overflow-hidden shadow-lg relative">
-            <WorkspaceScene />
+          
+          {/* Middle: Stats cards */}
+          <div className="grid grid-cols-3 gap-2 shrink-0 font-pixel h-[150px]">
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center">
+              <span className="text-4xl text-aic-yellow mb-2">{working}</span>
+              <span className="text-[11px] text-aic-text-muted uppercase tracking-widest">WORKING</span>
+            </div>
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center">
+              <span className="text-4xl text-aic-green mb-2">{complete}</span>
+              <span className="text-[11px] text-aic-text-muted uppercase tracking-widest">COMPLETE</span>
+            </div>
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded flex flex-col items-center justify-center">
+              <span className="text-4xl text-gray-500 mb-2">{idle}</span>
+              <span className="text-[11px] text-aic-text-muted uppercase tracking-widest">IDLE</span>
+            </div>
+          </div>
+
+          {/* Bottom: AIC Image (Wide & Compact) */}
+          <div className="h-[180px] shrink-0 rounded-lg overflow-hidden border-2 border-aic-border/50 shadow-lg bg-aic-bg-panel mt-auto mb-[50px]">
+            <img 
+              src="/AIC.png" 
+              alt="AIC Workspace" 
+              className="w-full h-full object-cover object-top"
+              style={{ imageRendering: 'pixelated' }}
+            />
           </div>
         </div>
       </div>

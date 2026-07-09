@@ -82,6 +82,10 @@ export default {
           '90%':  { opacity: '0.3' },
           '100%': { transform: 'translateY(-100vh) rotate(720deg)', opacity: '0' },
         },
+        'pulse-slow': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.4' },
+        },
       },
       animation: {
         'scroll-border': 'scroll-border 20s linear infinite',
@@ -91,6 +95,7 @@ export default {
         'bubble-pulse':  'bubble-pulse 0.5s ease-in-out infinite',
         'icon-pulse':    'icon-pulse 1s infinite',
         'float':         'float-particle var(--float-duration, 10s) linear infinite',
+        'pulse-slow':    'pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       boxShadow: {
         'neon-accent': '0 0 10px rgba(0, 212, 255, 0.5), 0 0 20px rgba(0, 212, 255, 0.3)',

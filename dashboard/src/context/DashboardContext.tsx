@@ -1,12 +1,16 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react';
 import type { DashboardState, DashboardAction } from '../types';
 
-export const initialState: DashboardState = {
+const initialState: DashboardState = {
   connected: false,
   workers: {},
   currentTask: null,
   currentPhase: null,
-  startedAt: Date.now()
+  runtimeGate: null,
+  phaseBarrier: null,
+  pmReview: null,
+  rework: null,
+  startedAt: Date.now(),
 };
 
 function reducer(state: DashboardState, action: DashboardAction): DashboardState {
@@ -27,7 +31,6 @@ const DashboardContext = createContext<{
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-
   return (
     <DashboardContext.Provider value={{ state, dispatch }}>
       {children}

@@ -41,10 +41,10 @@ esac
 
 # Resolve timeout from worker
 case "$WORKER" in
-  pm|architect)                    TIMEOUT=180 ;;
-  researcher|designer|qa|governor) TIMEOUT=300 ;;
-  frontend|backend|infra)          TIMEOUT=600 ;;
-  *)                               TIMEOUT=300 ;;
+  pm|architect|data|integration|research) TIMEOUT=180 ;;
+  designer|qa|governor|documentation)     TIMEOUT=300 ;;
+  frontend|backend|infra|security|perf)   TIMEOUT=600 ;;
+  *)                                      TIMEOUT=300 ;;
 esac
 
 # Validate prompt file
@@ -72,14 +72,19 @@ fi
 
 # Map worker to pipeline phase
 PHASE_MAP_pm="Investigate"
+PHASE_MAP_research="Investigate"
 PHASE_MAP_architect="Planning"
-PHASE_MAP_researcher="Implementation"
+PHASE_MAP_data="Planning"
+PHASE_MAP_integration="Planning"
+PHASE_MAP_security="Planning"
+PHASE_MAP_infra="Planning"
 PHASE_MAP_designer="Implementation"
 PHASE_MAP_frontend="Implementation"
 PHASE_MAP_backend="Implementation"
-PHASE_MAP_infra="Implementation"
 PHASE_MAP_qa="Verification"
-PHASE_MAP_governor="Review"
+PHASE_MAP_perf="Verification"
+PHASE_MAP_documentation="Closeout"
+PHASE_MAP_governor="Closeout"
 PHASE_VAR="PHASE_MAP_$WORKER"
 CURRENT_PHASE="${!PHASE_VAR:-unknown}"
 
@@ -95,7 +100,6 @@ curl -sf -X POST "$API_URL/api/agent-status" \
 
 echo "=== Spawning $WORKER (tier=$TIER, model=$MODEL, timeout=${TIMEOUT}s) ==="
 
-# Run opencode — cross-platform safe, capture output for metrics
 EXIT_CODE=0
 METRICS_OUTPUT=""
 if command -v opencode &>/dev/null; then

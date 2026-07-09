@@ -15,7 +15,7 @@ spawn-worker.sh (capture opencode JSON output)
 {
   "id": "metric-<timestamp>",
   "timestamp": "ISO string",
-  "worker": "pm|architect|researcher|designer|frontend|backend|infra|qa|governor",
+  "worker": "pm|architect|research|designer|frontend|backend|qa|governor|documentation|perf|infra|security|data|integration",
   "tier": "thinker|crafter|sprinter",
   "model": "provider/ModelName",
   "tokens": {
@@ -61,7 +61,10 @@ Recharts auto-skips labels when too many categories. Force all labels:
 ### Pre-populate All Workers
 Always include all 9 workers (excluding dispatcher) in chart data with 0 values to reserve space:
 ```tsx
-const ALL_WORKERS = ['pm', 'architect', 'researcher', 'designer', 'frontend', 'backend', 'infra', 'qa', 'governor'];
+const ALL_WORKERS = [
+  'pm', 'architect', 'research', 'designer', 'frontend', 'backend', 'qa', 
+  'governor', 'documentation', 'perf', 'infra', 'security', 'data', 'integration'
+];
 ```
 
 ### Worker Display Names

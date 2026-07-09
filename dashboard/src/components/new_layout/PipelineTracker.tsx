@@ -1,72 +1,122 @@
 import { DashboardState } from '../../types';
+import { useState, useEffect } from 'react';
 
-export function PipelineTracker({ state }: { state: DashboardState }) {
+function ElapsedTimer({ startedAt }: { startedAt: number }) {
+  const [elapsed, setElapsed] = useState('00:00:00');
+  useEffect(() => {
+    const update = () => { const d = Date.now() - startedAt; setElapsed(`${Math.floor(d/3600000).toString().padStart(2,'0')}:${Math.floor((d%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((d%60000)/1000).toString().padStart(2,'0')}`); };
+    update(); const i = setInterval(update, 1000); return () => clearInterval(i);
+  }, [startedAt]);
+  return <span className="text-aic-yellow font-pixel text-[10px] tabular-nums">{elapsed}</span>;
+}
+
+export function PipelineTracker({ state, taskProgress }: { state: DashboardState; taskProgress?: number }) {
   const phases = ['Investigate', 'Planning', 'Implementation', 'Verification', 'Closeout'];
-  
+  const barrierTotal = state.phaseBarrier?.workers?.length || 0;
+  const barrierDone = state.phaseBarrier ? Object.keys(state.phaseBarrier.completed || {}).length : 0;
+  const pmV = state.pmReview?.verdicts || {};
+  const pmPass = Object.values(pmV).filter(v => v === 'PASS').length;
+  const pmRework = Object.values(pmV).filter(v => v === 'REWORK').length;
+  const pmTotal = Object.keys(pmV).length;
+  const reworkActive = state.rework?.active || false;
+
+  const gate = (() => {
+    if (!state.currentTask) return { label: 'Idle', color: 'text-gray-500' };
+    if (reworkActive) return { label: 'REWORK', color: 'text-red-400' };
+    if (state.pmReview && pmTotal > 0) return { label: 'PM Review', color: pmRework > 0 ? 'text-red-400' : pmPass === pmTotal ? 'text-aic-green' : 'text-aic-yellow' };
+    if (state.runtimeGate) { const s = state.runtimeGate.status; return { label: state.runtimeGate.type.replace('-',' '), color: s==='passed'||s==='complete' ? 'text-aic-green' : s==='blocked'||s==='rework' ? 'text-red-400' : 'text-aic-yellow' }; }
+    if (state.phaseBarrier?.active) return { label: 'Phase Barrier', color: 'text-aic-yellow' };
+    if (Object.values(state.workers||{}).some(w => w.subWorkers?.some(s => s.status === 'working'))) return { label: 'Sub-worker Sync', color: 'text-aic-yellow' };
+    if (state.currentPhase) return { label: 'Execution', color: 'text-aic-yellow' };
+    return { label: 'Initializing', color: 'text-gray-500' };
+  })();
+
+  const next = (() => {
+    if (reworkActive) return `Respawn: ${state.rework?.failedWorkers?.join(', ')}`;
+    if (state.pmReview && pmTotal > 0) return pmRework > 0 ? `PM: ${pmRework} REWORK` : pmPass === pmTotal ? 'Dispatcher Gate' : 'Waiting PM';
+    if (state.phaseBarrier?.active) return barrierDone === barrierTotal ? 'Invoke PM Review' : `Waiting ${barrierTotal - barrierDone} workers`;
+    if (state.runtimeGate) return state.runtimeGate.status;
+    if (state.currentPhase) return 'Worker executing';
+    return 'Pending';
+  })();
+
   return (
-    <div className="flex flex-col gap-3 h-full font-pixel">
+    <div className="flex flex-col gap-2 h-full font-pixel">
       {/* Current Task */}
       <div className="shrink-0 flex flex-col h-[240px]">
-        <div className="flex items-center gap-2 mb-2 shrink-0">
-          <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
-          <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">CURRENT TASK</h3>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <span className="text-aic-accent text-[11px]">▶</span>
+            <h3 className="text-[11px] text-aic-accent uppercase tracking-widest">CURRENT TASK</h3>
+          </div>
+          {taskProgress !== undefined && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-16 h-1.5 bg-aic-bg-dark rounded-full overflow-hidden"><div className="h-full bg-aic-accent rounded-full transition-all" style={{ width: `${taskProgress}%` }} /></div>
+              <span className="text-aic-text-muted text-[9px]">{taskProgress}%</span>
+            </div>
+          )}
         </div>
-        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-5 flex-1 shadow-lg relative overflow-hidden flex flex-col">
-          {!state.currentTask ? (
-            <span className="text-aic-text-muted font-pixel text-px-sm italic m-auto tracking-widest">[ WAITING FOR TASK ]</span>
-          ) : (
-            <div className="flex flex-col h-full">
-              <div className="flex justify-between items-start mb-2 shrink-0">
-                <div className="text-aic-yellow font-pixel text-px-md">[{state.currentTask.id}]</div>
-                <div className="text-aic-accent/70 font-pixel text-[10px] uppercase border border-aic-accent/30 px-2 py-1 rounded bg-aic-bg-dark">
-                  {state.currentTask.type || 'FEATURE'}
-                </div>
-              </div>
-              <div className="text-white text-xl md:text-2xl uppercase tracking-wider line-clamp-1 leading-tight mb-3 shrink-0">
-                {state.currentTask.title}
-              </div>
-              {/* Task Description Detail */}
-              <div className="text-aic-text-bright/90 font-pixel text-[11px] leading-relaxed overflow-y-auto bg-aic-bg-dark/40 p-3 rounded border border-aic-border/20 flex-1 min-h-0">
-                {/* Fallback to a placeholder description if state doesn't have one */}
-                {(state.currentTask as any).description || `Dispatcher has initialized the task orchestration. Currently establishing connection with OpenCode engine and formulating the primary workspace configuration...`}
+        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-3 flex-1 shadow-lg overflow-hidden flex flex-col min-h-0">
+          {!state.currentTask ? <span className="text-aic-text-muted text-[10px] italic m-auto tracking-widest">[ WAITING FOR TASK ]</span> : (
+            <div className="flex flex-col h-full min-h-0">
+              <div className="text-aic-yellow text-[11px] mb-0.5">[{state.currentTask.id}]</div>
+              <div className="text-white text-base uppercase tracking-wide line-clamp-1 mb-1">{state.currentTask.title}</div>
+              <div className="text-aic-text-bright/80 text-[10px] leading-relaxed overflow-y-auto bg-aic-bg-dark/40 p-1.5 rounded border border-aic-border/20 flex-1 min-h-0">
+                {(state.currentTask as any).description || 'Dispatcher initialized task orchestration.'}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Pipeline & Doodle */}
-      <div className="shrink-0 flex flex-col h-[240px] relative">
-        <div className="flex items-center gap-2 mb-2 shrink-0">
-          <span className="text-aic-accent text-px-md font-pixel drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">▶</span>
-          <h3 className="font-pixel text-px-md text-aic-accent uppercase drop-shadow-[0_0_5px_rgba(0,255,255,0.5)]">PIPELINE</h3>
-        </div>
-        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-4 flex-1 shadow-lg flex flex-col relative overflow-hidden">
-          <div className="flex flex-col justify-between z-10 flex-1 min-h-0">
-            {phases.map((p, idx) => {
-              const isComplete = state.currentPhase === 'Closeout';
-              const isActive = !isComplete && state.currentTask ? p === state.currentPhase : false;
-              const currentIndex = state.currentPhase ? phases.indexOf(state.currentPhase) : -1;
-              const isPast = isComplete || (state.currentTask && currentIndex > -1 && idx < currentIndex);
-              
-              let textColor = 'text-gray-600'; // Upcoming (gray)
-              let icon = '○';
-              
-              if (isActive) {
-                textColor = 'text-aic-accent font-bold drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]'; // Neon blue
-                icon = '●';
-              } else if (isPast) {
-                textColor = 'text-aic-green drop-shadow-[0_0_8px_rgba(0,255,0,0.8)]'; // Neon green
-                icon = '✓';
-              }
+      {/* Pipeline + Runtime Gate — titles above cards, side by side */}
+      <div className="shrink-0 h-[240px] flex flex-col">
+        <div className="flex gap-2 flex-1 min-h-0">
+          {/* Pipeline */}
+          <div className="flex-1 flex flex-col">
+            <div className="flex items-center gap-1.5 mb-1 shrink-0">
+              <span className="text-aic-accent text-[10px]">▶</span>
+              <h3 className="text-[10px] text-aic-accent uppercase tracking-widest">PIPELINE</h3>
+            </div>
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-2 shadow-lg flex flex-col justify-between flex-1">
+              {phases.map((p, idx) => {
+                const ci = state.currentPhase ? phases.indexOf(state.currentPhase) : -1;
+                const isComplete = state.currentPhase === 'Closeout' && state.workers?.governor?.status === 'complete';
+                const isPast = isComplete || (state.currentTask && ci > -1 && idx < ci);
+                const isActive = !isComplete && state.currentTask ? p === state.currentPhase : false;
+                return (
+                  <div key={p} className={`flex items-center gap-1.5 px-1 py-1 rounded transition-all ${isActive ? 'text-aic-accent font-bold bg-aic-accent/5' : isPast ? 'text-aic-green' : 'text-gray-500'}`}>
+                    <span className="w-6 text-center text-base">{isActive ? '●' : isPast ? '✓' : '○'}</span>
+                    <span className="text-base uppercase tracking-wide">{p}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-              return (
-                <div key={p} className={`flex items-center gap-3 font-pixel text-[11px] transition-all duration-300 ${textColor} ${isActive ? 'scale-105 ml-2' : ''}`}>
-                  <span className="w-8 text-center">{icon}</span>
-                  <span className="uppercase tracking-widest">{p}</span>
+          {/* Runtime Gate */}
+          <div className="flex-1 flex flex-col">
+            <div className="flex items-center justify-between mb-1 shrink-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-aic-accent text-[10px]">▶</span>
+                <h3 className="text-[10px] text-aic-accent uppercase tracking-widest">RUNTIME GATE</h3>
+              </div>
+              {state.startedAt && <ElapsedTimer startedAt={state.startedAt} />}
+            </div>
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-2 shadow-lg flex flex-col flex-1">
+              {state.currentTask ? (
+                <div className="flex flex-col gap-1 text-[10px] flex-1">
+                  <div className="flex justify-between bg-aic-bg-dark/40 p-1 rounded"><span className="text-gray-400">Gate</span><span className={`${gate.color} uppercase font-bold`}>{gate.label}</span></div>
+                  <div className="flex justify-between px-1"><span className="text-gray-400">Phase</span><span className="text-aic-accent">{state.currentPhase || '—'}</span></div>
+                  <div className="flex justify-between px-1"><span className="text-gray-400">Owner</span><span className="text-white">{state.runtimeGate?.owner || '—'}</span></div>
+                  <div className="flex justify-between px-1"><span className="text-gray-400">Waiting</span><span className="text-white">{state.runtimeGate?.target || '—'}</span></div>
+                  <div className="flex justify-between px-1"><span className="text-gray-400">Barrier</span><span className={state.phaseBarrier?.active ? (barrierDone===barrierTotal?'text-aic-green':'text-aic-yellow') : 'text-gray-500'}>{state.phaseBarrier?.active ? `${barrierDone}/${barrierTotal}` : '—'}</span></div>
+                  <div className="flex justify-between px-1"><span className="text-gray-400">PM</span><span className={state.pmReview && pmTotal > 0 ? (pmRework>0?'text-red-400':'text-aic-green') : 'text-gray-500'}>{state.pmReview && pmTotal > 0 ? `${pmPass}P${pmRework>0?` ${pmRework}R`:''}` : '—'}</span></div>
+                  {reworkActive && <div className="flex justify-between px-1"><span className="text-gray-400">Rework</span><span className="text-red-400">{state.rework?.failedWorkers?.join(', ')} (#{state.rework?.attempt})</span></div>}
+                  <div className="flex justify-between px-1 pt-0.5 border-t border-aic-border/20 mt-auto"><span className="text-gray-400">Next</span><span className="text-aic-text-bright text-[9px]">{next}</span></div>
                 </div>
-              );
-            })}
+              ) : <span className="text-aic-text-muted text-[9px] italic m-auto tracking-widest">[ NO ACTIVE TASK ]</span>}
+            </div>
           </div>
         </div>
       </div>

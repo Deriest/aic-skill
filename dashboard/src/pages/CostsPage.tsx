@@ -2,27 +2,37 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { api } from '../api';
 
-const ALL_WORKERS = ['pm', 'architect', 'researcher', 'designer', 'frontend', 'backend', 'infra', 'qa', 'governor'];
+const ALL_WORKERS = ['pm', 'research', 'designer', 'documentation', 'architect', 'data', 'integration', 'infra', 'security', 'backend', 'frontend', 'qa', 'perf', 'governor'];
 const WORKER_NAMES: Record<string, string> = {
   pm: 'Aria (PM)',
-  architect: 'Atlas (Architect)',
-  researcher: 'Sage (Researcher)',
+  research: 'Sage (Research)',
   designer: 'Luna (Designer)',
-  frontend: 'Leo (Frontend)',
-  backend: 'Hugo (Backend)',
+  documentation: 'Echo (Docs)',
+  architect: 'Atlas (Architect)',
+  data: 'Nova (Data)',
+  integration: 'Nexus (Integration)',
   infra: 'Flint (Infra)',
+  security: 'Sentinel (Security)',
+  backend: 'Hugo (Backend)',
+  frontend: 'Leo (Frontend)',
   qa: 'Eve (QA)',
+  perf: 'Pulse (Performance)',
   governor: 'Rex (Governor)',
 };
 const SHORT_NAMES: Record<string, string> = {
   pm: 'Aria',
-  architect: 'Atlas',
-  researcher: 'Sage',
+  research: 'Sage',
   designer: 'Luna',
-  frontend: 'Leo',
-  backend: 'Hugo',
+  documentation: 'Echo',
+  architect: 'Atlas',
+  data: 'Nova',
+  integration: 'Nexus',
   infra: 'Flint',
+  security: 'Sentinel',
+  backend: 'Hugo',
+  frontend: 'Leo',
   qa: 'Eve',
+  perf: 'Pulse',
   governor: 'Rex',
 };
 
@@ -215,9 +225,9 @@ export function CostsPage() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-2 gap-4 mb-4 min-h-[300px]">
+      <div className="flex flex-col md:flex-row gap-4 mb-4 min-h-[300px]">
         {/* Tokens Over Time */}
-        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded p-4">
+        <div className="md:w-2/5 bg-aic-bg-panel border-2 border-aic-border/50 rounded p-4">
           <h3 className="font-pixel text-px-sm text-aic-text-muted uppercase tracking-widest mb-3">
             TOKENS OVER TIME
           </h3>
@@ -240,7 +250,7 @@ export function CostsPage() {
         </div>
 
         {/* By Worker */}
-        <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded p-4">
+        <div className="md:w-3/5 bg-aic-bg-panel border-2 border-aic-border/50 rounded p-4">
           <h3 className="font-pixel text-px-sm text-aic-text-muted uppercase tracking-widest mb-3">
             BY WORKER
           </h3>

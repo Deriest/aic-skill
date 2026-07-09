@@ -29,8 +29,20 @@ When resolving Typescript Type overlaps inside React functional components, **DO
 
 ## 6. Recharts Chart Pitfalls
 
-### Vite Circular Chunk → Blank Screen
-`manualChunks` splitting `recharts` into a separate `ui` chunk from `vendor: ['react']` causes circular dependency. Browser refuses the circular JS = blank page. Dev mode (port 6869) works fine because Vite doesn't bundle — only production build (port 6868) breaks. FIX: merge into same chunk: `vendor: ['react', 'react-dom', 'framer-motion', 'recharts']`.
+### Dashboard Vite circular chunk warning
+`manualChunks` splitting `recharts` into a separate `ui` chunk from `vendor: ['react']` causes circular dependency. Browser refuses the circular JS = blank page. Dev mode (port 6869) works fine because Vite doesn't bundle — only production build (port 6868) breaks. FIX: merge into same chunk: `vendor: ['react', 'react-dom', 'framer-motion', 'recharts']`. Never split dependencies that share transitive imports into separate manualChunks.
+
+### Vite dev server vs API server port conflict
+`server.js` and Vite (`npm run dev`) both default to port 6868 in the current config. When testing dashboard UI changes, running `npm run dev` will block `server.js` if it's already running.
+**Fix:** Do not run Vite dev server. Instead, run `npm run build` and let `server.js` serve the static output (`dist/`) via `node server.js 6868`.
+
+### Dashboard + API same port
+`server.js` on 6868 serves both API endpoints and dashboard static files. No separate port.
+
+### React Dashboard UI Stats sync
+Dashboard states must account for `subWorkers`. 
+**Pitfall:** Calculating 'complete' workers by filtering `status === 'complete'` causes false positives if the head worker finished its prompt generation but its sub-workers are still running.
+**Fix:** Filter by `w.status === 'complete' && (!w.subWorkers || w.subWorkers.every(sw => sw.status === 'complete'))`.
 
 ### AreaChart Single Data Point
 Recharts AreaChart with only 1 data point renders as a dot, not a filled area. Use BarChart for categorical/discrete data (worker names). AreaChart is for timeseries with 2+ data points.

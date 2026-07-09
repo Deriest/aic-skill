@@ -67,6 +67,8 @@ When `currentPhase === 'Closeout'`, ALL phases show green (task fully complete).
 State stored in `.aic/state.json`. Persists across server restarts.
 After `task-complete`, worker statuses are preserved in state.json until next `task-start`.
 
+**Cleanup Rule:** The server `loadState()` MUST clean up obsolete worker keys (e.g. `researcher` vs `research`) that are no longer in the `WORKERS` constant array. Failure to do so leads to UI bugs where the dashboard renders total worker counts (e.g., 16 workers) that exceed the defined maximum of 15.
+
 ---
 
 ## Task Context Persistence
@@ -110,7 +112,13 @@ The AIC Dashboard is a pure React frontend built with Vite and Tailwind CSS. It 
 - **Header / Navigation:** Uses `App.tsx` state (`activeTab`) to switch between pages without `react-router`. Uses `font-pixel`, text shadows (`text-shadow-cyan`), and tracking-widest for retro feel.
 - **Overview Page:** Serves the 3D-ish isometric/flat hybrid `OfficeFloor`.
   - **Pipeline Tracker:** Resides dynamically on the right sidebar, tracing the strict 5-phase lifecycle. Scales to fill available height (`flex-1`).
-- **Config Page:** Resides in a separate tab (`CONFIG (2)`). Contains form-based key-value pairs mapping `.env` and `opencode.jsonc`, omitting raw `<textarea>` inputs for usability.
+  - **Worker Statistics (Active/Complete/Idle):** Resides at the bottom of the right sidebar, directly beneath the pixel art scene. Do NOT place stats beneath the Virtual Office grid.
+- **Config Page:** Resides in a separate tab (`CONFIG (4)`). Contains form-based key-value pairs mapping `.env` and `opencode.jsonc`, omitting raw `<textarea>` inputs for usability.
+
+- **Costs Page Layout:**
+  - Token Over Time chart: 40% width (`md:w-2/5`).
+  - Token By Worker chart: 60% width (`md:w-3/5`).
+  - Uses an asymmetric horizontal layout to prevent worker labels from bunching, preserving the UI legibility across 15 Head Workers.
 
 ### Positioning & Pixel Aesthetics
 
@@ -118,7 +126,7 @@ The AIC Dashboard is a pure React frontend built with Vite and Tailwind CSS. It 
 - **Negative Space (Breathability):** Use generous vertical spacing (`space-y-12`, `py-6`) between department sections. Use generous horizontal gaps (`gap-6 md:gap-8`) between desks. Desk width should be modest (e.g., `w-[150px]`) to avoid overpowering the screen.
 - **Alignment:** Worker grids MUST be center-aligned (`flex justify-center`, `flex flex-col items-center`), never left-aligned.
 - **Z-Indexing:** Desks overlap gracefully. Hover effects create neon box-shadows (`shadow-[0_0_15px_rgba(0,255,255,0.2)]`). Idle workers should have reduced opacity (`opacity-80`) and no glowing borders to emphasize active ones.
-- **Worker Sorting Hierarchy:** The grid strictly sorts workers top-to-bottom: `Leadership` (Dispatcher + Governor) -> `Product` -> `Engineering`. Ensure `groupWorkersBySection` returns a sorted array tuple. Use subtle borders beneath section headers.
+- **Worker Sorting Hierarchy:** The grid strictly sorts workers top-to-bottom: `Leadership` (Dispatcher + Governor) -> `Product` -> `Engineering` -> `Platform`. Ensure `groupWorkersBySection` returns a sorted array tuple. Use subtle borders beneath section headers.
 - **Desk Accents:**
   - *Monitor*: Anchored relative to desk using `-top-12 right-2`. Do NOT let it float offside.
   - *Status Plat/Bubble*: Anchored `top-2 left-1/2 -translate-x-1/2` directly on the wooden surface div.

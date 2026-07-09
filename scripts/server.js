@@ -60,17 +60,22 @@ function getActiveProject() {
 const PORT = parseInt(process.argv[2] || process.env.PORT || '6868', 10);
 
 const WORKERS = [
-  'pm', 'researcher', 'designer', 'architect',
-  'frontend', 'backend', 'infra', 'qa', 'governor', 'dispatcher'
+  'pm', 'architect', 'research', 'frontend', 'backend', 'qa', 
+  'designer', 'infra', 'security', 'perf', 'data', 'integration', 
+  'documentation', 'governor', 'dispatcher'
 ];
 
 const defaultState = () => {
   const s = {
     workers: Object.fromEntries(
-      WORKERS.map(id => [id, { status: id === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null }])
+      WORKERS.map(id => [id, { status: id === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null, subWorkers: [] }])
     ),
     currentTask: null,
     currentPhase: null,
+    runtimeGate: null,
+    phaseBarrier: null,
+    pmReview: null,
+    rework: null,
     startedAt: Date.now(),
   };
   return s;
@@ -83,9 +88,20 @@ function loadState() {
     const raw = fs.readFileSync(STATE_FILE, 'utf8');
     const saved = JSON.parse(raw);
     state = { ...defaultState(), ...saved, startedAt: saved.startedAt || Date.now() };
+    
+    // Clean up obsolete workers not in current WORKERS list
+    if (state.workers) {
+      for (const w of Object.keys(state.workers)) {
+        if (!WORKERS.includes(w)) {
+          delete state.workers[w];
+        }
+      }
+    }
+    
     // Ensure all workers exist
     for (const w of WORKERS) {
-      if (!state.workers[w]) state.workers[w] = { status: w === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null };
+      if (!state.workers[w]) state.workers[w] = { status: w === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null, subWorkers: [] };
+      if (!state.workers[w].subWorkers) state.workers[w].subWorkers = [];
     }
     state.workers.dispatcher.status = 'working'; // Force dispatcher to always be working
   } catch {
@@ -265,7 +281,124 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // POST /api/agent-status — set a worker's state (lifecycle-enforced)
+  // POST /api/runtime-gate
+  if (req.method === 'POST' && pathname === '/api/runtime-gate') {
+    const data = await readBody(req);
+    
+    if (data.action === 'clear') {
+      state.runtimeGate = null;
+    } else {
+      state.runtimeGate = {
+        type: String(data.type || 'pm-review'),
+        owner: String(data.owner || 'pm'),
+        target: String(data.target || ''),
+        status: String(data.status || 'reviewing'),
+        startedAt: state.runtimeGate?.startedAt || Date.now(),
+        metadata: data.metadata || null
+      };
+    }
+    
+    saveState();
+    broadcast('state', state);
+    return send(res, 200, { ok: true, runtimeGate: state.runtimeGate });
+  }
+
+  // POST /api/pm-review — batch PM review verdicts
+  if (req.method === 'POST' && pathname === '/api/pm-review') {
+    const data = await readBody(req);
+    const phase = String(data.phase || '');
+    const verdicts = data.verdicts || {};
+    const feedback = data.feedback || {};
+
+    state.pmReview = {
+      phase,
+      verdicts,
+      feedback,
+      completedAt: Date.now()
+    };
+
+    // Determine if all PASS or any REWORK
+    const allPass = Object.values(verdicts).every(v => v === 'PASS');
+    const failedWorkers = Object.entries(verdicts)
+      .filter(([_, v]) => v === 'REWORK')
+      .map(([k]) => k);
+
+    if (!allPass) {
+      state.rework = {
+        active: true,
+        failedWorkers,
+        passedWorkers: Object.entries(verdicts)
+          .filter(([_, v]) => v === 'PASS')
+          .map(([k]) => k),
+        attempt: (state.rework?.attempt || 0) + 1
+      };
+    } else {
+      state.rework = null;
+    }
+
+    saveState();
+    broadcast('state', state);
+    return send(res, 200, { ok: true, allPass, failedWorkers, pmReview: state.pmReview, rework: state.rework });
+  }
+
+  // POST /api/phase-barrier — update phase barrier state
+  if (req.method === 'POST' && pathname === '/api/phase-barrier') {
+    const data = await readBody(req);
+    const action = String(data.action || 'update');
+
+    if (action === 'start') {
+      state.phaseBarrier = {
+        active: true,
+        workers: data.workers || [],
+        completed: {},
+        startedAt: Date.now(),
+        timeout: data.timeout || 600000
+      };
+    } else if (action === 'update') {
+      if (state.phaseBarrier) {
+        const worker = String(data.worker || '');
+        const status = String(data.status || 'complete');
+        if (worker) state.phaseBarrier.completed[worker] = status;
+      }
+    } else if (action === 'clear') {
+      state.phaseBarrier = null;
+    }
+
+    saveState();
+    broadcast('state', state);
+    return send(res, 200, { ok: true, phaseBarrier: state.phaseBarrier });
+  }
+
+  // POST /api/sub-agent-status
+  if (req.method === 'POST' && pathname === '/api/sub-agent-status') {
+    const data = await readBody(req);
+    const parent = String(data.parent || '').toLowerCase();
+    const subId = String(data.id || '');
+    const scope = String(data.scope || '');
+    const status = String(data.status || 'working');
+
+    if (!WORKERS.includes(parent)) {
+      return send(res, 400, { error: `unknown parent agent: ${parent}` });
+    }
+    if (!subId) {
+      return send(res, 400, { error: `sub-agent id required` });
+    }
+
+    const workerState = state.workers[parent];
+    const existingIdx = workerState.subWorkers.findIndex(sw => sw.id === subId);
+    
+    if (existingIdx >= 0) {
+      workerState.subWorkers[existingIdx].status = status;
+      if (scope) workerState.subWorkers[existingIdx].scope = scope;
+    } else {
+      workerState.subWorkers.push({ id: subId, scope: scope, status: status });
+    }
+    
+    saveState();
+    broadcast('state', state);
+    return send(res, 200, { ok: true, state });
+  }
+
   if (req.method === 'POST' && pathname === '/api/agent-status') {
     const data = await readBody(req);
     const agent = String(data.agent || '').toLowerCase();
@@ -276,11 +409,11 @@ const server = http.createServer(async (req, res) => {
     if (data.status === 'working' && agent !== 'dispatcher') {
       const phase = (state.currentPhase || '').toLowerCase();
       const PHASE_ALLOWED = {
-        investigate:    ['pm', 'researcher'],
-        planning:       ['pm', 'researcher', 'designer', 'architect'],
-        execution:      ['pm', 'researcher', 'designer', 'architect', 'frontend', 'backend', 'infra'],
-        documentation:  ['pm', 'researcher', 'designer', 'architect', 'frontend', 'backend', 'infra', 'governor'],
-        verification:   ['pm', 'researcher', 'designer', 'architect', 'frontend', 'backend', 'infra', 'qa', 'governor'],
+        investigate:    ['pm', 'research'],
+        planning:       ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra'],
+        implementation: ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra', 'designer', 'frontend', 'backend'],
+        verification:   ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra', 'designer', 'frontend', 'backend', 'qa', 'perf'],
+        closeout:       ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra', 'designer', 'frontend', 'backend', 'qa', 'perf', 'documentation', 'governor'],
       };
       const allowed = PHASE_ALLOWED[phase];
       if (!allowed) {
