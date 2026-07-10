@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const auth = require('./auth');
 const { handleOpsEndpoint } = require('./ops-endpoints');
+const { handleEnterpriseEndpoint } = require('./enterprise-endpoints');
 
 const SKILL_DIR = path.join(__dirname, '..');
 const STATE_FILE = path.join(SKILL_DIR, '.aic', 'state.json');
@@ -219,6 +220,11 @@ const server = http.createServer(async (req, res) => {
       currentPhase: state.currentPhase,
       startedAt: state.startedAt,
     });
+  }
+
+  // GET /api/version — version info (no auth required)
+  if (req.method === 'GET' && pathname === '/api/version') {
+    return send(res, 200, { version: '2.0.0', milestone: 'J' });
   }
 
   // Auth management endpoints (protected)
@@ -533,7 +539,33 @@ const server = http.createServer(async (req, res) => {
     // Don't reset workers — let them stay 'complete' so dashboard shows who did what
     // Workers reset to idle on next task-start
     saveState();
+    // RP-003.3: Knowledge Auto-Update trigger
+    try {
+      const kDir = path.join(SKILL_DIR, 'knowledge');
+      const kFile = path.join(kDir, 'task-entries.json');
+      const entries = fs.existsSync(kFile) ? JSON.parse(fs.readFileSync(kFile, 'utf8')) : [];
+      entries.push({ task_id: tid, status: 'done', timestamp: Date.now() });
+      fs.mkdirSync(kDir, { recursive: true });
+      fs.writeFileSync(kFile, JSON.stringify(entries, null, 2));
+    } catch (e) { /* knowledge update is best-effort */ }
     return send(res, 200, { success: true, status: 'done' });
+  }
+
+
+  // RP-003.2: Pipeline Status — Phase State Machine
+  if (req.method === "GET" && pathname === "/api/pipeline/status") {
+    const tasksDir = path.join(SKILL_DIR, ".aic", "tasks");
+    const phases = [];
+    try {
+      for (const d of fs.readdirSync(tasksDir)) {
+        const sf = path.join(tasksDir, d, "state.json");
+        if (fs.existsSync(sf)) {
+          const s = JSON.parse(fs.readFileSync(sf, "utf8"));
+          phases.push({ id: s.id, phase: s.phase, status: s.status, description: s.description });
+        }
+      }
+    } catch {}
+    return send(res, 200, { phases, current: phases.find(p => p.status === "running") || null });
   }
 
   // POST /api/reset — clear all workers to idle
@@ -700,6 +732,9 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && !pathname.startsWith('/api/')) {
     return serveStatic(req, res, pathname);
   }
+
+  // Enterprise endpoints (Milestone J)
+  if (await handleEnterpriseEndpoint(req, res, send, readBody, { ...state, port: PORT })) return;
 
   // Ops endpoints (Milestone I)
   if (await handleOpsEndpoint(req, res, send, readBody, { ...state, port: PORT })) return;

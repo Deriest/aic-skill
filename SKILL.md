@@ -201,14 +201,42 @@ Runtime milestones follow the same documentation-first pattern as Dashboard:
 Milestone sub-items (E.1-E.5) become internal Work Packages (WP-1-WP-5). User approval required only at final milestone completion, not between Work Packages.
 
 ### opencode Non-Interactive Mode (Pitfall)
-`opencode --print` does NOT exist. The correct flag for non-interactive prompts is `--prompt`:
+`opencode --print` and `opencode --prompt` do NOT work reliably. The correct command for headless execution is `opencode run`:
 ```bash
-opencode --prompt "Analyze this file" 2>&1
+echo "Create a file called result.txt with content hello" | opencode run 2>&1
 ```
-`opencode --prompt` also times out in non-PTY mode (execute_code, terminal without pty=true). Workarounds:
-1. Use `delegate_task` to spawn a subagent that runs opencode (recommended)
-2. Produce artifacts directly and register through knowledge platform (fastest)
-Discovered during Milestone H Runtime OAT — 5-minute timeout on `opencode --print`.
+`opencode run` reads from stdin, executes the task, and exits with code 0 on success. Works without a PTY. Discovered during Milestone J Runtime OAT — `spawn-worker.sh` already uses `opencode run` (line 126: `execFileSync('opencode', ['run', promptFile, '-m', model, '--auto', '--format', 'json'])`).
+
+**Pitfall:** Running bare `opencode` (without `run`) opens the TUI and hangs in non-PTY contexts. Always use `opencode run` for scripted/batch execution.
+
+### Enterprise Pipeline Orchestrator (Milestone J+)
+`pipeline-orchestrator.sh` chains the full AIC workflow end-to-end:
+```bash
+pipeline-orchestrator.sh "task description" /project/dir
+```
+Phases: investigate → planning → implementation → verification → closeout → knowledge auto-update.
+
+**Architecture:**
+- Calls `phase-runner.sh` per phase with approved worker assignments
+- Each phase's workers come from `PHASE_WORKERS` associative array
+- Stops on failure (`set -euo pipefail` + explicit `fail()`)
+- Creates task state in `.aic/tasks/<task_id>/state.json`
+- Triggers knowledge auto-update via `/api/task-complete` (RP-003.3)
+- Tracks phase progression via `GET /api/pipeline/status`
+
+**API contract:** `/api/task-start` requires `{title, type}`, NOT `{task, project_dir}`. The orchestrator uses `python3 -c` to build proper JSON.
+
+**Knowledge auto-update:** After `POST /api/task-complete`, server.js automatically writes to `knowledge/task-entries.json`. No manual trigger needed.
+
+**Pitfall:** Thinker tier (Opus) workers occasionally timeout at 180s. This is a model availability issue, not a pipeline defect. Sprinter/Crafter tiers are more reliable for testing.
+
+### Self-Check ≠ Official Verification (CRITICAL)
+
+Implementation self-validation is NOT Official Verification. They are separate lifecycle stages. User correction: *"Verification belum dimulai secara resmi. Hasil ad-hoc yang sudah kamu jalankan hanya sebagai self-check implementasi. Jangan gunakan hasil tersebut sebagai Verification resmi."*
+
+**Rule:** After implementation, do NOT present self-check results as verification evidence. Self-checks are internal confidence checks only. Official Verification is a separate gate that the user triggers explicitly. The verification report must be independently executed — never copy self-check results into the verification report.
+
+**Rule:** Same applies to Runtime OAT. Endpoint-based testing (curl API calls) is NOT a valid Runtime OAT. User rejected Milestone I Runtime OAT as "INVALID" because it tested endpoints in isolation rather than executing a real engineering task through the AIC workflow. A valid Runtime OAT must execute a real `spawn-worker.sh` task and observe ops capabilities naturally.
 
 ### Milestone Reports Directory (Pitfall)
 Milestone reports must go in the **repo root** (`workflows/aic/`), NOT in `~/.hermes/skills/aic/`. Use `write_file` with the full repo path. The `skill_manage write_file` tool writes to the skill directory by default — wrong location for milestone deliverables. During Milestone H closeout, 5 reports had to be copied back.
@@ -279,7 +307,7 @@ When adding new API endpoints to an existing `http.createServer` server, `server
 async function handleOpsEndpoint(req, res, send, readBody, state) {
   if (req.method === 'GET' && pathname === '/api/foo') {
     send(res, 200, { ok: true });
-    return true;  // handled
+    return true;  // handled — MUST return true, not send() return value
   }
   return false;  // not handled, pass to main handler
 }
@@ -291,6 +319,8 @@ if (await handleOpsEndpoint(req, res, send, readBody, state)) return;
 return send(res, 404, { error: 'not found' });
 ```
 Discovered during Milestone I — 6 new ops endpoints failed silently when registered via `server.on('request')`, worked immediately after switching to inline handler pattern.
+
+**Sub-pitfall: `return send()` returns undefined.** `send(res, 200, data)` typically doesn't return a value. Writing `return send(res, 200, data)` returns `undefined` (falsy), so `if (await handle(...)) return;` falls through and the 404 handler tries to send again → `ERR_HTTP_HEADERS_SENT`. Fix: always `send(...); return true;` — two statements, not one. Discovered during Milestone J enterprise-endpoints.js crash.
 
 ### Dashboard Implementation Pitfalls
 IF dashboard changes → load `references/dashboard-implementation-pitfalls.md`

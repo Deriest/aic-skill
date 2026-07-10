@@ -1,0 +1,37 @@
+[
+  {
+    "id": "proj-1783699398578",
+    "name": "test-proj",
+    "dir": "/tmp/test",
+    "status": "active",
+    "created_at": 1783699398578
+  },
+  {
+    "id": "proj-1783699756822",
+    "name": "Project Alpha",
+    "dir": "/tmp/aic-alpha",
+    "status": "active",
+    "created_at": 1783699756822
+  },
+  {
+    "id": "proj-1783699756849",
+    "name": "Project Beta",
+    "dir": "/tmp/aic-beta",
+    "status": "active",
+    "created_at": 1783699756849
+  },
+  {
+    "id": "proj-1783701228340",
+    "name": "Project Alpha",
+    "dir": "/tmp/aic-alpha",
+    "status": "active",
+    "created_at": 1783701228340
+  },
+  {
+    "id": "proj-1783702809309",
+    "name": "Project Beta",
+    "dir": "/tmp/aic-beta",
+    "status": "active",
+    "created_at": 1783702809309
+  }
+]
