@@ -1,0 +1,163 @@
+# Milestone H — Investigation Report
+
+**Status:** COMPLETE
+**Date:** 2026-07-10
+**Baseline:** Milestone G (commit 1365423)
+
+---
+
+## Investigation Method
+
+- Repository inspection via `grep`, `find`, `ls`
+- Script content analysis
+- Gap analysis against MASTER-ROADMAP.md
+- Dependency matrix construction
+
+---
+
+## 1. Repository Analysis
+
+### Current Repository State
+
+| Component | Location | Status |
+|-----------|----------|--------|
+| Runtime scripts | `scripts/*.sh` (24 files) | COMPLETE |
+| Server API | `scripts/server.js` (20 endpoints) | COMPLETE |
+| Auth system | `scripts/api-auth.sh` + `scripts/auth.js` | COMPLETE |
+| Worker memory | `scripts/worker-memory.sh` | COMPLETE |
+| Context sharing | `scripts/context-sharing.sh` | COMPLETE |
+| Worker validation | `scripts/worker-validation.sh` | COMPLETE |
+| Artifacts storage | `.aic/artifacts/` (7 files) | RAW — no versioning |
+| Worker memory | `.aic/workers/` (3 JSON files) | FUNCTIONAL |
+| Shared context | `.aic/shared-context/` (2 JSON files) | FUNCTIONAL |
+
+---
+
+## 2. Gap Analysis Matrix
+
+| WP | Name | Status | Evidence |
+|----|------|--------|----------|
+| H-1 | Artifact Lifecycle | **NOT IMPLEMENTED** | No versioning, lifecycle states, or artifact storage |
+| H-2 | Knowledge Indexing | **PARTIAL** | "index" in preflight.sh, worker-autonomy.sh; no metadata indexing |
+| H-3 | Semantic Search | **PARTIAL** | "search" in changelog.sh, decision-engine.sh; no semantic/vector search |
+| H-4 | Reuse Engine | **NOT IMPLEMENTED** | No "reuse" or "suggest" in any script |
+| H-5 | Semantic Memory | **NOT IMPLEMENTED** | No "vector" or "embedding" in any script |
+| H-6 | Lessons Learned | **PARTIAL** | "pattern" in worker-autonomy.sh; no lesson/anti-pattern capture |
+| H-7 | Knowledge Graph | **PARTIAL** | "graph" in dependency-graph.sh; no knowledge graph data structure |
+| H-8 | Cross-project References | **PARTIAL** | "reference" in setup.sh; no cross-project linking |
+
+---
+
+## 3. Reusable Milestone G Components
+
+| Component | File | Reuse Without Modification |
+|-----------|------|---------------------------|
+| Per-worker Memory | `worker-memory.sh` | YES — can store knowledge metadata |
+| Context Sharing | `context-sharing.sh` | YES — can share knowledge artifacts |
+| Worker Validation | `worker-validation.sh` | YES — can validate knowledge artifacts |
+| Internal Auth | `api-auth.sh` | YES — protects knowledge API endpoints |
+| Worker Registry | `worker-registry.sh` | YES — can register knowledge capabilities |
+| Decision Engine | `decision-engine.sh` | YES — can route knowledge tasks |
+
+**6 components reusable without modification.**
+
+---
+
+## 4. Existing Artifacts (Raw)
+
+| Artifact | Format | Versioned | Searchable |
+|----------|--------|-----------|-----------|
+| `requirements.json` | JSON | NO | NO |
+| `design.json` | JSON | NO | NO |
+| `plan.md` | MD | NO | NO |
+| `investigation.md` | MD | NO | NO |
+| `review.json` | JSON | NO | NO |
+| `test-results.json` | JSON | NO | NO |
+| `changelog.md` | MD | NO | NO |
+
+**All 7 artifacts exist in raw form. None are versioned or indexed.**
+
+---
+
+## 5. Dependency Analysis
+
+### External Dependencies (Milestone H WPs)
+
+| WP | Depends On | Status |
+|----|-----------|--------|
+| H-1 | Milestones F+G | ✅ COMPLETE |
+| H-2 | H-1 | ⏳ PENDING |
+| H-3 | H-2 | ⏳ PENDING |
+| H-4 | H-2 + H-3 | ⏳ PENDING |
+| H-5 | H-2 | ⏳ PENDING |
+| H-6 | H-1 + H-5 | ⏳ PENDING |
+| H-7 | H-1 + H-2 | ⏳ PENDING |
+| H-8 | H-7 | ⏳ PENDING |
+
+### Internal Dependencies (no circular)
+
+```
+H-1 (Artifact Lifecycle)
+├── H-2 (Knowledge Indexing) → depends on H-1
+│   ├── H-3 (Semantic Search) → depends on H-2
+│   │   └── H-4 (Reuse Engine) → depends on H-2 + H-3
+│   └── H-5 (Semantic Memory) → depends on H-2
+│       └── H-6 (Lessons Learned) → depends on H-1 + H-5
+│   └── H-7 (Knowledge Graph) → depends on H-1 + H-2
+│       └── H-8 (Cross-project) → depends on H-7
+```
+
+**No circular dependencies found.**
+
+---
+
+## 6. Boundary Validation
+
+| Scope | Milestone | Boundary |
+|-------|-----------|----------|
+| Knowledge Platform | H | ✅ Correct scope |
+| Production Monitoring | I | ❌ NOT in H |
+| Enterprise Features | J | ❌ NOT in H |
+
+**No scope overlap with I or J.**
+
+---
+
+## 7. Risk Assessment
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| No vector DB dependency | HIGH | Use simple JSON-based indexing first, add vectors later |
+| Artifact versioning complexity | MEDIUM | Start with hash-based versioning, not full git-like |
+| Semantic search accuracy | MEDIUM | Use keyword search first, add embeddings in later WP |
+| Performance on large knowledge bases | LOW | Current scale is small; optimize later |
+| Regression from Milestone G | LOW | All 6 G-components verified working |
+
+---
+
+## 8. Entry Criteria Validation
+
+| Criterion | Status |
+|-----------|--------|
+| Milestones F+G COMPLETE | ✅ |
+| Artifacts generated by workers | ✅ (7 artifacts in .aic/artifacts/) |
+| Worker memory functional | ✅ (3 workers with memory.json) |
+
+**All entry criteria met.**
+
+---
+
+## Limitations
+
+1. No vector database installed — semantic search may need external dependency
+2. Artifacts are flat files — no structured artifact registry yet
+3. Knowledge graph has no existing data structure — needs design
+4. Cross-project references have no link format defined
+
+---
+
+## Decision
+
+**Milestone H Investigation = COMPLETE**
+
+**Ready for Planning**
