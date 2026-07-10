@@ -21,43 +21,42 @@ case "$ACTION" in
     [[ -z "$VALUE" ]] && { echo "ERROR: Missing value"; exit 1; }
     python3 << PYEOF
 import json, os
-f = os.path.abspath("$MEMORY_FILE")
+f = "$MEMORY_FILE"
 d = json.load(open(f)) if os.path.exists(f) else {}
 d["$KEY"] = "$VALUE"
 json.dump(d, open(f, "w"), indent=2)
-print(f"  Stored: $KEY = $VALUE")
+print("  Stored: $KEY = $VALUE")
 PYEOF
     ;;
-  recall)
+  retrieve)
     [[ -z "$KEY" ]] && { echo "ERROR: Missing key"; exit 1; }
     python3 << PYEOF
 import json, os
-f = os.path.abspath("$MEMORY_FILE")
-k = "$KEY"
-if os.path.exists(f):
-    d = json.load(open(f))
-    v = d.get(k, "not found")
-    print(f"  {k} = {v}")
-else:
-    print("  No memory found")
+f = "$MEMORY_FILE"
+d = json.load(open(f)) if os.path.exists(f) else {}
+v = d.get("$KEY")
+if v: print("  $KEY = %s" % v)
+else: print("  Not found: $KEY")
 PYEOF
     ;;
   list)
-    if [[ -f "$MEMORY_FILE" ]]; then
-      echo "=== Worker Memory: $WORKER ==="
-      python3 << PYEOF
-import json
-d = json.load(open("$MEMORY_FILE"))
-for k, v in d.items():
-    print(f"  {k} = {v}")
+    python3 << PYEOF
+import json, os
+f = "$MEMORY_FILE"
+d = json.load(open(f)) if os.path.exists(f) else {}
+for k, v in d.items(): print("  %s = %s" % (k, v))
 PYEOF
-    else
-      echo "  No memory found"
-    fi
     ;;
-  clear)
-    rm -f "$MEMORY_FILE"
-    echo "  Memory cleared for $WORKER"
+  knowledge-store)
+    K="$2"; V="$3"
+    [[ -z "$K" ]] && { echo "ERROR: Missing key"; exit 1; }
+    [[ -z "$V" ]] && { echo "ERROR: Missing value"; exit 1; }
+    bash "$SCRIPT_DIR/knowledge-memory.sh" store "$K" "$V"
+    ;;
+  knowledge-retrieve)
+    K="$2"
+    [[ -z "$K" ]] && { echo "ERROR: Missing key"; exit 1; }
+    bash "$SCRIPT_DIR/knowledge-memory.sh" retrieve "$K"
     ;;
   *)
     echo "ERROR: Unknown action '$ACTION'" >&2
