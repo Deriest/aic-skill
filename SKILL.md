@@ -163,6 +163,26 @@ wait $PID_BE $PID_FE   # phase barrier
 ```
 Load `references/parallel-execution-model.md` for full dependency matrix and barrier rules.
 
+### Work Package Structure
+
+Work Packages represent **business capabilities**, not implementation details. Internal wiring, helper functions, PID handling belong to the capability that requires them. Never create a WP for "execution wiring" — it belongs in the WP that needs it.
+
+### Parallel Scheduler Pattern
+Runtime supports parallel execution via bash `&` + `wait`:
+```bash
+spawn-worker.sh backend crafter /dir /prompt --background &
+PID_BE=$!
+spawn-worker.sh frontend crafter /dir /prompt --background &
+PID_FE=$!
+wait $PID_BE $PID_FE   # phase barrier
+```
+Load `references/parallel-execution-model.md` for full dependency matrix and barrier rules.
+
+### Documentation-First Workflow for Runtime Milestones
+Runtime milestones follow the same documentation-first pattern as Dashboard:
+1. ADR → SPEC → CHANGESET → PLAN → PM Review → Implementation → Verification → OAT → Freeze
+Milestone sub-items (E.1-E.5) become internal Work Packages (WP-1-WP-5). User approval required only at final milestone completion, not between Work Packages.
+
 ### Documentation-First Workflow for Runtime Milestones
 Runtime milestones follow the same documentation-first pattern as Dashboard:
 1. ADR → SPEC → CHANGESET → PLAN → PM Review → Implementation → Verification → OAT → Freeze
