@@ -35,6 +35,7 @@ fi
 # Load .env
 if [[ -f "$ENV_FILE" ]]; then
   set -a; source "$ENV_FILE" 2>/dev/null || true; set +a
+source "$(dirname "$0")/api-auth.sh"
 fi
 
 echo "=== REWORK Handler: $PHASE ==="
@@ -49,7 +50,7 @@ while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
   echo "=== REWORK attempt $RETRY_COUNT of $MAX_RETRIES ==="
 
   # Update runtime state
-  curl -sf -X POST "$API_URL/api/phase-barrier" \
+  curl_api -X POST "$API_URL/api/phase-barrier" \
     -H "Content-Type: application/json" \
     -d "{\"active\":true,\"workers\":[\"${@%%,*}\"],\"completed\":{},\"startedAt\":$(date +%s),\"timeout\":600}" > /dev/null 2>&1 || true
 
@@ -65,7 +66,7 @@ while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
 
   # Collect artifacts
   ARTIFACTS=()
-  TASK_ID=$(curl -sf "$API_URL/api/status" 2>/dev/null | grep -o '"id":"TASK-[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+  TASK_ID=$(curl_api "$API_URL/api/status" 2>/dev/null | grep -o '"id":"TASK-[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
   if [[ -n "$TASK_ID" ]]; then
     REPORT_DIR="$SKILL_DIR/.aic/tasks/$TASK_ID/reports"
     if [[ -d "$REPORT_DIR" ]]; then
@@ -93,7 +94,7 @@ while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
       echo "=== REWORK loop complete after $RETRY_COUNT attempt(s) ==="
       
       # Update runtime state
-      curl -sf -X POST "$API_URL/api/pm-review" \
+      curl_api -X POST "$API_URL/api/pm-review" \
         -H "Content-Type: application/json" \
         -d "{\"phase\":\"$PHASE\",\"verdicts\":{\"all\":\"PASS\"},\"feedback\":{}}" > /dev/null 2>&1 || true
       
@@ -123,7 +124,7 @@ echo "=== $MAX_RETRIES attempts failed for phase $PHASE ===" >&2
 echo "=== Escalating to BLOCKED state ===" >&2
 
 # Update runtime state to blocked
-curl -sf -X POST "$API_URL/api/phase-barrier" \
+curl_api -X POST "$API_URL/api/phase-barrier" \
   -H "Content-Type: application/json" \
   -d "{\"active\":false,\"workers\":[],\"completed\":{},\"startedAt\":0,\"timeout\":0}" > /dev/null 2>&1 || true
 

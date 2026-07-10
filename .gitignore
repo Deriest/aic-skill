@@ -28,6 +28,7 @@ cache/
 CHANGELOG.md
 
 # AIC Local Database & History
+.aic/auth.json
 .aic/tasks/
 .aic/prompts/
 .aic/state.json

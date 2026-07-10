@@ -36,10 +36,11 @@ fi
 # Load .env
 if [[ -f "$ENV_FILE" ]]; then
   set -a; source "$ENV_FILE" 2>/dev/null || true; set +a
+source "$(dirname "$0")/api-auth.sh"
 fi
 
 # Update phase
-curl -sf -X POST "$API_URL/api/task-status" \
+curl_api -X POST "$API_URL/api/task-status" \
   -H "Content-Type: application/json" \
   -d "{\"currentPhase\":\"$PHASE\"}" > /dev/null 2>&1 || true
 

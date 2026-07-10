@@ -35,6 +35,7 @@ done
 # Load .env
 if [[ -f "$ENV_FILE" ]]; then
   set -a; source "$ENV_FILE" 2>/dev/null || true; set +a
+source "$(dirname "$0")/api-auth.sh"
 else
   echo "ERROR: $ENV_FILE not found. Run setup.sh first." >&2
   exit 1
@@ -98,12 +99,12 @@ PHASE_VAR="PHASE_MAP_$WORKER"
 CURRENT_PHASE="${!PHASE_VAR:-unknown}"
 
 # Update pipeline phase
-curl -sf -X POST "$API_URL/api/task-status" \
+curl_api -X POST "$API_URL/api/task-status" \
   -H "Content-Type: application/json" \
   -d "{\"currentPhase\":\"$CURRENT_PHASE\"}" > /dev/null 2>&1 || true
 
 # Set worker status to working
-curl -sf -X POST "$API_URL/api/agent-status" \
+curl_api -X POST "$API_URL/api/agent-status" \
   -H "Content-Type: application/json" \
   -d "{\"agent\":\"$WORKER\",\"status\":\"working\",\"engine\":\"opencode\"}" > /dev/null 2>&1 || true
 
@@ -155,7 +156,7 @@ NODESCRIPT
     # Send metrics to API
     if [[ -n "$INPUT_TOKENS" ]] && [[ "$INPUT_TOKENS" != "0" ]]; then
       TOTAL_TOKENS=$((${INPUT_TOKENS:-0} + ${OUTPUT_TOKENS:-0} + ${REASONING_TOKENS:-0}))
-      curl -sf -X POST "$API_URL/api/metrics" \
+      curl_api -X POST "$API_URL/api/metrics" \
         -H "Content-Type: application/json" \
         -d "{
           \"worker\": \"$WORKER\",
@@ -173,7 +174,7 @@ NODESCRIPT
         }" > /dev/null 2>&1 || true
     fi
     # Save output to task reports directory before cleanup
-    TASK_ID=$(curl -sf "$API_URL/api/status" 2>/dev/null | grep -o '"id":"TASK-[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+    TASK_ID=$(curl_api "$API_URL/api/status" 2>/dev/null | grep -o '"id":"TASK-[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
     if [[ -n "$TASK_ID" ]]; then
       REPORT_DIR="$SKILL_DIR/.aic/tasks/$TASK_ID/reports"
       mkdir -p "$REPORT_DIR"
@@ -192,14 +193,14 @@ fi
 [[ "${CLEANUP_PROMPT:-false}" == true ]] && rm -f "$PROMPT_FILE"
 
 if [[ $EXIT_CODE -eq 0 ]]; then
-  curl -sf -X POST "$API_URL/api/agent-status" \
+  curl_api -X POST "$API_URL/api/agent-status" \
     -H "Content-Type: application/json" \
     -d "{\"agent\":\"$WORKER\",\"status\":\"complete\"}" > /dev/null 2>&1 || true
   # Auto-mark task done when last phase worker (governor) completes
   if [[ "$WORKER" == "governor" ]]; then
-    TASK_ID=$(curl -sf "$API_URL/api/status" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('currentTask',{}).get('id',''))" 2>/dev/null || echo "")
+    TASK_ID=$(curl_api "$API_URL/api/status" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('currentTask',{}).get('id',''))" 2>/dev/null || echo "")
     if [[ -n "$TASK_ID" ]]; then
-      curl -sf -X POST "$API_URL/api/task-complete" \
+      curl_api -X POST "$API_URL/api/task-complete" \
         -H "Content-Type: application/json" \
         -d "{\"taskId\":\"$TASK_ID\"}" > /dev/null 2>&1 || true
     fi

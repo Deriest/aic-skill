@@ -35,6 +35,7 @@ fi
 # Load .env
 if [[ -f "$ENV_FILE" ]]; then
   set -a; source "$ENV_FILE" 2>/dev/null || true; set +a
+source "$(dirname "$0")/api-auth.sh"
 fi
 
 echo "=== PM Review: $PHASE ==="
@@ -142,7 +143,7 @@ case "$VERDICT" in
     done
     VERDICTS_JSON="${VERDICTS_JSON%,}}"
     
-    curl -sf -X POST "$API_URL/api/pm-review" \
+    curl_api -X POST "$API_URL/api/pm-review" \
       -H "Content-Type: application/json" \
       -d "{\"phase\":\"$PHASE\",\"verdicts\":$VERDICTS_JSON,\"feedback\":{}}" > /dev/null 2>&1 || true
     
@@ -160,7 +161,7 @@ case "$VERDICT" in
     done
     VERDICTS_JSON="${VERDICTS_JSON%,}}"
     
-    curl -sf -X POST "$API_URL/api/pm-review" \
+    curl_api -X POST "$API_URL/api/pm-review" \
       -H "Content-Type: application/json" \
       -d "{\"phase\":\"$PHASE\",\"verdicts\":$VERDICTS_JSON,\"feedback\":{}}" > /dev/null 2>&1 || true
     

@@ -62,6 +62,7 @@ IF browser/GUI issues → load `references/dispatcher-pitfalls-browser.md`
 IF UI issues → load `references/dispatcher-pitfalls-ui.md`
 IF heredoc escaping issues → load `references/dispatcher-pitfalls-heredoc.md`
 IF historical pitfalls → load `references/dispatcher-pitfalls-history.md`
+IF auth/API key issues → load `references/runtime-auth-pattern.md`
 IF general troubleshooting → load `references/dispatcher-troubleshooting.md`
 
 ### Configuration
@@ -183,10 +184,19 @@ Runtime milestones follow the same documentation-first pattern as Dashboard:
 1. ADR → SPEC → CHANGESET → PLAN → PM Review → Implementation → Verification → OAT → Freeze
 Milestone sub-items (E.1-E.5) become internal Work Packages (WP-1-WP-5). User approval required only at final milestone completion, not between Work Packages.
 
-### Documentation-First Workflow for Runtime Milestones
-Runtime milestones follow the same documentation-first pattern as Dashboard:
-1. ADR → SPEC → CHANGESET → PLAN → PM Review → Implementation → Verification → OAT → Freeze
-Milestone sub-items (E.1-E.5) become internal Work Packages (WP-1-WP-5). User approval required only at final milestone completion, not between Work Packages.
+### Python-in-Shell Pattern (Pitfall)
+When calling python from bash with variable interpolation, NEVER use inline f-strings with bash variables — causes quote conflicts. Use heredoc instead:
+```bash
+# BAD: python3 -c "print(f'  $KEY = {d.get(\"$KEY\", \"not found\")}')"
+# GOOD:
+python3 << PYEOF
+import json, os
+k = "$KEY"
+d = json.load(open("$FILE"))
+print(f"  {k} = {d.get(k, 'not found')}")
+PYEOF
+```
+Discovered during Milestone G worker-memory.sh fix. `import os.environ as env` also fails — use `import os; env = os.environ`.
 
 ### Dashboard Implementation Pitfalls
 IF dashboard changes → load `references/dashboard-implementation-pitfalls.md`

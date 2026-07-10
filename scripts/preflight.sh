@@ -86,7 +86,7 @@ fi
 
 # 5. Set dispatcher to working & Open Dashboard
 if [[ $FAIL -eq 0 ]]; then
-  curl -sf -X POST "$API_URL/api/agent-status" \
+  curl_api -X POST "$API_URL/api/agent-status" \
     -H "Content-Type: application/json" \
     -d '{"agent":"dispatcher","status":"working","engine":"delegate"}' >/dev/null 2>&1 || true
 

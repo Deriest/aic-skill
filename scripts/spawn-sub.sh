@@ -21,6 +21,7 @@ SKIP_CONTEXT=false
 # Load .env
 if [[ -f "$ENV_FILE" ]]; then
   set -a; source "$ENV_FILE" 2>/dev/null || true; set +a
+source "$(dirname "$0")/api-auth.sh"
 else
   echo "ERROR: $ENV_FILE not found." >&2
   exit 1
@@ -58,7 +59,7 @@ if [[ "$SKIP_CONTEXT" == false ]] && [[ -x "$SCRIPT_DIR/context-gather.sh" ]]; t
 fi
 
 # Set sub-worker status to working
-curl -sf -X POST "$API_URL/api/sub-agent-status" \
+curl_api -X POST "$API_URL/api/sub-agent-status" \
   -H "Content-Type: application/json" \
   -d "{\"parent\":\"$PARENT\",\"id\":\"$SUB_ID\",\"status\":\"working\",\"scope\":\"${SUB_ID}\"}" > /dev/null 2>&1 || true
 
@@ -96,7 +97,7 @@ NODESCRIPT
   if [[ -f "$OUTPUT_FILE" ]]; then
     # Token metrics could be sent here as well, similar to spawn-worker.sh
     # Save output
-    TASK_ID=$(curl -sf "$API_URL/api/status" 2>/dev/null | grep -o '"id":"TASK-[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+    TASK_ID=$(curl_api "$API_URL/api/status" 2>/dev/null | grep -o '"id":"TASK-[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
     if [[ -n "$TASK_ID" ]]; then
       REPORT_DIR="$SKILL_DIR/.aic/tasks/$TASK_ID/reports"
       mkdir -p "$REPORT_DIR"
@@ -121,7 +122,7 @@ else
   echo "=== $SUB_ID completed successfully ==="
 fi
 
-curl -sf -X POST "$API_URL/api/sub-agent-status" \
+curl_api -X POST "$API_URL/api/sub-agent-status" \
   -H "Content-Type: application/json" \
   -d "{\"parent\":\"$PARENT\",\"id\":\"$SUB_ID\",\"status\":\"$STATUS\"}" > /dev/null 2>&1 || true
 

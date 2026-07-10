@@ -7,6 +7,7 @@ const os = require('os');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const auth = require('./auth');
 
 const SKILL_DIR = path.join(__dirname, '..');
 const STATE_FILE = path.join(SKILL_DIR, '.aic', 'state.json');
@@ -58,6 +59,19 @@ function getActiveProject() {
   };
 }
 const PORT = parseInt(process.argv[2] || process.env.PORT || '6868', 10);
+
+// Rate limiter: 60 req/min per IP
+const rateLimits = new Map();
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const window = 60000;
+  let record = rateLimits.get(ip);
+  if (!record || now - record.start > window) {
+    record = { start: now, count: 0 };
+    rateLimits.set(ip, record);
+  }
+  return ++record.count <= 60;
+}
 
 const WORKERS = [
   'pm', 'architect', 'research', 'frontend', 'backend', 'qa', 
@@ -152,12 +166,18 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  // Health check
+  // Rate limit: 60 req/min per IP
+  const clientIp = req.socket.remoteAddress;
+  if (!checkRateLimit(clientIp)) {
+    return send(res, 429, { error: 'rate limit exceeded' });
+  }
+
+  // Health check — no auth required
   if (req.method === 'GET' && pathname === '/health') {
     return send(res, 200, { ok: true, port: PORT, uptime: Math.floor((Date.now() - state.startedAt) / 1000) });
   }
 
-  // GET /api/status — single source of truth for dashboard
+  // Dashboard GET /api/status — no auth required (dashboard consumer)
   if (req.method === 'GET' && pathname === '/api/status') {
     return send(res, 200, {
       connected: true,
@@ -168,6 +188,29 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // Auth management endpoints (protected)
+  if (pathname.startsWith('/api/auth')) {
+    if (!auth.requireAuth(req, res)) return;
+
+    if (req.method === 'POST' && pathname === '/api/auth/keys') {
+      const data = await readBody(req);
+      const key = auth.addApiKey(data.label || 'default');
+      return send(res, 200, { success: true, key });
+    }
+    if (req.method === 'GET' && pathname === '/api/auth/keys') {
+      return send(res, 200, { keys: auth.listApiKeys() });
+    }
+    if (req.method === 'DELETE' && pathname === '/api/auth/keys') {
+      const data = await readBody(req);
+      if (!data.key) return send(res, 400, { error: 'missing key' });
+      const removed = auth.removeApiKey(data.key);
+      return removed ? send(res, 200, { success: true }) : send(res, 404, { error: 'key not found' });
+    }
+    return send(res, 404, { error: 'unknown auth endpoint' });
+  }
+
+  // All other API routes require auth
+  if (pathname.startsWith('/api') && !auth.requireAuth(req, res)) return;
 
   // POST /api/task-start — start a new task (sets currentTask + resets workers)
   if (req.method === 'POST' && pathname === '/api/task-start') {
