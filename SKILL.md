@@ -115,6 +115,59 @@ This prevents requirement drift and iterative redesign.
 **Worker Registry:** `WORKER-REGISTRY.md` is the single source of truth for all 15 workers
 **Dashboard Spec:** `DASHBOARD-SPECIFICATION-v1.0.md` is the frozen visual baseline
 
+### OAT Scope Distinction (CRITICAL)
+Dashboard OAT and Runtime OAT are different things. Do NOT conflate them.
+
+- **Dashboard OAT**: Verifies Dashboard renders runtime state correctly. Test via `curl` API + `browser_vision`. This is Milestone D scope.
+- **Runtime OAT**: Verifies real workers, real spawning, real PM Review, real artifact generation. Test via `spawn-worker.sh` execution. This is Milestone E scope.
+
+**Pitfall**: Claiming "Runtime OAT PASS" when only Dashboard API endpoints were tested via `curl`. User correction: *"kok sage ga berkerja ya? emang kamu test apa?"* — I triggered API state changes but never executed `spawn-worker.sh` or `spawn-sub.sh` against real AI models.
+
+**Rule**: Every OAT claim must state exactly which runtime components were actually executed. If only API endpoints were tested, say "Dashboard OAT PASS, Runtime OAT NOT TESTED."
+
+### Verification Evidence Policy (CRITICAL)
+
+**Never claim PASS based on code inspection alone.** User correction: *"saya butuh execution evidence verification nya bukan cuma checklist"*
+
+Verification levels (ascending):
+1. **Code inspection** — grep, syntax check, structure validation. Lowest confidence. Never sufficient for PASS.
+2. **API testing** — curl endpoints, check responses. Confirms API works. Does NOT confirm runtime integration.
+3. **Mock execution** — test scripts with mock workers. Confirms mechanism works. Does NOT confirm real AI execution.
+4. **Real execution** — actual `spawn-worker.sh` against real AI models. Highest confidence. Required for Runtime OAT PASS.
+
+**Rule**: WP/Milestone PASS requires at minimum level 3 (mock execution) for structural verification, and level 4 (real execution) for at least one end-to-end test. Always state which level was used.
+
+### Gap Matrix Lesson
+
+**Documented features ≠ connected features.** A `server.js` endpoint existing does NOT mean any runtime component calls it. A `--background` flag existing does NOT mean any script uses it. Always verify the full execution path:
+
+1. Does the feature exist in code? (grep)
+2. Does any caller invoke it? (grep for callers)
+3. Does the orchestration logic connect it? (check dispatcher discipline/prompts)
+4. Does it actually execute end-to-end? (run it)
+
+If step 2-4 are missing, the feature is NOT complete regardless of how well step 1 is documented.
+
+### Work Package Structure
+
+Work Packages represent **business capabilities**, not implementation details. Internal wiring, helper functions, PID handling belong to the capability that requires them. Never create a WP for "execution wiring" — it belongs in the WP that needs it.
+
+### Parallel Scheduler Pattern
+Runtime supports parallel execution via bash `&` + `wait`:
+```bash
+spawn-worker.sh backend crafter /dir /prompt --background &
+PID_BE=$!
+spawn-worker.sh frontend crafter /dir /prompt --background &
+PID_FE=$!
+wait $PID_BE $PID_FE   # phase barrier
+```
+Load `references/parallel-execution-model.md` for full dependency matrix and barrier rules.
+
+### Documentation-First Workflow for Runtime Milestones
+Runtime milestones follow the same documentation-first pattern as Dashboard:
+1. ADR → SPEC → CHANGESET → PLAN → PM Review → Implementation → Verification → OAT → Freeze
+Milestone sub-items (E.1-E.5) become internal Work Packages (WP-1-WP-5). User approval required only at final milestone completion, not between Work Packages.
+
 ### Dashboard Implementation Pitfalls
 IF dashboard changes → load `references/dashboard-implementation-pitfalls.md`
 Key lessons:

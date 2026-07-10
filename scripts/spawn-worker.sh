@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # spawn-worker.sh — Safe worker spawner for AIC Dispatcher
-# Usage: spawn-worker.sh <worker> <tier> <project_dir> <prompt_file> [--no-context]
 #
 # Features:
 # - Escape-safe: reads prompt from file, never inline bash quotes
 # - Auto-context: runs context-gather.sh and prepends to prompt
 # - Multi-OS: works on Linux, macOS, Windows (git-bash/MSYS/WSL)
 # - Auto API status: hits /api/agent-status before and after
+#
+# Parallel Scheduler:
+# For parallel execution within a phase:
+#   PID=$!
+#   # ... spawn more workers ...
+#   wait $PID1 $PID2 $PID3   # phase barrier
+# For serial execution:
+#   spawn-worker.sh <worker> <tier> <dir> <prompt>  # blocks until complete
 
 set -euo pipefail
 
@@ -21,7 +28,9 @@ TIER="${2:?Missing tier (thinker/crafter/sprinter)}"
 PROJECT_DIR="${3:?Missing project directory}"
 PROMPT_FILE="${4:?Missing prompt file path}"
 SKIP_CONTEXT=false
-[[ "${5:-}" == "--no-context" ]] && SKIP_CONTEXT=true
+for arg in "${5:-}" "${6:-}"; do
+  [[ "$arg" == "--no-context" ]] && SKIP_CONTEXT=true
+done
 
 # Load .env
 if [[ -f "$ENV_FILE" ]]; then
