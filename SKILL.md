@@ -179,15 +179,45 @@ wait $PID_BE $PID_FE   # phase barrier
 ```
 Load `references/parallel-execution-model.md` for full dependency matrix and barrier rules.
 
+### Verification & OAT Patterns
+IF writing verification scripts → load `references/verification-patterns.md`
+Key lessons: git tracking pitfall, public endpoints, OAT timeouts, cascading deps, server lifecycle.
+
+### Milestone Closeout
+IF closing a milestone → load `references/milestone-closeout-pattern.md`
+Pattern: PM Final Review → Doc Sync → Repo Validation → Baseline Summary → Commit
+
+### Knowledge Platform
+IF knowledge/artifact platform → load `references/knowledge-platform-pattern.md`
+9 scripts (artifact-registry, knowledge-lifecycle, knowledge-index, knowledge-search, knowledge-reuse, knowledge-memory, knowledge-lessons, knowledge-graph, knowledge-cross-project). JSON registry, grep-based search, SHA256 versioning, 4-state lifecycle.
+
+### Regression Patch
+IF fixing regressions in a closed milestone → load `references/regression-patch-pattern.md`
+Pattern: RP-NNN with strict scope — Investigation → Implementation → Verification
+
 ### Documentation-First Workflow for Runtime Milestones
 Runtime milestones follow the same documentation-first pattern as Dashboard:
 1. ADR → SPEC → CHANGESET → PLAN → PM Review → Implementation → Verification → OAT → Freeze
 Milestone sub-items (E.1-E.5) become internal Work Packages (WP-1-WP-5). User approval required only at final milestone completion, not between Work Packages.
 
+### opencode Non-Interactive Mode (Pitfall)
+`opencode --print` does NOT exist. The correct flag for non-interactive prompts is `--prompt`:
+```bash
+opencode --prompt "Analyze this file" 2>&1
+```
+`opencode --prompt` also times out in non-PTY mode (execute_code, terminal without pty=true). Workarounds:
+1. Use `delegate_task` to spawn a subagent that runs opencode (recommended)
+2. Produce artifacts directly and register through knowledge platform (fastest)
+Discovered during Milestone H Runtime OAT — 5-minute timeout on `opencode --print`.
+
+### Milestone Reports Directory (Pitfall)
+Milestone reports must go in the **repo root** (`workflows/aic/`), NOT in `~/.hermes/skills/aic/`. Use `write_file` with the full repo path. The `skill_manage write_file` tool writes to the skill directory by default — wrong location for milestone deliverables. During Milestone H closeout, 5 reports had to be copied back.
+Also: `git add` and commit milestone reports in the same commit as closeout docs. Don't leave them uncommitted.
+
 ### Python-in-Shell Pattern (Pitfall)
 When calling python from bash with variable interpolation, NEVER use inline f-strings with bash variables — causes quote conflicts. Use heredoc instead:
 ```bash
-# BAD: python3 -c "print(f'  $KEY = {d.get(\"$KEY\", \"not found\")}')"
+# BAD: python3 -c "print(f'  $KEY = {d.get(\\\"$KEY\\\", \\\"not found\\\")}')"
 # GOOD:
 python3 << PYEOF
 import json, os
@@ -197,6 +227,70 @@ print(f"  {k} = {d.get(k, 'not found')}")
 PYEOF
 ```
 Discovered during Milestone G worker-memory.sh fix. `import os.environ as env` also fails — use `import os; env = os.environ`.
+
+**Sub-pitfall: f-strings with dict access in heredocs.** `a['id']` inside an f-string inside a bash heredoc breaks because single quotes conflict with bash quoting. Use `%` formatting instead:
+```bash
+# BAD (dict access in f-string):
+print(f"  {a['id']} [{a['status']}]")
+# GOOD (% formatting):
+print("  %s [%s]" % (a["id"], a["status"]))
+```
+Discovered during Milestone H artifact-registry.sh, knowledge-lessons.sh, knowledge-graph.sh.
+
+**Sub-pitfall: heredoc delimiter quoting.** `'PYEOF'` (quoted) prevents ALL expansion including `$REGISTRY`. `PYEOF` (unquoted) expands variables but also tries to expand Python dict access quotes. Rule: use unquoted PYEOF for bash variable expansion, but NEVER use f-strings with dict access inside heredocs.
+
+**Sub-pitfall: version display doubling.** When version is stored as `"v1"` and print format adds another `v` prefix (`v%s`), output is `"vv1"`. Fix: store bare numbers or strip prefix: `str(art.get("version","0")).lstrip("v")`. Discovered during Milestone H artifact-registry.sh.
+
+**Sub-pitfall: `python3 -c` vs heredoc.** `python3 -c "..."` with f-strings is fragile — bash expansion, quote nesting, backslash escaping all conspire. Use heredoc (`python3 << PYEOF ... PYEOF`) for anything beyond a one-liner. Reserve `python3 -c` for trivial single-expression prints.
+
+**Sub-pitfall: argument position conflicts when adding actions.** When adding new actions (e.g. `knowledge-store`) to an existing script with global arg parsing (`KEY="${3:-}"`), the new action may need different positions ($2=key instead of $3). Fix: override KEY/VALUE inside the new case before the check:
+```bash
+  knowledge-store)
+    KEY="$2"; VALUE="$3"  # override global positions
+    [[ -z "$KEY" ]] && ...
+```
+
+**Sub-pitfall: verification script batching.** `execute_code` has a 50 tool-call limit per script. When running many functional tests, use a single `cat > /tmp/hermes-verify-*.sh << 'S' ... S` bash script with grep assertions instead of individual `terminal()` calls. One bash script = one tool call for N tests. Discovered during Milestone H verification.
+
+**Sub-pitfall: re-registration overwrites metadata.** Re-registering an artifact with different tags overwrites the original tags. Tests that depend on original tags must run before re-registration. Discovered during Milestone H search-tag verification failure.
+
+**Sub-pitfall: `sys.argv` in quoted heredocs.** `python3 << 'PYEOF'` (quoted delimiter) prevents ALL bash expansion — including argument passing. `sys.argv[1]` inside the heredoc will fail with `IndexError: list index out of range` because no arguments reach Python. Fix: `export` the bash variables and use `os.environ.get()` in Python:
+```bash
+# BAD: sys.argv not populated in quoted heredoc
+python3 << 'PYEOF'
+state = sys.argv[1]  # IndexError!
+PYEOF
+
+# GOOD: export bash vars, read via os.environ
+export STATE R_SERVER R_AUTH
+python3 << 'PYEOF'
+import os
+state = os.environ.get("STATE", "unknown")
+PYEOF
+```
+Rule: quoted heredoc + `os.environ` for safety. Unquoted heredoc + `"$VAR"` for expansion (but watch for quote conflicts with Python dict access). Discovered during Milestone I health-check.sh fix.
+
+### Node.js Endpoint Integration (Pitfall)
+When adding new API endpoints to an existing `http.createServer` server, `server.on('request', ...)` does NOT work as middleware. The `createServer` callback IS a `'request'` listener — adding more listeners via `.on('request')` fires them in parallel, not as a chain. The main handler already sends responses, so secondary listeners calling `send(res, ...)` try to write to an already-finished response.
+
+**Correct pattern:** Export a handler function and call it INSIDE the main createServer callback, before the 404 fallback:
+```javascript
+// ops-endpoints.js — exports a handler function
+async function handleOpsEndpoint(req, res, send, readBody, state) {
+  if (req.method === 'GET' && pathname === '/api/foo') {
+    send(res, 200, { ok: true });
+    return true;  // handled
+  }
+  return false;  // not handled, pass to main handler
+}
+
+// server.js — call inline before 404
+const { handleOpsEndpoint } = require('./ops-endpoints');
+// ... inside createServer callback, before 404:
+if (await handleOpsEndpoint(req, res, send, readBody, state)) return;
+return send(res, 404, { error: 'not found' });
+```
+Discovered during Milestone I — 6 new ops endpoints failed silently when registered via `server.on('request')`, worked immediately after switching to inline handler pattern.
 
 ### Dashboard Implementation Pitfalls
 IF dashboard changes → load `references/dashboard-implementation-pitfalls.md`

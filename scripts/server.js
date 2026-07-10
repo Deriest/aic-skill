@@ -8,12 +8,40 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const auth = require('./auth');
+const { handleOpsEndpoint } = require('./ops-endpoints');
 
 const SKILL_DIR = path.join(__dirname, '..');
 const STATE_FILE = path.join(SKILL_DIR, '.aic', 'state.json');
 const METRICS_FILE = path.join(SKILL_DIR, '.aic', 'metrics.json');
 const TASKS_DIR = path.join(SKILL_DIR, '.aic', 'tasks');
 const ENV_FILE = path.join(SKILL_DIR, '.env');
+const LOG_FILE = path.join(SKILL_DIR, '.aic', 'logs', 'app.log');
+const HEALTH_FILE = path.join(SKILL_DIR, '.aic', 'health.json');
+const QUEUE_FILE = path.join(SKILL_DIR, '.aic', 'queue.json');
+const INSTANCE_ID = `inst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
+
+// Structured Logger (I-4)
+function log(level, cat, msg, data = {}) {
+  const entry = { ts: new Date().toISOString(), level, cat, msg, data };
+  try {
+    fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+    fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + '\n');
+  } catch {}
+}
+
+// In-memory cache (I-9)
+const cache = new Map();
+function cachedRead(filePath, maxAge = 5000) {
+  const now = Date.now();
+  const c = cache.get(filePath);
+  if (c && now - c.ts < maxAge) return c.data;
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    cache.set(filePath, { data, ts: now });
+    return data;
+  } catch { return null; }
+}
+function invalidateCache(filePath) { cache.delete(filePath); }
 
 // Task persistence helpers
 function ensureTaskDir(taskId) {
@@ -167,9 +195,14 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Rate limit: 60 req/min per IP
-  const clientIp = req.socket.remoteAddress;
+  // Request logging (I-4)
+  const reqStart = Date.now();
+  const clientIp = req.socket.remoteAddress || 'unknown';
+  log('INFO', 'api', `${req.method} ${pathname}`, { ip: clientIp });
+
   if (!checkRateLimit(clientIp)) {
-    return send(res, 429, { error: 'rate limit exceeded' });
+    log('WARN', 'api', 'Rate limit exceeded', { ip: clientIp });
+    return send(res, 429, { error: 'Rate limit exceeded' });
   }
 
   // Health check — no auth required
@@ -667,6 +700,9 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && !pathname.startsWith('/api/')) {
     return serveStatic(req, res, pathname);
   }
+
+  // Ops endpoints (Milestone I)
+  if (await handleOpsEndpoint(req, res, send, readBody, { ...state, port: PORT })) return;
 
   return send(res, 404, { error: 'not found' });
 });
