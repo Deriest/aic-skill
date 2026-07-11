@@ -25,12 +25,16 @@ async function handleOpsEndpoint(req, res, send, readBody, state) {
   if (req.method === 'GET' && pathname === '/api/metrics/summary') {
     let metrics = [];
     try { metrics = JSON.parse(fs.readFileSync(METRICS_FILE, 'utf8')); } catch {}
+    const os = require('os');
+    const mem = process.memoryUsage();
     send(res, 200, {
       total: metrics.length,
       totalInput: metrics.reduce((s, m) => s + (m.tokens?.input || 0), 0),
       totalOutput: metrics.reduce((s, m) => s + (m.tokens?.output || 0), 0),
       workers: [...new Set(metrics.map(m => m.worker).filter(Boolean))],
-      tiers: metrics.reduce((acc, m) => { acc[m.tier] = (acc[m.tier] || 0) + 1; return acc; }, {})
+      tiers: metrics.reduce((acc, m) => { acc[m.tier] = (acc[m.tier] || 0) + 1; return acc; }, {}),
+      memory: { rss: mem.rss, heapUsed: mem.heapUsed, heapTotal: mem.heapTotal },
+      cpu: { loadAvg: os.loadavg(), cores: os.cpus().length }
     });
     return true;
   }

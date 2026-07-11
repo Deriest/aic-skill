@@ -26,6 +26,11 @@ function DashboardApp() {
           <h1 className="text-px-lg font-pixel text-aic-accent tracking-widest uppercase text-shadow-cyan whitespace-nowrap">
             AI ENGINEERING COMPANY
           </h1>
+          {state.project?.name && (
+            <span className="text-aic-text-muted text-[11px] font-pixel tracking-wider ml-2 truncate max-w-[200px]">
+              [{state.project.name}]
+            </span>
+          )}
         </div>
         
         {/* Tabs - Centered */}

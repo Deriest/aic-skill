@@ -55,6 +55,12 @@ export interface ReworkState {
   attempt: number;
 }
 
+export interface ProjectInfo {
+  path: string;
+  name: string;
+  workspace: string;
+}
+
 export interface DashboardState {
   connected: boolean;
   workers: Record<string, WorkerState>;
@@ -65,6 +71,7 @@ export interface DashboardState {
   pmReview: PmReview | null;
   rework: ReworkState | null;
   startedAt: number;
+  project?: ProjectInfo;
 }
 
 export type DashboardAction =

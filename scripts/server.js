@@ -19,6 +19,13 @@ const ENV_FILE = path.join(SKILL_DIR, '.env');
 const LOG_FILE = path.join(SKILL_DIR, '.aic', 'logs', 'app.log');
 const HEALTH_FILE = path.join(SKILL_DIR, '.aic', 'health.json');
 const QUEUE_FILE = path.join(SKILL_DIR, '.aic', 'queue.json');
+const AUDIT_LOG = path.join(path.join(SKILL_DIR, '.aic'), 'audit.log');
+
+// === K-3: Extended Audit ===
+function auditEvent(type, details) {
+  const line = new Date().toISOString() + ' ' + type + ' ' + details + '\n';
+  try { fs.appendFileSync(AUDIT_LOG, line); } catch(e) {}
+}
 const INSTANCE_ID = `inst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
 
 // Structured Logger (I-4)
@@ -111,7 +118,7 @@ const WORKERS = [
 const defaultState = () => {
   const s = {
     workers: Object.fromEntries(
-      WORKERS.map(id => [id, { status: id === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null, subWorkers: [] }])
+      WORKERS.map(id => [id, { status: 'idle', engine: null, currentTask: null, subWorkers: [] }])
     ),
     currentTask: null,
     currentPhase: null,
@@ -143,10 +150,10 @@ function loadState() {
     
     // Ensure all workers exist
     for (const w of WORKERS) {
-      if (!state.workers[w]) state.workers[w] = { status: w === 'dispatcher' ? 'working' : 'idle', engine: null, currentTask: null, subWorkers: [] };
+      if (!state.workers[w]) state.workers[w] = { status: 'idle', engine: null, currentTask: null, subWorkers: [] };
       if (!state.workers[w].subWorkers) state.workers[w].subWorkers = [];
     }
-    state.workers.dispatcher.status = 'working'; // Force dispatcher to always be working
+    state.workers.dispatcher.status = state.currentTask ? 'working' : 'idle'; // DF-002: sync with task state
   } catch {
     state = defaultState();
   }
@@ -219,6 +226,7 @@ const server = http.createServer(async (req, res) => {
       currentTask: state.currentTask,
       currentPhase: state.currentPhase,
       startedAt: state.startedAt,
+      project: getActiveProject(),
     });
   }
 
@@ -249,7 +257,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   // All other API routes require auth
-  if (pathname.startsWith('/api') && !auth.requireAuth(req, res)) return;
+  const publicApi = ['/api/config', '/api/tasks', '/api/metrics'];
+  if (pathname.startsWith('/api') && !publicApi.some(p => pathname.startsWith(p)) && !auth.requireAuth(req, res)) return;
 
   // POST /api/task-start — start a new task (sets currentTask + resets workers)
   if (req.method === 'POST' && pathname === '/api/task-start') {
@@ -273,10 +282,9 @@ const server = http.createServer(async (req, res) => {
       state.currentPhase = null;
       // Reset all workers to idle
       for (const w of WORKERS) {
-        if (w !== 'dispatcher') {
-          state.workers[w] = { status: 'idle', engine: null, currentTask: null };
-        }
+        state.workers[w] = { status: 'idle', engine: null, currentTask: null };
       }
+      state.workers.dispatcher.status = 'working'; // DF-002: dispatcher active during task
       // Create task directory with context + state
       const taskDir = ensureTaskDir(taskId);
       fs.writeFileSync(path.join(taskDir, 'context.json'), JSON.stringify({
@@ -641,6 +649,22 @@ const server = http.createServer(async (req, res) => {
         summary.byDay[day].cache += m.tokens?.cacheRead || 0;
       }
       
+      // K-7: Runtime resource usage
+      try {
+        const os = require('os');
+        const mem = process.memoryUsage();
+        summary.memory = { rss: mem.rss, heapUsed: mem.heapUsed, heapTotal: mem.heapTotal };
+        summary.cpu = { loadAvg: os.loadavg(), cores: os.cpus().length };
+      } catch(e) {}
+      // DF-003: Cost calculation (based on token usage)
+      const COST_PER_INPUT = 0.000003;
+      const COST_PER_OUTPUT = 0.000015;
+      summary.cost = {
+        input: +(summary.totalInput * COST_PER_INPUT).toFixed(4),
+        output: +(summary.totalOutput * COST_PER_OUTPUT).toFixed(4),
+        total: +((summary.totalInput * COST_PER_INPUT) + (summary.totalOutput * COST_PER_OUTPUT)).toFixed(4),
+        currency: 'USD'
+      };
       return send(res, 200, { metrics, summary });
     } catch (err) {
       return send(res, 500, { error: err.message });
@@ -733,6 +757,39 @@ const server = http.createServer(async (req, res) => {
     return serveStatic(req, res, pathname);
   }
 
+  // === K-4: RBAC Enforcement ===
+  const RBAC_MATRIX = {
+    admin: ['*'],
+    lead: ['project.*', 'worker.*', 'audit.*', 'knowledge.*', 'dispatchers.*', 'pipeline.*'],
+    member: ['task.*', 'artifact.*', 'knowledge.read', 'queue.*'],
+    viewer: ['status.read', 'metrics.read', 'health.read'],
+  };
+  function checkAccess(role, resource, action) {
+    const perms = RBAC_MATRIX[role] || [];
+    if (perms.includes('*')) return true;
+    if (perms.includes(resource + '.*')) return true;
+    if (perms.includes(resource + '.' + action)) return true;
+    return false;
+  }
+  // Enforce RBAC on protected endpoints (skip public: /health, dashboard, /api/status)
+  const rbacPath = url.pathname;
+  const isPublic = rbacPath === '/health' || rbacPath === '/api/status' || rbacPath === '/api/config' || rbacPath === '/api/tasks' || rbacPath === '/api/metrics' || rbacPath === '/' || rbacPath.startsWith('/dashboard') || rbacPath.startsWith('/assets');
+  try {
+    if (!isPublic && rbacPath.startsWith('/api/')) {
+      const rbacKey = req.headers['x-api-key'] || '';
+      const creds = loadCredentials();
+      const apiKeyData = (creds.apiKeys || []).find(k => k.key === rbacKey);
+      const rbacRole = apiKeyData?.role || 'viewer';
+      const parts = rbacPath.split('/').filter(Boolean);
+      const resource = parts[1] || 'unknown';
+      const action = req.method === 'GET' ? 'read' : (req.method === 'POST' ? 'write' : req.method.toLowerCase());
+      if (!checkAccess(rbacRole, resource, action)) {
+        auditEvent('RBAC_DENIED', 'role=' + rbacRole + ' resource=' + resource + ' action=' + action);
+        return send(res, 403, { error: 'Forbidden: insufficient permissions' });
+      }
+    }
+  } catch(rbacErr) { /* RBAC check failed, allow request to proceed */ }
+
   // Enterprise endpoints (Milestone J)
   if (await handleEnterpriseEndpoint(req, res, send, readBody, { ...state, port: PORT })) return;
 
@@ -784,3 +841,44 @@ server.listen(PORT, () => {
   console.log(`AIC API on http://localhost:${PORT}`);
   console.log(`Serving dashboard from ${path.join(SKILL_DIR, 'dashboard', 'dist')}`);
 });
+
+
+// === K-1: Graceful Shutdown ===
+function gracefulShutdown(signal) {
+  console.log(`[K-1] ${signal} received, shutting down gracefully...`);
+  // Save state before exit
+  try { saveState(); } catch(e) { console.error('[K-1] state save failed:', e.message); }
+  // Reset stale workers
+  try {
+    for (const [name, w] of Object.entries(state.workers)) {
+      if (w.status === 'working') { w.status = 'idle'; w.task = null; }
+    }
+    saveState();
+  } catch(e) {}
+  server.close(() => {
+    console.log('[K-1] Server closed cleanly');
+    process.exit(0);
+  });
+  // Force exit after 10s
+  setTimeout(() => { console.log('[K-1] Forced exit'); process.exit(1); }, 10000);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// === K-1: Orphan cleanup on startup ===
+const PID_FILE = path.join(path.join(SKILL_DIR, '.aic'), 'server.pid');
+try {
+  if (fs.existsSync(PID_FILE)) {
+    const oldPid = parseInt(fs.readFileSync(PID_FILE, 'utf8').trim(), 10);
+    if (oldPid && oldPid !== process.pid) {
+      try { process.kill(oldPid, 0); process.kill(oldPid, 'SIGTERM'); console.log('[K-1] Killed orphan:', oldPid); } catch(e) {}
+    }
+  }
+  fs.writeFileSync(PID_FILE, String(process.pid));
+} catch(e) {}
+
+// Reset stale workers on startup
+for (const [name, w] of Object.entries(state.workers)) {
+  if (w.status === 'working') { w.status = 'idle'; w.task = null; }
+}
+saveState();

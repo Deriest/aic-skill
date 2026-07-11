@@ -141,7 +141,18 @@ try {
 }
 NODESCRIPT
   OUTPUT_FILE=$(mktemp "${TMPDIR:-/tmp}/aic-output-XXXXXX.txt")
-  node "$NODE_RUNNER" "$PROMPT_FILE" "$MODEL" "$PROJECT_DIR" "$TIMEOUT" "$OUTPUT_FILE" || EXIT_CODE=$?
+  # K-6: Provider timeout retry (1 retry with 5s backoff)
+  ATTEMPT=0
+  MAX_ATTEMPTS=2
+  while [[ $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
+    node "$NODE_RUNNER" "$PROMPT_FILE" "$MODEL" "$PROJECT_DIR" "$TIMEOUT" "$OUTPUT_FILE" && EXIT_CODE=0 && break
+    EXIT_CODE=$?
+    ATTEMPT=$((ATTEMPT + 1))
+    if [[ $ATTEMPT -lt $MAX_ATTEMPTS ]]; then
+      echo "[K-6] Worker retry $ATTEMPT/$MAX_ATTEMPTS after 5s backoff"
+      sleep 5
+    fi
+  done
   
   # Extract tokens from captured output
   if [[ -f "$OUTPUT_FILE" ]]; then

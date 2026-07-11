@@ -121,10 +121,26 @@ Dashboard OAT and Runtime OAT are different things. Do NOT conflate them.
 
 - **Dashboard OAT**: Verifies Dashboard renders runtime state correctly. Test via `curl` API + `browser_vision`. This is Milestone D scope.
 - **Runtime OAT**: Verifies real workers, real spawning, real PM Review, real artifact generation. Test via `spawn-worker.sh` execution. This is Milestone E scope.
+- **Enterprise Runtime OAT**: Verifies the FULL AIC pipeline executes end-to-end with real opencode workers. Must use `pipeline-orchestrator.sh` or equivalent. Individual endpoint testing is NOT sufficient. Two independent engineering tasks required. User rejected Milestone J OAT 3 times before accepting: (1) API probes only, (2) direct spawn-worker calls, (3) trivial "create file" tasks. Only full pipeline execution with real engineering complexity passed.
 
 **Pitfall**: Claiming "Runtime OAT PASS" when only Dashboard API endpoints were tested via `curl`. User correction: *"kok sage ga berkerja ya? emang kamu test apa?"* — I triggered API state changes but never executed `spawn-worker.sh` or `spawn-sub.sh` against real AI models.
 
-**Rule**: Every OAT claim must state exactly which runtime components were actually executed. If only API endpoints were tested, say "Dashboard OAT PASS, Runtime OAT NOT TESTED."
+**Pitfall**: Claiming "Runtime OAT PASS" when workers were spawned directly via `spawn-worker.sh` rather than through the pipeline orchestrator. User: *"itu real task atau tidak?"* — Direct worker execution bypasses the pipeline (investigate → planning → implementation → verification → closeout → knowledge). A valid Runtime OAT must exercise the complete orchestration.
+
+**Rule**: Every OAT claim must state exactly which runtime components were actually executed. If only API endpoints were tested, say "Dashboard OAT PASS, Runtime OAT NOT TESTED." If workers were spawned directly, say "Worker Execution OAT PASS, Pipeline OAT NOT TESTED."
+
+### OAT Resume Pattern (Milestone J+)
+When a Runtime OAT phase fails due to an external issue (model timeout, provider outage), do NOT rerun the entire pipeline. Resume from the failed phase:
+
+1. Locate task state: `.aic/tasks/<task_id>/state.json`
+2. Read current `phase` and `status`
+3. Run only the incomplete phase via `phase-runner.sh`
+4. Continue with remaining phases (knowledge update, finalize)
+5. Update task state
+
+**Key:** Resume does NOT restart from investigate. Completed phases and artifacts are preserved. Pipeline orchestrator should support this, but manual resume via phase-runner.sh also works when orchestrator resume is not implemented.
+
+**User decision:** After Beta closeout failed (Opus timeout), user explicitly said: "Do NOT modify the repository. Do NOT implement any fixes. Do NOT rerun the entire Runtime OAT. Execute ONLY a Runtime OAT Resume." Always check with user before implementing fixes — they may prefer resume over rework.
 
 ### Verification Evidence Policy (CRITICAL)
 
@@ -180,8 +196,13 @@ wait $PID_BE $PID_FE   # phase barrier
 Load `references/parallel-execution-model.md` for full dependency matrix and barrier rules.
 
 ### Verification & OAT Patterns
-IF writing verification scripts → load `references/verification-patterns.md`
-Key lessons: git tracking pitfall, public endpoints, OAT timeouts, cascading deps, server lifecycle.
+IF verification scripts → load `references/verification-patterns.md`
+Key lessons: git tracking pitfall, public endpoints, OAT timeouts, cascading deps, server lifecycle, cascade failure pattern.
+IF modifying server.js → load `references/server-modification-pitfalls.md`
+Key lessons: AIC_DIR vs SKILL_DIR, auth.apiKeys vs loadCredentials(), RBAC try-catch, terminal safety blocks, `local` outside functions, metrics response shape, dispatcher state sync, SIGTERM cascade, variable shadowing in RBAC.
+IF server.js runtime behavior bugs (dual auth gates, code-after-return, test JSON path) → load `references/server-modification-pitfalls-k.md`
+IF adding API endpoint fields → load `references/server-modification-pitfalls-ops-shadow.md`
+Key lesson: ops-endpoints.js runs BEFORE server.js — if it handles the route, server.js code is unreachable.
 
 ### Milestone Closeout
 IF closing a milestone → load `references/milestone-closeout-pattern.md`

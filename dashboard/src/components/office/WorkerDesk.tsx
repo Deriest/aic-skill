@@ -29,7 +29,7 @@ const reduced: Record<string, any> = {
 
 const statusConfig: Record<string, { bg: string, text: string, label: string }> = {
   idle: { bg: 'bg-aic-bg-floor', text: 'text-gray-500', label: 'IDLE' },
-  working: { bg: 'bg-aic-accent/20', text: 'text-aic-yellow', label: 'WORKING' },
+  working: { bg: 'bg-blue-900/20', text: 'text-blue-400', label: 'WORKING' },
   blocked: { bg: 'bg-aic-bg-floor', text: 'text-red-500', label: 'BLOCKED' },
   error: { bg: 'bg-red-900/30', text: 'text-red-500', label: 'ERROR' },
   complete: { bg: 'bg-aic-green/20', text: 'text-aic-green', label: 'COMPLETE' },
@@ -42,7 +42,7 @@ export const WorkerDesk = memo(function WorkerDesk({ worker, status, engine, sub
   const prefersReduced = useReducedMotion();
   usePixelCanvas(canvasRef, worker, status);
 
-  const cardStyle = status === 'working' ? 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)] bg-amber-900/10'
+  const cardStyle = status === 'working' ? 'border-blue-400 shadow-[0_0_15px_rgba(96,160,250,0.3)] bg-blue-900/10'
     : status === 'complete' ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)] bg-green-900/10'
     : status === 'waiting_pm' ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.3)] bg-purple-900/10'
     : status === 'rework' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] bg-red-900/10'
