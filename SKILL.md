@@ -204,7 +204,9 @@ IF server.js runtime behavior bugs (dual auth gates, code-after-return, test JSO
 IF adding API endpoint fields → load `references/server-modification-pitfalls-ops-shadow.md`
 Key lesson: ops-endpoints.js runs BEFORE server.js — if it handles the route, server.js code is unreachable.
 
-### Milestone Closeout
+### Milestone Lifecycle (Full)
+IF running a full milestone → load `references/milestone-lifecycle.md`
+Pattern: Investigation → Planning → Implementation → Verification → Runtime OAT → Defect Fix → Re-Verification → Closeout → Regression Audit → Post-Audit Review
 IF closing a milestone → load `references/milestone-closeout-pattern.md`
 Pattern: PM Final Review → Doc Sync → Repo Validation → Baseline Summary → Commit
 
