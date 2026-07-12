@@ -22,10 +22,8 @@ status.json
 dashboard/dist/
 audit.json
 history.json
-status.json
 snapshots/
 cache/
-CHANGELOG.md
 
 # AIC Local Database & History
 .aic/auth.json
@@ -35,3 +33,14 @@ CHANGELOG.md
 .aic/metrics.json
 .aic/chat-history.json
 .aic/artifacts/
+
+# AIC Runtime State (generated at runtime)
+.aic/server.pid
+.aic/health.json
+.aic/active-project.json
+.aic/dispatcher-registry.json
+.aic/permissions.json
+.aic/projects.json
+.aic/worker-targets.json
+.aic/shared-context/
+.aic/logs/

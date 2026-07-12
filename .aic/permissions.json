@@ -1,8 +1,0 @@
-{
-  "users": {
-    "alice": "member",
-    "alpha-lead": "lead",
-    "alpha-member": "member",
-    "alpha-viewer": "viewer"
-  }
-}
