@@ -1,5 +1,7 @@
 # Dashboard Operations Control Center — IMP-001 Patterns
 
+> **Related:** `references/layout-foundation.md` (IMP-002), `references/polling-consolidation.md` (FIX-003)
+
 ## Dispatcher State Machine
 
 **NEVER show "Idle" or "Complete" for dispatcher state.**
@@ -54,17 +56,46 @@ No backend changes required — all data already exposed via existing endpoints.
 2. **PERFORMANCE** — single-column metric list
 3. **STATUS** — 4-column grid with `mt-1` spacing above
 
-## Layout Ratios
+## Layout Ratios (Updated: IMP-002)
 
 | Section | Value |
 |---------|-------|
-| Virtual Office (left) | `flex-[1.5]` |
-| Right panel | `flex-1` |
-| Office height | `h-[94%]` |
+| Virtual Office (left) | `flex-[1.5] min-h-0` (no `h-full`, no `h-[94%]`) |
+| Right panel | `flex-1 min-h-0` |
+| Office height | `flex-1 min-h-0` (natural flex, no magic %) |
+| Current Task card | `h-[250px]` |
 | PipelineTracker cards | `h-[180px]` each, `h-[215px]` container |
-| STATUS cards | `h-[100px]` fixed |
+| STATUS cards | `h-[140px]` fixed |
 
-User preference: Virtual Office should NOT be `h-full` — too tall. `h-[94%]` provides visible gap at bottom. Preserve this.
+**Layout foundation**: Viewport chain = `html/body/#root` all `height:100%; overflow:hidden`. App root = `h-screen`. OverviewPage = `flex-1 min-h-0` (NOT `h-screen`). See `references/layout-foundation.md` for full patterns.
+
+**Right panel scroll**: Wrapped in `ScrollContainer` with CSS scroll shadows. All panels inside use `shrink-0`.
+
+## Polling Architecture (FIX-003)
+
+**Single source per endpoint.** All polling lives in `DashboardProvider`:
+
+| Endpoint | Interval | Consumer |
+|----------|----------|----------|
+| `/api/status` | 5s | `dispatch(SET_STATE)` → React Context |
+| `/api/metrics/summary` | 5s | `setMetrics()` → React Context `metrics` |
+
+Components read from context — no independent `fetch` calls. `PerfPanel` reads `useDashboardContext().metrics`. 
+
+**Deleted hooks:** `useStatusPolling.ts` (merged into provider), `useDashboardState.ts` (duplicate poller).
+
+**Anti-pattern:** Multiple components polling the same endpoint independently causes HTTP 429. Always consolidate into a single provider/context.
+
+**MetricsState shape:**
+```typescript
+interface MetricsState {
+  memory?: { rss: number; heapUsed: number; heapTotal: number };
+  cpu?: { loadAvg: number[]; cores: number };
+  totalRequests?: number;
+  totalInput?: number;
+  totalOutput?: number;
+}
+```
 
 ## Dispatcher Status (WorkerGrid Override)
 
@@ -91,6 +122,8 @@ Title "▶ STATUS" above the grid. Data: `WORKERS.filter()` based on `state.work
 ## Spacing Rules
 
 - Parent flex container has NO `gap` — spacing is per-section via `mt-*` / `mb-*`
-- Pipeline/Runtime Gate container: `h-[215px]` shared, `grid grid-cols-2` for equal card heights
-- Between PERFORMANCE and STATUS: `mt-1` (4px)
+- Pipeline/Runtime Gate container: shared, `grid grid-cols-2` for equal card heights
+- Between PERFORMANCE and STATUS: `mt-2` (8px)
 - STATUS title `mb-1` above cards
+- Right panel: no parent `gap` — all spacing is explicit per-section
+- All right-panel sections use `shrink-0` inside `ScrollContainer`

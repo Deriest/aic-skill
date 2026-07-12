@@ -27,7 +27,7 @@ AIC transforms [Hermes Agent](https://hermes-agent.nousresearch.com) into a full
 
 Live at `http://localhost:6868` after starting AIC.
 
-![Dashboard Overview](./dashboard-overview.png)
+![Dashboard Overview](./dashboard-overview-v2.png)
 
 | Page | Description |
 |------|-------------|
