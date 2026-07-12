@@ -154,7 +154,7 @@ export function CostsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full p-4 min-h-0 overflow-auto">
+    <div className="flex flex-col flex-1 p-4 min-h-0 overflow-auto">
       {/* Header with filters */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <h2 className="text-px-lg font-pixel text-aic-accent tracking-widest uppercase">

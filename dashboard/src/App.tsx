@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { DashboardProvider } from './context/DashboardContext';
-import { useStatusPolling } from './hooks/useStatusPolling';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { OverviewPage } from './pages/OverviewPage';
 import { ConfigPage } from './pages/ConfigPage';
@@ -11,12 +10,11 @@ import { useDashboardContext } from './context/DashboardContext';
 
 function DashboardApp() {
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'costs' | 'config'>('overview');
-  useStatusPolling();
   
   const { state } = useDashboardContext();
 
   return (
-    <div className="flex flex-col min-h-screen bg-aic-bg-dark text-aic-text-bright font-body overflow-hidden">
+    <div className="flex flex-col h-screen bg-aic-bg-dark text-aic-text-bright font-body overflow-hidden">
       <CRTOverlay />
       
       {/* Top Header Navigation */}

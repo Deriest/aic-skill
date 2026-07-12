@@ -10,20 +10,5 @@
 
 ## Reference Documents
 
-- [references/](../references/) — 46 reference docs (dispatcher, dashboard, knowledge, etc.)
-- [templates/](../templates/) — 16 document templates
-
-## Engineering History
-
-- [archive/milestones/](../archive/milestones/) — Superseded milestone reports
-- [archive/defects/](../archive/defects/) — Consolidated defect & audit reports
-
-## Baselines
-
-- [BASELINE-K.md](../BASELINE-K.md) — Current production baseline
-
-## Milestone Reports
-
-- [K-CLOSEOUT-REPORT.md](../K-CLOSEOUT-REPORT.md) — Latest closeout
-- [L-INVESTIGATION.md](../L-INVESTIGATION.md) — Documentation investigation
-- [L-PLAN.md](../L-PLAN.md) — Documentation consolidation plan
+- [references/](../references/) — Reference docs (dispatcher, dashboard, knowledge, etc.)
+- [templates/](../templates/) — Document templates

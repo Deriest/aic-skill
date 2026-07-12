@@ -110,7 +110,7 @@ export function HistoryPage() {
   const currentTasks = tasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 flex flex-col h-full">
+    <div className="flex-1 overflow-y-auto p-6 flex flex-col min-h-0">
       <div className="flex justify-between items-center mb-4 shrink-0">
         <h2 className="font-pixel text-px-lg text-aic-accent">TASK HISTORY</h2>
         {totalPages > 1 && (

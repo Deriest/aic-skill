@@ -105,7 +105,10 @@ IF dashboard UI / layout rules → load `references/dashboard-ui-rules.md`
 IF dashboard panel sizing constraints → load `references/dashboard-sizing-freeze.md`
 IF dashboard design preferences → load `references/dashboard-design-preferences.md`
 IF dashboard operations control center / IMP-001 patterns → load `references/dashboard-operations-control-center.md`
+IF dashboard layout foundation / viewport chain / scroll infrastructure / IMP-002 → load `references/layout-foundation.md`
+IF dashboard polling consolidation / FIX-003 / API rate limits / context-based metrics → load `references/polling-consolidation.md`
 IF dashboard theming rules, color conventions, or no-auto-commit workflow → load `references/dashboard-theming-and-workflow.md`
+IF IMP-001 final state / status themes / dashboard build-serve cycle / dispatcher never-idle rule → load `references/imp-001-final-state.md`
 
 ### Documentation-First Implementation (MANDATORY for Dashboard/UI work)
 IF implementing a major feature → follow documentation-first workflow:
