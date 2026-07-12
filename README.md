@@ -1,40 +1,39 @@
 # AI Engineering Company (AIC)
 
-> A multi-agent AI software engineering workforce, orchestrated from your terminal.
+> Turn natural language into working code — with an entire AI engineering team at your command.
 
-AIC transforms [Hermes Agent](https://hermes-agent.nousresearch.com) into a full engineering company — a Dispatcher, Product Manager, Architect, Engineers, QA, and Governor — all working through a structured 5-phase pipeline. Describe what you want in natural language; AIC builds it.
+AIC is a multi-agent orchestration system built on [Hermes Agent](https://hermes-agent.nousresearch.com). Instead of prompting a single model, you get a structured engineering company: a Dispatcher routes your request, a PM investigates requirements, an Architect designs the solution, Engineers build it in parallel, QA verifies, and a Governor reviews before anything touches your repo. Every task follows a strict 5-phase pipeline. No shortcuts, no skipped steps.
 
 ---
 
 ## Key Features
 
-- **AI Engineering Organization** — 15 specialized roles across Leadership, Product, Engineering, and Platform tiers
-- **Dispatcher Intelligence** — Natural language task routing with automatic classification and worker delegation
-- **Multi-Agent Workforce** — Parallel and sequential execution with role-specific model tiers (Thinker, Crafter, Sprinter)
+- **Engineering Organization** — Specialized roles across Leadership, Product, Engineering, and Platform tiers
+- **Dispatcher Intelligence** — Natural language task classification, routing, and worker delegation
 - **5-Phase Pipeline** — Investigate → Planning → Implementation → Verification → Closeout
-- **Knowledge Platform** — Persistent knowledge base with search, statistics, and task-triggered ingestion
-- **Multi-Project Management** — Switch target projects without restarting; per-project task tracking
-- **Runtime Monitoring** — Live worker status, pipeline progress, and runtime gate tracking
-- **Performance Metrics** — Memory, CPU, request throughput, and token usage
-- **Cost Tracking** — Per-worker input/output/cache token breakdown with time-filtered charts
-- **Task History** — Paginated task records with expandable context, work package trees, and resume support
-- **Configuration Management** — Runtime config viewer with environment, project, and model tier settings
-- **Pixel Office Dashboard** — Retro-themed real-time control panel at `localhost:6868`
+- **Parallel Workers** — Frontend, Backend, and Infrastructure engineers execute simultaneously
+- **Knowledge Platform** — Persistent knowledge base with search, task-triggered ingestion, and cross-project learning
+- **Multi-Project Management** — Switch target projects without restarting; isolated per-project tracking
+- **Pixel Office Dashboard** — Real-time operations control center with virtual office, pipeline tracking, and metrics
+- **Observability** — Live worker status, pipeline progress, runtime gate, memory, CPU, and request throughput
+- **Cost Tracking** — Per-worker token breakdown (input/output/cache) with time-filtered charts
+- **Task History** — Paginated task records with expandable context and resume support
+- **Configuration** — Runtime config viewer with environment, model tier, and project settings
 
 ---
 
 ## Dashboard
 
-Live at `http://localhost:6868` after starting AIC.
+The Operations Control Center runs at `http://localhost:6868`.
 
 ![Dashboard Overview](./dashboard-overview-v2.png)
 
-| Page | Description |
-|------|-------------|
-| **Overview** | Virtual office floor, live pipeline status, performance metrics, and worker statistics |
-| **History** | Paginated task list with status badges, expandable details, and resume support |
-| **Costs** | Per-worker token breakdown (input/output/cache), time-filtered charts, and cache hit rates |
-| **Configuration** | Environment settings, model tier assignments, and project configuration |
+| Page | Purpose |
+|------|---------|
+| **Overview** | Operations Control Center — virtual office floor, live pipeline, runtime gate, performance metrics, and worker status cards |
+| **History** | Task archive — paginated list with status badges, expandable context, and resume for interrupted tasks |
+| **Costs** | Token economics — per-worker input/output/cache breakdown, time-filtered bar charts, and cache hit rates |
+| **Configuration** | System settings — environment variables, model tier assignments, and opencode configuration |
 
 ---
 
@@ -43,11 +42,11 @@ Live at `http://localhost:6868` after starting AIC.
 ```
 User (natural language)
     ↓
-Dispatcher (Hermes) — task classification, routing, orchestration
+Dispatcher (Hermes) — classification, routing, orchestration
     ↓
 Pipeline (5 phases) — lifecycle enforcement, phase barriers
     ↓
-Workers (15 roles) — Thinker / Crafter / Sprinter model tiers
+Engineering Teams — specialized roles, Thinker/Crafter/Sprinter tiers
     ↓
 Knowledge Base — persistent context, search, ingestion
     ↓
@@ -60,19 +59,8 @@ Detailed architecture: [Architecture Overview](./docs/architecture/architecture-
 
 ## Quick Start
 
-### Prerequisites
-
-| Dependency | Required | Check |
-|------------|----------|-------|
-| Hermes Agent | Yes | `hermes --version` |
-| Node.js + npm | Yes | `node --version` |
-| OpenCode CLI | Yes | `opencode --version` |
-| jq | Yes | `jq --version` |
-
-### Install
-
 ```bash
-# 1. Clone
+# 1. Install
 git clone --depth 1 https://github.com/Deriest/aic-skill.git ~/.hermes/skills/workflows/aic
 
 # 2. Setup (interactive — configures provider, models, environment)
@@ -80,20 +68,13 @@ bash ~/.hermes/skills/workflows/aic/scripts/setup.sh
 
 # 3. Build dashboard
 cd ~/.hermes/skills/workflows/aic/dashboard && npm install && npm run build
+
+# 4. Start (in any Hermes chat)
+/aic
+/aic project ~/my-app
 ```
 
-### Start
-
-```
-You:  /aic
-
-Hermes: [Preflight Check — server started]
-        Set your target project: /aic project <path>
-
-You:  /aic project ~/my-app
-
-Hermes: Project set. What task can I help with?
-```
+Dashboard opens at `http://localhost:6868`.
 
 ### Commands
 
@@ -111,12 +92,13 @@ Hermes: Project set. What task can I help with?
 ## Repository Structure
 
 ```
-├── dashboard/          # Pixel Dashboard (React + Vite + Tailwind)
+├── archive/            # Archived milestone reports and defect logs
+├── dashboard/          # Operations Control Center (React + Vite + Tailwind)
 ├── docs/               # Documentation (API, architecture, guides, operations)
-├── knowledge/          # Knowledge base scripts
-├── references/         # Reference documents
+├── knowledge/          # Knowledge base scripts and data
+├── references/         # Reference documents (46 files)
 ├── scripts/            # Runtime scripts (server, pipeline, workers, setup)
-├── templates/          # Document templates
+├── templates/          # Document templates (16 files)
 ├── aic                 # CLI entry point
 ├── SKILL.md            # Hermes skill definition
 └── README.md
@@ -141,10 +123,10 @@ Entry point: [docs/INDEX.md](./docs/INDEX.md)
 
 ## Roadmap
 
+- Workspace Dashboard
 - Live Dashboard Events
 - WebSocket Real-Time Updates
 - Enhanced Observability
-- Dashboard UX Improvements
 - Plugin Ecosystem
 
 ---
@@ -157,5 +139,5 @@ MIT — See [LICENSE](./LICENSE)
 
 <p align="center">
   <i>Built with <a href="https://hermes-agent.nousresearch.com">Hermes Agent</a> by Nous Research</i><br/>
-  <i>AIC originally ported from OpenClaw plugin by TVD</i>
+  <i>Originally ported from OpenClaw plugin by TVD</i>
 </p>
