@@ -78,6 +78,8 @@ Dashboard opens at `http://localhost:6868`.
 
 ### Commands
 
+**Dispatcher** (chat with Hermes):
+
 | Command | Description |
 |---------|-------------|
 | `/aic` | Activate Dispatcher, run preflight, start server |
@@ -86,6 +88,15 @@ Dashboard opens at `http://localhost:6868`.
 | `/aic status task <TASK-ID>` | Show task details |
 | `/aic continue` | Resume last interrupted task |
 | `/aic stop` | Deactivate Dispatcher |
+
+**CLI** (terminal):
+
+| Command | Description |
+|---------|-------------|
+| `./aic setup` | First-time interactive setup |
+| `./aic update` | Update AIC to latest version |
+| `./aic test` | Run self-test |
+| `./aic uninstall` | Remove AIC completely |
 
 ---
 
