@@ -22,7 +22,8 @@ export function WorkerGrid() {
                 const activeSubs = ws?.subWorkers?.filter(s => s.status === 'working').length ?? 0;
                 const completedSubs = ws?.subWorkers?.filter(s => s.status === 'complete').length ?? 0;
                 const totalSubs = ws?.subWorkers?.length ?? 0;
-                if (uiStatus === 'working' || activeSubs > 0) uiStatus = 'working';
+                if (worker.id === 'dispatcher' && state.connected) uiStatus = 'working';
+                else if (uiStatus === 'working' || activeSubs > 0) uiStatus = 'working';
                 else if (state.rework?.failedWorkers?.includes(worker.id)) uiStatus = 'rework';
                 else if (uiStatus === 'complete' && state.pmReview?.phase === worker.phase) uiStatus = 'waiting_pm';
                 return (

@@ -65,6 +65,10 @@ IF historical pitfalls → load `references/dispatcher-pitfalls-history.md`
 IF auth/API key issues → load `references/runtime-auth-pattern.md`
 IF general troubleshooting → load `references/dispatcher-troubleshooting.md`
 
+### Documentation Consolidation & Release
+IF consolidating documentation after milestones → load `references/documentation-consolidation-pattern.md`
+IF creating a release → load `references/release-process.md`
+
 ### Configuration
 IF OpenCode config → load `references/dispatcher-opencode.md`
 IF model selection → load `references/model-selection.md`
@@ -100,6 +104,8 @@ IF worker registry → load `references/worker-registry.md`
 IF dashboard UI / layout rules → load `references/dashboard-ui-rules.md`
 IF dashboard panel sizing constraints → load `references/dashboard-sizing-freeze.md`
 IF dashboard design preferences → load `references/dashboard-design-preferences.md`
+IF dashboard operations control center / IMP-001 patterns → load `references/dashboard-operations-control-center.md`
+IF dashboard theming rules, color conventions, or no-auto-commit workflow → load `references/dashboard-theming-and-workflow.md`
 
 ### Documentation-First Implementation (MANDATORY for Dashboard/UI work)
 IF implementing a major feature → follow documentation-first workflow:
@@ -195,6 +201,10 @@ wait $PID_BE $PID_FE   # phase barrier
 ```
 Load `references/parallel-execution-model.md` for full dependency matrix and barrier rules.
 
+### Dashboard Source Development
+IF modifying dashboard source → load `references/dashboard-source-workflow.md`
+Component structure, build process, state flow, API endpoints, pitfalls.
+
 ### Verification & OAT Patterns
 IF verification scripts → load `references/verification-patterns.md`
 Key lessons: git tracking pitfall, public endpoints, OAT timeouts, cascading deps, server lifecycle, cascade failure pattern.
@@ -260,6 +270,21 @@ Implementation self-validation is NOT Official Verification. They are separate l
 **Rule:** After implementation, do NOT present self-check results as verification evidence. Self-checks are internal confidence checks only. Official Verification is a separate gate that the user triggers explicitly. The verification report must be independently executed — never copy self-check results into the verification report.
 
 **Rule:** Same applies to Runtime OAT. Endpoint-based testing (curl API calls) is NOT a valid Runtime OAT. User rejected Milestone I Runtime OAT as "INVALID" because it tested endpoints in isolation rather than executing a real engineering task through the AIC workflow. A valid Runtime OAT must execute a real `spawn-worker.sh` task and observe ops capabilities naturally.
+
+### Stale Persisted State (Pitfall)
+When verifying fixes that affect server state (e.g., `currentTask`, `dispatcher.status`), persisted state in `.aic/` survives server restarts. Restarting the server reloads the old state file, so the fix appears to not work.
+
+**Symptom:** Fix is correct in code, `node --check` passes, but verification still shows old behavior.
+
+**Root cause:** `saveState()` writes to `.aic/state.json` (or similar). On restart, `loadState()` reads the stale file. The fix only takes effect for NEW state transitions, not the persisted snapshot.
+
+**Fix:** Clear persisted state before verification:
+```bash
+curl -X POST -H "X-API-Key: $KEY" http://localhost:6868/api/reset
+```
+Or delete the state file and restart.
+
+**Example:** DF-002 fix (clear `currentTask` on task-complete) was correct in code, but verification showed `currentTask` still set because the old value was persisted from a previous pipeline run. `/api/reset` cleared it and verification passed.
 
 ### Milestone Reports Directory (Pitfall)
 Milestone reports must go in the **repo root** (`workflows/aic/`), NOT in `~/.hermes/skills/aic/`. Use `write_file` with the full repo path. The `skill_manage write_file` tool writes to the skill directory by default — wrong location for milestone deliverables. During Milestone H closeout, 5 reports had to be copied back.
@@ -374,7 +399,7 @@ IF dashboard specification → load `references/dashboard-specification.md`
 
 1. Every task follows: Investigate → Planning → Implementation → Verification → Closeout
 2. Reports flow through Dispatcher only — departments never communicate directly
-3. After ALL phases complete → ask user about commit (never auto-commit)
+3. **NEVER commit without explicit user instruction.** This applies to ALL changes — milestones, improvements, hotfixes, dashboard tweaks, documentation. Staging is OK. Committing requires user says "commit" or equivalent. User correction: *"ga ada yang suruh commit"*
 4. Governor does NOT commit — Dispatcher asks user for permission
 
 ## Related Skills

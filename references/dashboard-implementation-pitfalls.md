@@ -52,6 +52,16 @@
 **Root cause:** Buttons reserved for "future use" regardless of state.
 **Fix:** Dispatcher shows "Delegate" ONLY when status=working. All other workers show "OpenCode" ONLY when status=working. Hide action row completely when not working. No reserved empty buttons.
 
+### 17. Card Height Alignment (Flex vs Grid)
+**Symptom:** Cards side-by-side (like Pipeline and Runtime Gate) have unequal heights when content length differs, even with `flex-1`.
+**Root cause:** Dynamic content pushes `justify-between` boundaries in flex layouts.
+**Fix:** Use a CSS grid (`grid grid-cols-2`) wrapper with a fixed height (e.g., `h-[160px]`), and set the inner cards to `h-full` or the same fixed height to stretch equally.
+
+### 18. Title Container Height Sync
+**Symptom:** Two adjacent cards are misaligned at the bottom despite grid wrapping.
+**Root cause:** Titles above the cards have different line counts or text sizes, shifting the cards below.
+**Fix:** Give title wrappers an explicit, identical fixed height (e.g. `h-[28px]`).
+
 ### 11. Progress Bar in Wrong Location
 **Symptom:** Progress bar placed in Virtual Office header or as separate component.
 **Root cause:** Header treated as generic container.

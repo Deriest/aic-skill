@@ -20,15 +20,19 @@ export function PipelineTracker({ state, taskProgress }: { state: DashboardState
   const pmTotal = Object.keys(pmV).length;
   const reworkActive = state.rework?.active || false;
 
+  const dispatcherStatus = state.workers?.dispatcher?.status;
+  const hasActiveWorkers = Object.values(state.workers||{}).some(w => w.status === 'working' || w.subWorkers?.some(s => s.status === 'working'));
+
   const gate = (() => {
-    if (!state.currentTask) return { label: 'Idle', color: 'text-gray-500' };
-    if (reworkActive) return { label: 'REWORK', color: 'text-red-400' };
-    if (state.pmReview && pmTotal > 0) return { label: 'PM Review', color: pmRework > 0 ? 'text-red-400' : pmPass === pmTotal ? 'text-aic-green' : 'text-aic-yellow' };
-    if (state.runtimeGate) { const s = state.runtimeGate.status; return { label: state.runtimeGate.type.replace('-',' '), color: s==='passed'||s==='complete' ? 'text-aic-green' : s==='blocked'||s==='rework' ? 'text-red-400' : 'text-aic-yellow' }; }
-    if (state.phaseBarrier?.active) return { label: 'Phase Barrier', color: 'text-aic-yellow' };
-    if (Object.values(state.workers||{}).some(w => w.subWorkers?.some(s => s.status === 'working'))) return { label: 'Sub-worker Sync', color: 'text-aic-yellow' };
-    if (state.currentPhase) return { label: 'Execution', color: 'text-aic-yellow' };
-    return { label: 'Initializing', color: 'text-gray-500' };
+    if (!state.currentTask) return { label: 'ONLINE', color: 'text-aic-green' };
+    if (reworkActive) return { label: 'RECOVERING', color: 'text-red-400' };
+    if (state.pmReview && pmTotal > 0 && pmRework > 0) return { label: 'RECOVERING', color: 'text-red-400' };
+    if (state.pmReview && pmTotal > 0) return { label: 'WAITING APPROVAL', color: 'text-aic-yellow' };
+    if (state.runtimeGate) { const s = state.runtimeGate.status; return { label: s==='blocked'||s==='rework' ? 'RECOVERING' : 'WAITING APPROVAL', color: s==='passed'||s==='complete' ? 'text-aic-green' : s==='blocked'||s==='rework' ? 'text-red-400' : 'text-aic-yellow' }; }
+    if (state.phaseBarrier?.active && barrierDone < barrierTotal) return { label: 'MONITORING', color: 'text-aic-yellow' };
+    if (hasActiveWorkers) return { label: 'DISPATCHING', color: 'text-aic-cyan' };
+    if (state.currentPhase) return { label: 'MONITORING', color: 'text-aic-yellow' };
+    return { label: 'ONLINE', color: 'text-aic-green' };
   })();
 
   const next = (() => {
@@ -43,7 +47,7 @@ export function PipelineTracker({ state, taskProgress }: { state: DashboardState
   return (
     <div className="flex flex-col gap-2 h-full font-pixel">
       {/* Current Task */}
-      <div className="shrink-0 flex flex-col h-[240px]">
+      <div className="shrink-0 flex flex-col h-[250px]">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <span className="text-aic-accent text-[11px]">▶</span>
@@ -70,15 +74,14 @@ export function PipelineTracker({ state, taskProgress }: { state: DashboardState
       </div>
 
       {/* Pipeline + Runtime Gate — titles above cards, side by side */}
-      <div className="shrink-0 h-[240px] flex flex-col">
-        <div className="flex gap-2 flex-1 min-h-0">
+      <div className="shrink-0 grid grid-cols-2 gap-2 h-[215px]">
           {/* Pipeline */}
           <div className="flex-1 flex flex-col">
             <div className="flex items-center gap-1.5 mb-1 shrink-0">
               <span className="text-aic-accent text-[10px]">▶</span>
               <h3 className="text-[10px] text-aic-accent uppercase tracking-widest">PIPELINE</h3>
             </div>
-            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-2 shadow-lg flex flex-col justify-between flex-1">
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-2 shadow-lg flex flex-col justify-between h-[180px]">
               {phases.map((p, idx) => {
                 const ci = state.currentPhase ? phases.indexOf(state.currentPhase) : -1;
                 const isComplete = state.currentPhase === 'Closeout' && state.workers?.governor?.status === 'complete';
@@ -101,9 +104,9 @@ export function PipelineTracker({ state, taskProgress }: { state: DashboardState
                 <span className="text-aic-accent text-[10px]">▶</span>
                 <h3 className="text-[10px] text-aic-accent uppercase tracking-widest">RUNTIME GATE</h3>
               </div>
-              {state.startedAt && <ElapsedTimer startedAt={state.startedAt} />}
+              {state.currentTask ? <ElapsedTimer startedAt={(state.currentTask as any).startedAt || state.startedAt} /> : <span className="text-gray-500 font-pixel text-[10px] tabular-nums">00:00:00</span>}
             </div>
-            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-2 shadow-lg flex flex-col flex-1">
+            <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-2 shadow-lg flex flex-col h-[180px]">
               {state.currentTask ? (
                 <div className="flex flex-col gap-1 text-[10px] flex-1">
                   <div className="flex justify-between bg-aic-bg-dark/40 p-1 rounded"><span className="text-gray-400">Gate</span><span className={`${gate.color} uppercase font-bold`}>{gate.label}</span></div>
@@ -118,7 +121,6 @@ export function PipelineTracker({ state, taskProgress }: { state: DashboardState
               ) : <span className="text-aic-text-muted text-[9px] italic m-auto tracking-widest">[ NO ACTIVE TASK ]</span>}
             </div>
           </div>
-        </div>
       </div>
     </div>
   );

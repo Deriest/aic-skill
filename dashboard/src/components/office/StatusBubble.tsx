@@ -7,7 +7,7 @@ interface StatusBubbleProps {
 
 const statusConfig: Record<string, { bg: string, text: string, border: string, shadow: string, label: string }> = {
   idle: { bg: 'bg-gray-800/50', text: 'text-white', border: 'border-gray-500', shadow: 'shadow-[0_0_5px_rgba(107,114,128,0.5)]', label: 'IDLE' },
-  working: { bg: 'bg-blue-900/30', text: 'text-blue-400', border: 'border-blue-400', shadow: 'shadow-[0_0_5px_rgba(96,160,250,0.6)]', label: 'WORKING' },
+  working: { bg: 'bg-yellow-900/30', text: 'text-aic-yellow', border: 'border-aic-yellow', shadow: 'shadow-[0_0_5px_rgba(255,204,0,0.6)]', label: 'WORKING' },
   blocked: { bg: 'bg-red-900/30', text: 'text-red-500', border: 'border-red-500', shadow: 'shadow-[0_0_5px_rgba(239,68,68,0.6)]', label: 'BLOCKED' },
   error: { bg: 'bg-red-900/30', text: 'text-red-500', border: 'border-red-500', shadow: 'shadow-[0_0_5px_rgba(239,68,68,0.6)]', label: 'ERROR' },
   complete: { bg: 'bg-green-900/30', text: 'text-aic-green', border: 'border-aic-green', shadow: 'shadow-[0_0_5px_rgba(0,255,136,0.6)]', label: 'COMPLETE' },
