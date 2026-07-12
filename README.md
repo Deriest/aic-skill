@@ -333,6 +333,23 @@ MODEL_SPRINTER=provider/model-name
 
 ---
 
+## Documentation
+
+Full documentation: [docs/INDEX.md](./docs/INDEX.md)
+
+| Guide | Description |
+|-------|-------------|
+| [API Reference](./docs/api/api-reference.md) | All 21 endpoints, auth, response formats |
+| [Architecture Overview](./docs/architecture/architecture-overview.md) | System design, components, data flow |
+| [Developer Guide](./docs/guides/developer-guide.md) | Setup, repo layout, coding conventions |
+| [Operations Guide](./docs/operations/operations-guide.md) | Deployment, monitoring, recovery |
+| [Operator Guide](./docs/guides/operator-guide.md) | Task management, dashboard usage |
+| [Operations Runbook](./references/operations-runbook.md) | Troubleshooting, escalation procedures |
+
+Engineering history and milestone reports are archived in [archive/milestones/](./archive/milestones/).
+
+---
+
 ## License
 
 MIT — See [LICENSE](./LICENSE)
