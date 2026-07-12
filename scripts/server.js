@@ -546,6 +546,7 @@ const server = http.createServer(async (req, res) => {
     }
     // Don't reset workers — let them stay 'complete' so dashboard shows who did what
     // Workers reset to idle on next task-start
+    state.currentTask = null; // DF-002: clear task on completion
     saveState();
     // RP-003.3: Knowledge Auto-Update trigger
     try {
