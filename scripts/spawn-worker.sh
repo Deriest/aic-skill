@@ -148,8 +148,12 @@ NODESCRIPT
     REPORT_DIR="$SKILL_DIR/.aic/tasks/$TASK_ID/reports"
     mkdir -p "$REPORT_DIR"
     ARTIFACT_PATH="$REPORT_DIR/${WORKER}-output.md"
-    python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" > "$ARTIFACT_PATH" 2>/dev/null \
-      || cp "$OUTPUT_FILE" "$ARTIFACT_PATH"
+    if ! python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" > "$ARTIFACT_PATH" 2>/dev/null; then
+      echo "=== LEGACY: extraction failed — failing worker, NOT dumping raw NDJSON ===" >&2
+      rm -f "$ARTIFACT_PATH" 2>/dev/null || true
+      ARTIFACT_PATH=""
+      EXIT_CODE=1
+    fi
     # FIX-019: Planning post-gen gate after PM repair respawn (one regen, no PM)
     if [[ "${AIC_PM_REPAIR:-}" == "1" && "${AIC_PIPELINE_PHASE:-}" == "PLANNING" ]]; then
       case "$WORKER" in pm|architect|research)
@@ -159,8 +163,12 @@ NODESCRIPT
             echo "=== FIX-019: planning gate FAIL — one regeneration ===" >&2
             node "$NODE_RUNNER" "$PROMPT_FILE" "$MODEL" "$PROJECT_DIR" "$TIMEOUT" "$OUTPUT_FILE" || true
             if [[ -f "$OUTPUT_FILE" ]]; then
-              python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" > "$ARTIFACT_PATH" 2>/dev/null \
-                || cp "$OUTPUT_FILE" "$ARTIFACT_PATH"
+              if ! python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" > "$ARTIFACT_PATH" 2>/dev/null; then
+                echo "=== LEGACY: extraction failed on regen — failing worker ===" >&2
+                rm -f "$ARTIFACT_PATH" 2>/dev/null || true
+                ARTIFACT_PATH=""
+                EXIT_CODE=1
+              fi
             fi
           fi
         fi
