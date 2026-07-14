@@ -210,6 +210,22 @@ Entry point: [docs/INDEX.md](./docs/INDEX.md)
 | [Operator Guide](./docs/guides/operator-guide.md) | Task management, dashboard usage |
 | [Operations Runbook](./docs/operations/operations-runbook.md) | Troubleshooting, escalation procedures |
 
+Documentation entry point: [docs/INDEX.md](./docs/INDEX.md)
+
+---
+
+## Project Status
+
+**Runtime Baseline** — production-ready at commit `c6faeac`.
+
+| Milestone | Status |
+|-----------|--------|
+| Runtime Stabilization (FIX-008 → FIX-023, IMP-024) | **COMPLETE** |
+| Repository Finalization (WP-101 / WP-102) | **COMPLETE** |
+| Production ready | **Yes** — operator deploy via Quick Start + [docs/INDEX.md](./docs/INDEX.md) |
+
+Hermes skill version: **3.1.2** (`SKILL.md`).
+
 ---
 
 ## Roadmap

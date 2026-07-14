@@ -1,6 +1,29 @@
 # AIC Changelog
 
-Auto-generated changelog of completed tasks.
+All notable releases and historical task entries.
+
+## [1.0.0] — Runtime Baseline — 2026-07-14
+
+First production baseline (`c6faeac`). Engineering complete; no further runtime stabilization work in this line.
+
+### Runtime Stabilization
+
+- Engine FSM, phase barriers, PM review, recovery, and guarded lifecycle hardened through milestone FIX-008 → FIX-023 (including token/cost metrics and dashboard observability alignment).
+- Runtime gate, checkpoint/task isolation, WECP orchestration, and OAT verification patterns documented in active `references/`.
+
+### Worker Reliability
+
+- IMP-024 milestone: extraction hardening (no raw NDJSON in reports), session reliability and JSON payload safety, trivial-task classification and noop handling.
+
+### Repository Finalization
+
+- WP-101 / WP-102: archive normalization, tracked FIX/IMP lineage refs, `.env.example` and `PROVIDER` config consistency, hardened `.gitignore`, canonical `templates/phase-contracts/`, generated knowledge ledger policy, `docs/assets/` screenshots, synchronized guides and architecture docs.
+
+---
+
+## Earlier history
+
+Task-level entries from pre-baseline development:
 
 ## 🔧 Fix context-gather backtick crash
 - **Date:** 2026-07-08
