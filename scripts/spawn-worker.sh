@@ -32,7 +32,7 @@ case "$TIER" in
 esac
 
 case "$WORKER" in
-  pm|architect|data|integration|research) TIMEOUT=180 ;;
+  pm|architect|data|integration|research) TIMEOUT="${AIC_PM_TIMEOUT_SECONDS:-300}" ;;
   designer|qa|governor|documentation)     TIMEOUT=300 ;;
   frontend|backend|infra|security|perf)   TIMEOUT=600 ;;
   *)                                      TIMEOUT=300 ;;

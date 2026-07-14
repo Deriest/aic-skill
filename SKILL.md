@@ -1,7 +1,7 @@
 ---
 name: aic
 description: "AI Engineering Company — 15-worker orchestration system for software development. Dispatch, classify, and route tasks to specialized workers following a structured workflow with Runtime Gates and PM Review."
-version: 3.1.2
+version: 3.1.3
 author: TVD
 platforms: [linux, macos, windows]
 metadata:
@@ -24,7 +24,11 @@ When activated via `/aic`:
 1. Preflight: `opencode --version` + `curl localhost:6868/health`
 2. Set dispatcher status: `POST /api/agent-status`
 3. Ask user: "Which project folder? Use: `./aic project <path>`"
-4. User sets folder → THEN greet with pipeline status
+4. User sets folder → THEN greet with **compact** pipeline status (task id, phase, idle/busy) and ask what they want to do
+
+**Cold start (no user task yet):** Do **not** resume a prior thread, milestone, freeze doc, OAT, or draft report unless the user's **first message in this session** names it. `/aic` alone is not a task. Wrong pattern: user only invoked `/aic` → Dispatcher delivers a long freeze/OAT/verify report. User correction: *"lah laporan itu untuk apa saya baru start aic saja?"* See `references/dispatcher-cold-start-activation.md`.
+
+**First reply shape:** Short table (health, project path, task/phase) + one question ("Mau apa di project ini?"). Save milestone/OAT/IMP detail for when the user asks or starts a task.
 
 ## Responsibilities
 
@@ -47,9 +51,11 @@ See `dispatcher-discipline-aic` for complete behavioral policy.
 ## Decision Tree
 
 ### Setup & Lifecycle
+IF user only started `/aic` or gave project path without a task → load `references/dispatcher-cold-start-activation.md`
 IF first time setup → load `references/dispatcher-setup.md`
 IF understanding workflow → load `references/dispatcher-lifecycle.md`
 IF understanding architecture → load `references/architect-rules.md`
+IF RH-001 / dispatcher operational behavior / restart policy / speculative root cause / structured failure reporting / RH-002 intent boundary / RH-003 internal thinking visibility → load `dispatcher-discipline-aic`
 
 ### Dashboard & API
 IF dashboard/API issues → load `references/dispatcher-dashboard.md`
@@ -101,6 +107,7 @@ IF worker reliability baseline / 046-047-001 failures / IMP-024 investigation �
 IF trivial verify tasks / noop artifacts / impl barrier backend-frontend flip / IMP-024-C → load `references/imp024-c-trivial-task-reliability.md`, `references/imp024-milestone-worker-layer.md`
 IF IMP-024-A/B/C / focused smoke / worker-layer post Runtime Stability → load `references/imp024-milestone-worker-layer.md`; verify via ad-hoc /tmp/hermes-verify-imp024c.sh (do not track)
 IF dashboard pixel font / Press Start 2P / self-host font / font-src CSP → load `references/dashboard-fix022-selfhost-pixel-font.md`
+IF barrier completion tracking bug / pm+research not recorded in phaseBarrier.completed / sequential spawn barrier desync → load `references/barrier-completion-tracking-bug.md`
 IF stop all tasks / pause runtime / kill OAT pollers → load `references/runtime-stop-all-tasks.md`
 IF Phase Deliverable Contract architecture / IMP-001 / dedupe prompts vs PM vs runtime-contracts.json → load `references/phase-deliverable-contract-investigation-imp001.md`
 IF general troubleshooting → load `references/dispatcher-troubleshooting.md`
@@ -246,6 +253,12 @@ Dashboard OAT and Runtime OAT are different things. Do NOT conflate them.
 **User preference (verification):** After ad-hoc `hermes-verify-*` already passed in the same ticket thread, **do not rerun the same script** when the router only flags stale banner uptime — state last verify result unless `engine/index.js` or `pm-review.sh` changed again.
 
 **Direction (IMP-001)**: Stop growing bash heredocs for each FIX — target single `.aic/` phase deliverable schema shared by prompts, validators, PM. See `references/phase-deliverable-contract-investigation-imp001.md`.
+
+**Pitfall**: **PM Investigate hallucination** — opencode PM worker reports ALL requirements as "VERIFIED: present" with fabricated `file:line` references when they are actually **MISSING**. Caught only because Architect report contradicted PM. Pattern: pm-output.md has every row "VERIFIED" with realistic but fake line numbers; architecture-output.md correctly identifies gaps. **Fix:** After Investigate, cross-check PM claims against Architecture findings before advancing to Planning. If PM says "all present" but Architect says "missing", trust Architect and re-spawn PM Investigate or overwrite pm-output.md with aligned report. See `references/pm-investigate-hallucination-pattern.md`.
+
+**Pitfall**: **Direct opencode bypass when pipeline stuck** — When barrier completion tracking bugs + PM timeout loops + state corruption make `spawn-worker.sh` unusable, pipe prompt directly to opencode: `cat prompt.md | opencode run --auto --format json`. This bypasses lease checks in `spawn-worker.sh`. Valid **emergency escape hatch** when pipeline is non-functional, but: (1) no lease is recorded, (2) no WECP validation runs, (3) no automatic artifact extraction to `reports/`. Manual `write_file` needed for artifacts. Use only when user explicitly says to proceed despite pipeline issues. See `references/direct-opencode-bypass-pattern.md`.
+
+**Pitfall**: **PM Review tool permission rejection → exit 3 / server crash** — When opencode PM Review session encounters a file read that triggers tool permission rejection (e.g., trying to read `qa-output.md`), `pm-review.sh` exits with code 3 and the server process can die. The error looks like: `"The user rejected permission to use this specific tool call."` + `=== PM Review: UNKNOWN ===` + `=== PM Review complete (exit 3) ===`. **Fix:** Restart server, ensure review prompt only references files that exist and are accessible. Do not include stale report paths from prior runs in PM Review context.
 
 **Pitfall**: Claiming "Runtime OAT PASS" when workers were spawned directly via `spawn-worker.sh` rather than through the pipeline orchestrator. User: *"itu real task atau tidak?"* — Direct worker execution bypasses the pipeline (investigate → planning → implementation → verification → closeout → knowledge). A valid Runtime OAT must exercise the complete orchestration.
 

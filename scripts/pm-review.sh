@@ -130,7 +130,7 @@ try {
   const result = execFileSync('opencode', [
     'run', reviewMsg, '-m', model, '--format', 'json', '-f', promptFile,
   ], {
-    cwd: cwd, timeout: 120000, encoding: 'utf8',
+    cwd: cwd, timeout: parseInt(process.env.AIC_PM_TIMEOUT_SECONDS || "300", 10) * 1000, encoding: 'utf8',
   });
   fs.writeFileSync(outputFile, result);
 } catch (e) {

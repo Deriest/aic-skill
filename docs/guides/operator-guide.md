@@ -29,6 +29,23 @@ source scripts/api-auth.sh
 curl_api -X POST http://localhost:6868/api/runtime/intent   -H "Content-Type: application/json"   -d '{"intent":"task.start","title":"My Task","description":"..."}'
 ```
 
+### Runtime intents
+
+For runtime control (including `task.cancel`), you must always source `scripts/api-auth.sh` and use the `curl_api` function to send a `POST` request to `/api/runtime/intent`.
+
+Example payload (using a specific `taskId`):
+
+```bash
+source scripts/api-auth.sh
+curl_api -X POST http://localhost:6868/api/runtime/intent \
+  -H "Content-Type: application/json" \
+  -d '{"intent": "task.cancel", "taskId": "TASK-20260714-006"}'
+```
+
+*Note on `taskId`*: Specifying `"taskId"` is optional; omitting `"taskId"` will target and cancel the currently active task (`currentTask`).
+
+*Pitfall (HTTP 401)*: Initiating runtime intents via raw `curl` without authentication headers or without sourcing `scripts/api-auth.sh` first will result in an HTTP `401 Unauthorized` response.
+
 ## Monitoring Progress
 
 ### Dashboard
