@@ -358,6 +358,35 @@ def load_contract_headings(skill_dir, phase, role):
     return ((pc.get("roles") or {}).get(role) or {}).get("requiredSections") or []
 
 
+def noop_regen_once(prompt_text, md_file, model, project_dir, gen_timeout):
+    """IMP-024-C: one regen if unsupported no-op before validation."""
+    if not md_file or not Path(md_file).is_file():
+        return md_file, None
+    det = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "worker-noop-detector.py"), md_file],
+        capture_output=True,
+        text=True,
+    )
+    if det.returncode != 0:
+        return md_file, None
+    print("=== WECP: unsupported no-op detected — one regeneration (IMP-024-C) ===", file=sys.stderr)
+    regen_r = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "trivial-task-prompt.py"), "noop-regen"],
+        capture_output=True,
+        text=True,
+    )
+    regen_hdr = (regen_r.stdout or "").strip()
+    regen_tmp = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".txt", prefix="wecp-noop-regen-", delete=False
+    )
+    regen_tmp.write(f"{regen_hdr}\n\n{prompt_text[:12000]}")
+    regen_tmp.close()
+    safe_unlink(md_file)
+    md2, json2 = generate_with_optional_continue(regen_tmp.name, model, project_dir, gen_timeout)
+    safe_unlink(regen_tmp.name)
+    return md2, json2
+
+
 def safe_unlink(p):
     try:
         if p and os.path.exists(p):
@@ -475,6 +504,16 @@ def run_pipeline(skill_dir, worker, tier, project_dir, prompt_file):
             )
             if not md_file:
                 print(f"=== WECP: {tag} opencode failed ===", file=sys.stderr)
+                return 1
+            md2, json2 = noop_regen_once(prompt_text, md_file, model, project_dir, gen_timeout)
+            if md2:
+                md_file = md2
+                if json2:
+                    if json_file:
+                        safe_unlink(json_file)
+                    json_file = json2
+            else:
+                print(f"=== WECP: noop regen failed ===", file=sys.stderr)
                 return 1
         else:
             json_file = run_opencode(current_prompt, model, project_dir, repair_timeout)[0]

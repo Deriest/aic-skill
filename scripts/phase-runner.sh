@@ -67,6 +67,17 @@ Task Description: ''' + desc + '''
   fi
 fi
 
+TRIVIAL_TASK_BLOCK=""
+IMPLEMENTATION_TRIVIAL_BLOCK=""
+if [[ -f "${CTX:-}" ]]; then
+  TRIVIAL_TASK_BLOCK=$(python3 "$SCRIPT_DIR/trivial-task-prompt.py" classify-and-guidance "$CTX" 2>/dev/null || true)
+  if [[ "${PHASE,,}" == "implementation" ]]; then
+    if python3 "$SCRIPT_DIR/trivial-task-classifier.py" "$CTX" 2>/dev/null | python3 -c "import sys,json; print('yes' if json.load(sys.stdin).get('trivial') else 'no')" | grep -q yes; then
+      IMPLEMENTATION_TRIVIAL_BLOCK=$(python3 "$SCRIPT_DIR/trivial-task-prompt.py" implementation 2>/dev/null || true)
+    fi
+  fi
+fi
+
 echo "=== Phase: $PHASE (task=${AIC_TASK_ID:-none}) ==="
 echo "=== Spawning $# workers ==="
 
@@ -162,6 +173,8 @@ ${PLANNING_AUTHORITY_BLOCK}
 ${PM_REPAIR_BLOCK}
 ${CLOSEOUT_CONTEXT_BLOCK}
 ${TASK_SCOPE}
+${TRIVIAL_TASK_BLOCK}
+${IMPLEMENTATION_TRIVIAL_BLOCK}
 ${RESEARCH_PLANNING_BLOCK}
 ${IMPLEMENTATION_SKELETON_BLOCK}
 Produce a complete markdown report artifact for this phase. Address only the task scope above.
