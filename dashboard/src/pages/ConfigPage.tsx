@@ -47,14 +47,13 @@ export function ConfigPage() {
     }
     setStatus('Fetching models...');
     try {
-      const url = baseURL.endsWith('/') ? `${baseURL}models` : `${baseURL}/models`;
-      const headers: Record<string, string> = {};
-      if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-      const res = await fetch(url, { headers });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const res = await fetch('/api/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseURL, apiKey }),
+      });
       const result = await res.json();
+      if (!res.ok) throw new Error(result.error || `HTTP error! status: ${res.status}`);
       
       if (result && Array.isArray(result.data)) {
         const ids = result.data.map((m: any) => m.id || m.name).filter(Boolean);

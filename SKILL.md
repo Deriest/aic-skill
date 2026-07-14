@@ -60,6 +60,7 @@ IF intake routing / EPIC-201 / Quick Conversation Discovery From PRD / PRD appro
 
 ### Dashboard & API
 IF dashboard/API issues → load `references/dispatcher-dashboard.md`
+IF Config page FETCH MODELS fails / Failed to fetch / LAN baseURL from browser → load `references/dashboard-config-fetch-models.md` + `references/dispatcher-pitfalls-ui.md`
 IF control plane endpoints → load `references/dispatcher-control-plane.md`
 IF pipeline UI sizing → load `references/dispatcher-pipeline-ui.md`
 

@@ -5,6 +5,7 @@ const os = require('os');
 // Just: read state.json -> serve /api/status + accept /api/agent-status writes.
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const auth = require('./auth');
@@ -303,6 +304,46 @@ function readBody(req) {
   });
 }
 
+function fetchUpstreamModelsJson(baseURL, apiKey) {
+  const raw = String(baseURL || '').trim();
+  if (!raw) return Promise.reject(new Error('baseURL required'));
+  const base = raw.endsWith('/') ? raw.slice(0, -1) : raw;
+  const modelsUrl = `${base}/models`;
+  const u = new URL(modelsUrl);
+  const lib = u.protocol === 'https:' ? https : http;
+  const headers = { Accept: 'application/json' };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  return new Promise((resolve, reject) => {
+    const req = lib.request(
+      {
+        hostname: u.hostname,
+        port: u.port || (u.protocol === 'https:' ? 443 : 80),
+        path: u.pathname + u.search,
+        method: 'GET',
+        headers,
+        timeout: 20000,
+      },
+      (upstream) => {
+        let body = '';
+        upstream.on('data', (c) => { body += c; });
+        upstream.on('end', () => {
+          if (upstream.statusCode < 200 || upstream.statusCode >= 300) {
+            return reject(new Error(`Upstream HTTP ${upstream.statusCode}`));
+          }
+          try {
+            resolve(JSON.parse(body || '{}'));
+          } catch (e) {
+            reject(new Error('Invalid JSON from upstream'));
+          }
+        });
+      }
+    );
+    req.on('error', (e) => reject(e));
+    req.on('timeout', () => { req.destroy(); reject(new Error('Upstream timeout')); });
+    req.end();
+  });
+}
+
 function send(res, status, body, req) {
   const headers = {
     'Content-Type': 'application/json',
@@ -383,6 +424,20 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { version: '3.1.3', milestone: 'J' });
   }
 
+  // POST /api/models — proxy model list (CSP connect-src 'self' blocks browser → proxy)
+  if (req.method === 'POST' && pathname === '/api/models') {
+    const data = await readBody(req);
+    const baseURL = String(data.baseURL || '').trim();
+    const apiKey = String(data.apiKey || '').trim();
+    if (!baseURL) return send(res, 400, { error: 'baseURL required' }, req);
+    try {
+      const result = await fetchUpstreamModelsJson(baseURL, apiKey);
+      return send(res, 200, result, req);
+    } catch (err) {
+      return send(res, 502, { error: err.message || 'Upstream fetch failed' }, req);
+    }
+  }
+
   // Auth management endpoints (protected)
   if (pathname.startsWith('/api/auth')) {
     if (!auth.requireAuth(req, res)) return;
@@ -405,7 +460,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // All other API routes require auth
-  const publicApi = ['/api/config', '/api/tasks', '/api/metrics'];
+  const publicApi = ['/api/config', '/api/tasks', '/api/metrics', '/api/models'];
   if (pathname.startsWith('/api') && !publicApi.some(p => pathname.startsWith(p)) && !auth.requireAuth(req, res)) return;
 
   const engine = getRuntimeEngine();
@@ -857,7 +912,7 @@ const server = http.createServer(async (req, res) => {
   }
   // Enforce RBAC on protected endpoints (skip public: /health, dashboard, /api/status)
   const rbacPath = url.pathname;
-  const isPublic = rbacPath === '/health' || rbacPath === '/api/status' || rbacPath === '/api/config' || rbacPath === '/api/tasks' || rbacPath === '/api/metrics' || rbacPath === '/' || rbacPath.startsWith('/dashboard') || rbacPath.startsWith('/assets');
+  const isPublic = rbacPath === '/health' || rbacPath === '/api/status' || rbacPath === '/api/config' || rbacPath === '/api/tasks' || rbacPath === '/api/metrics' || rbacPath === '/api/models' || rbacPath === '/' || rbacPath.startsWith('/dashboard') || rbacPath.startsWith('/assets');
   try {
     if (!isPublic && rbacPath.startsWith('/api/')) {
       const rbacKey = req.headers['x-api-key'] || '';
