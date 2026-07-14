@@ -130,14 +130,12 @@ NODESCRIPT
     done
 
     if [[ -f "$OUTPUT_FILE" ]]; then
-      INPUT_TOKENS=$(grep -o '"input":[0-9]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
-      OUTPUT_TOKENS=$(grep -o '"output":[0-9]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
-      REASONING_TOKENS=$(grep -o '"reasoning":[0-9]*' "$OUTPUT_FILE" | tail -1 | cut -d: -f2 || echo "0")
+      TOKEN_JSON=$(python3 "$SCRIPT_DIR/opencode-token-extract.py" "$OUTPUT_FILE" 2>/dev/null || echo '{"input":0}')
+      INPUT_TOKENS=$(echo "$TOKEN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('input',0))")
       if [[ "${INPUT_TOKENS:-0}" != "0" ]]; then
-        TOTAL_TOKENS=$((${INPUT_TOKENS:-0} + ${OUTPUT_TOKENS:-0} + ${REASONING_TOKENS:-0}))
         curl_api -X POST "$API_URL/api/metrics" \
           -H "Content-Type: application/json" \
-          -d "{\"worker\":\"$WORKER\",\"tier\":\"$TIER\",\"model\":\"$MODEL\",\"tokens\":{\"input\":${INPUT_TOKENS:-0},\"output\":${OUTPUT_TOKENS:-0},\"reasoning\":${REASONING_TOKENS:-0},\"total\":$TOTAL_TOKENS},\"durationSec\":0}" > /dev/null 2>&1 || true
+          -d "$(echo "$TOKEN_JSON" | python3 -c "import sys,json; t=json.load(sys.stdin); print(json.dumps({'worker':'$WORKER','tier':'$TIER','model':'$MODEL','tokens':t,'durationSec':0}))")" > /dev/null 2>&1 || true
       fi
     fi
   else

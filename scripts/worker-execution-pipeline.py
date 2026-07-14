@@ -306,6 +306,53 @@ def safe_unlink(p):
         pass
 
 
+def post_worker_metrics(skill_dir, worker, tier, model, json_paths, task_id=""):
+    """One POST /api/metrics per WECP execution (sum of NDJSON files)."""
+    if not json_paths:
+        return
+    extract_py = SCRIPT_DIR / "opencode-token-extract.py"
+    r = subprocess.run(
+        [sys.executable, str(extract_py), *[str(p) for p in json_paths if p]],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if r.returncode != 0 or not r.stdout.strip():
+        print("=== WECP: metrics extract failed ===", file=sys.stderr)
+        return
+    tokens = json.loads(r.stdout.strip())
+    if not tokens.get("input"):
+        return
+    api_url = os.environ.get("AIC_API_URL", "http://localhost:6868").rstrip("/")
+    payload = {
+        "worker": worker,
+        "tier": tier,
+        "model": model,
+        "taskId": task_id or None,
+        "tokens": tokens,
+        "durationSec": 0,
+    }
+    headers = {"Content-Type": "application/json"}
+    auth_file = Path(skill_dir) / ".aic" / "auth.json"
+    if auth_file.is_file():
+        try:
+            headers["X-API-Key"] = json.loads(auth_file.read_text())["apiKeys"][0]["key"]
+        except (KeyError, IndexError, json.JSONDecodeError):
+            pass
+    try:
+        import urllib.request
+
+        req = urllib.request.Request(
+            f"{api_url}/api/metrics",
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=15)
+    except Exception as e:
+        print(f"=== WECP: metrics POST failed: {e} ===", file=sys.stderr)
+
+
 def run_pipeline(skill_dir, worker, tier, project_dir, prompt_file):
     cfg = load_config(skill_dir)
     phase_raw = os.environ.get("AIC_PIPELINE_PHASE", "Implementation")
@@ -342,6 +389,7 @@ def run_pipeline(skill_dir, worker, tier, project_dir, prompt_file):
     print(f"=== WECP: {worker} phase={phase} tier={tier} repairs={max_repairs} ===", file=sys.stderr)
     md_file = None
     val_errors = []
+    json_paths = []
 
     for attempt in range(max_repairs + 1):
         tag = f"repair#{attempt}" if attempt > 0 else "generate"
@@ -386,16 +434,22 @@ def run_pipeline(skill_dir, worker, tier, project_dir, prompt_file):
         if attempt == 0 and repair_tmp:
             safe_unlink(repair_tmp.name)
 
+        if json_file:
+            json_paths.append(json_file)
+
         normalize_md_file(md_file, headings)
 
         result = validate(skill_dir, phase, worker, md_file, min_section_chars)
         val_errors = result.get("errors", [])
         if result["ok"]:
             print(f"=== WECP: {tag} PASS ===", file=sys.stderr)
+            post_worker_metrics(skill_dir, worker, tier, model, json_paths, task_id)
+            for jp in json_paths:
+                safe_unlink(jp)
+            json_paths.clear()
             if artifact_path:
                 shutil.copy2(md_file, artifact_path)
             safe_unlink(md_file)
-            safe_unlink(json_file)
             return 0
 
         codes = [e["code"] for e in val_errors]
@@ -404,13 +458,16 @@ def run_pipeline(skill_dir, worker, tier, project_dir, prompt_file):
         if attempt == 0 and any(c in codes for c in ("FILE_ERROR",)):
             print("=== WECP: unrecoverable ===", file=sys.stderr)
             safe_unlink(md_file)
-            safe_unlink(json_file)
+            for jp in json_paths:
+                safe_unlink(jp)
             return 1
 
-        safe_unlink(json_file)  # keep md_file for repair prompt
+        # keep md_file for repair prompt; retain json_paths for token sum on success
 
     print(f"=== WECP: FAILED_AFTER_REPAIR ({max_repairs} attempts) ===", file=sys.stderr)
     safe_unlink(md_file)
+    for jp in json_paths:
+        safe_unlink(jp)
     return 1
 
 
