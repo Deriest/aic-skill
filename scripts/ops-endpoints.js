@@ -4,6 +4,46 @@ const path = require('path');
 
 const SKILL_DIR = path.join(__dirname, '..');
 const METRICS_FILE = path.join(SKILL_DIR, '.aic', 'metrics.json');
+const LATENCY_METRICS_FILE = path.join(SKILL_DIR, '.aic', 'latency_metrics.json');
+const SLO_API_P99_MS = 250;
+const ERROR_BUDGET_PCT = 1;
+
+function percentile(sorted, p) {
+  if (!sorted.length) return 0;
+  const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
+  return sorted[Math.max(0, idx)];
+}
+
+function buildLatencySli(samples) {
+  const api = samples.filter(s => s.kind === 'api');
+  const latencies = api.map(s => s.latencyMs).sort((a, b) => a - b);
+  const total = api.length;
+  const errors = api.filter(s => s.status >= 500).length;
+  const errorRate = total ? errors / total : 0;
+  const budgetConsumedPct = total ? Math.min(100, (errorRate / (ERROR_BUDGET_PCT / 100)) * 100) : 0;
+  const p99 = percentile(latencies, 99);
+  return {
+    windowSamples: total,
+    latencyMs: { p50: percentile(latencies, 50), p95: percentile(latencies, 95), p99 },
+    errorRate: +errorRate.toFixed(4),
+    slo: {
+      apiP99TargetMs: SLO_API_P99_MS,
+      apiP99Met: total === 0 || p99 <= SLO_API_P99_MS,
+      errorBudgetPct: ERROR_BUDGET_PCT,
+      errorBudgetConsumedPct: +budgetConsumedPct.toFixed(2),
+      errorBudgetRemainingPct: +Math.max(0, 100 - budgetConsumedPct).toFixed(2),
+    },
+  };
+}
+
+function readLatencySummary() {
+  let samples = [];
+  try {
+    const d = JSON.parse(fs.readFileSync(LATENCY_METRICS_FILE, 'utf8'));
+    samples = Array.isArray(d.samples) ? d.samples : [];
+  } catch {}
+  return { sli: buildLatencySli(samples), updatedAt: samples.length ? samples[samples.length - 1].ts : null };
+}
 const LOG_FILE = path.join(SKILL_DIR, '.aic', 'logs', 'app.log');
 const QUEUE_FILE = path.join(SKILL_DIR, '.aic', 'queue.json');
 const INSTANCE_ID = `inst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
@@ -34,8 +74,9 @@ async function handleOpsEndpoint(req, res, send, readBody, state) {
       workers: [...new Set(metrics.map(m => m.worker).filter(Boolean))],
       tiers: metrics.reduce((acc, m) => { acc[m.tier] = (acc[m.tier] || 0) + 1; return acc; }, {}),
       memory: { rss: mem.rss, heapUsed: mem.heapUsed, heapTotal: mem.heapTotal },
-      cpu: { loadAvg: os.loadavg(), cores: os.cpus().length }
-    });
+      cpu: { loadAvg: os.loadavg(), cores: os.cpus().length },
+      latency: readLatencySummary(),
+    }, req);
     return true;
   }
 

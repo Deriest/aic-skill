@@ -46,11 +46,23 @@ PROMPT_FILE=$(mktemp "${TMPDIR:-/tmp}/aic-pm-review-XXXXXX.txt")
 cat > "$PROMPT_FILE" << PROMPT
 You are the Project Manager (PM) for the AIC.
 
+You are performing a review only.
+Do not implement.
+Do not edit files.
+Do not execute engineering work.
+Do not use tools.
+Return only the review.
+
 ## Task
 Review the following artifacts from the ${PHASE} phase.
 
 ## Artifacts
 PROMPT
+
+CONTRACT_RUBRIC=$(python3 "$SCRIPT_DIR/phase-contract-loader.py" pm-rubric "$SKILL_DIR" "$PHASE" 2>/dev/null || true)
+if [[ -n "$CONTRACT_RUBRIC" ]]; then
+  echo "$CONTRACT_RUBRIC" >> "$PROMPT_FILE"
+fi
 
 for artifact in "$@"; do
   if [[ -f "$artifact" ]]; then
@@ -73,19 +85,18 @@ Review each artifact for:
 3. Consistency — does it align with the architecture specification?
 
 ## Verdict
-Respond with EXACTLY one of:
+The first non-empty line of your response must be exactly one of:
+VERDICT: PASS
+VERDICT: REWORK
+VERDICT: BLOCKED
+
+No prose, markdown, or commentary before that line.
+After the verdict line you may add brief rationale.
+
+Supported meanings:
 - PASS — all artifacts are complete and valid
 - REWORK — one or more artifacts need revision (specify which and why)
 - BLOCKED — cannot proceed due to external dependency
-
-Format your response as:
-VERDICT: PASS
-or
-VERDICT: REWORK
-[details]
-or
-VERDICT: BLOCKED
-[details]
 PROMPT
 
 echo "=== Prompt generated: $PROMPT_FILE ==="
@@ -104,19 +115,56 @@ const promptFile = process.argv[2];
 const model = process.argv[3];
 const cwd = process.argv[4];
 const outputFile = process.argv[5];
+const reviewMsg = [
+  'Review the attached prompt.',
+  'Return a review only.',
+  'The first line must be exactly:',
+  'VERDICT: PASS',
+  'or',
+  'VERDICT: REWORK',
+  'or',
+  'VERDICT: BLOCKED',
+  'Do not perform implementation work.',
+].join('\n');
 try {
-  const result = execFileSync('opencode', ['run', promptFile, '-m', model, '--auto', '--format', 'json'], {
+  const result = execFileSync('opencode', [
+    'run', reviewMsg, '-m', model, '--format', 'json', '-f', promptFile,
+  ], {
     cwd: cwd, timeout: 120000, encoding: 'utf8',
   });
   fs.writeFileSync(outputFile, result);
 } catch (e) {
-  if (e.stdout) fs.writeFileSync(outputFile, e.stdout);
+  const stdout = e.stdout || '';
+  const stderr = e.stderr || '';
+  if (stdout) fs.writeFileSync(outputFile, stdout);
+  process.stderr.write(
+    `=== PM opencode failed exit=${e.status || 1} stdout_bytes=${stdout.length} ===\n`
+  );
+  if (stderr) process.stderr.write(stderr);
   process.exit(e.status || 1);
 }
 NODESCRIPT
   PM_MODEL="${PROVIDER:-aic}/${MODEL_THINKER:-opus}"
-  node "$NODE_RUNNER" "$PROMPT_FILE" "$PM_MODEL" "$PROJECT_DIR" "$VERDICT_FILE" 2>/dev/null || true
-  rm -f "$NODE_RUNNER"
+  PM_ERR_LOG=$(mktemp "${TMPDIR:-/tmp}/aic-pm-err-XXXXXX.txt")
+  PM_NODE_EC=0
+  node "$NODE_RUNNER" "$PROMPT_FILE" "$PM_MODEL" "$PROJECT_DIR" "$VERDICT_FILE" 2>"$PM_ERR_LOG" || PM_NODE_EC=$?
+  if [[ $PM_NODE_EC -ne 0 ]] || [[ ! -s "$VERDICT_FILE" ]]; then
+    echo "=== PM opencode diagnostics ===" >&2
+    echo "node_exit=$PM_NODE_EC verdict_bytes=$(wc -c < "$VERDICT_FILE" 2>/dev/null || echo 0)" >&2
+    [[ -s "$PM_ERR_LOG" ]] && cat "$PM_ERR_LOG" >&2
+  fi
+  rm -f "$NODE_RUNNER" "$PM_ERR_LOG"
+  if [[ -f "$VERDICT_FILE" ]]; then
+    EXTRACT_ERR=$(mktemp "${TMPDIR:-/tmp}/aic-pm-extract-err-XXXXXX.txt")
+    if python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$VERDICT_FILE" > "${VERDICT_FILE}.md" 2>"$EXTRACT_ERR"; then
+      mv "${VERDICT_FILE}.md" "$VERDICT_FILE"
+    else
+      echo "=== PM extract failed ===" >&2
+      cat "$EXTRACT_ERR" >&2
+      echo "raw_ndjson_bytes=$(wc -c < "$VERDICT_FILE")" >&2
+    fi
+    rm -f "$EXTRACT_ERR"
+  fi
 else
   echo "=== opencode not found, using mock PM ==="
   # Mock: read prompt and produce PASS
@@ -129,8 +177,18 @@ VERDICT_RAW=$(cat "$VERDICT_FILE")
 echo "=== Raw verdict ==="
 echo "$VERDICT_RAW" | head -5
 
-# Extract verdict
-VERDICT=$(echo "$VERDICT_RAW" | grep -i "VERDICT:" | head -1 | sed 's/.*VERDICT:\s*//' | tr '[:lower:]' '[:upper:]' | xargs)
+# Extract verdict (first valid token; markdown/whitespace tolerant)
+VERDICT=$(python3 -c "
+import re, sys
+text = sys.stdin.read()
+clean = re.sub(r'\*+', '', text)
+m = re.search(r'(?i)VERDICT\s*:\s*(\w+)', clean)
+if not m:
+    sys.exit(0)
+v = m.group(1).upper()
+if v in ('PASS', 'REWORK', 'BLOCKED', 'FAIL'):
+    print(v)
+" <<<"$VERDICT_RAW")
 
 case "$VERDICT" in
   PASS)
@@ -149,7 +207,7 @@ case "$VERDICT" in
     
     EXIT_CODE=0
     ;;
-  REWORK)
+  REWORK|FAIL)
     echo "=== PM Review: REWORK ==="
     echo "$VERDICT_RAW" | grep -A 10 "REWORK" || true
     
@@ -181,6 +239,11 @@ case "$VERDICT" in
 esac
 
 # Cleanup
+if [[ -n "${AIC_TASK_ID:-}" ]]; then
+  TASK_REPORTS="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports"
+  mkdir -p "$TASK_REPORTS"
+  printf '%s' "$VERDICT_RAW" > "$TASK_REPORTS/.pm-last-verdict.txt"
+fi
 rm -f "$PROMPT_FILE" "$VERDICT_FILE"
 
 echo "=== PM Review complete (exit $EXIT_CODE) ==="

@@ -10,10 +10,19 @@ const path = require('path');
 const auth = require('./auth');
 const { handleOpsEndpoint } = require('./ops-endpoints');
 const { handleEnterpriseEndpoint } = require('./enterprise-endpoints');
+const { createEngine } = require('./engine');
+
+function broadcast() {
+  /* ponytail: no-op; dashboard polls GET /api/status */
+}
 
 const SKILL_DIR = path.join(__dirname, '..');
 const STATE_FILE = path.join(SKILL_DIR, '.aic', 'state.json');
 const METRICS_FILE = path.join(SKILL_DIR, '.aic', 'metrics.json');
+const LATENCY_METRICS_FILE = path.join(SKILL_DIR, '.aic', 'latency_metrics.json');
+const LATENCY_RING_MAX = 500;
+const SLO_API_P99_MS = 250;
+const ERROR_BUDGET_PCT = 1;
 const TASKS_DIR = path.join(SKILL_DIR, '.aic', 'tasks');
 const ENV_FILE = path.join(SKILL_DIR, '.env');
 const LOG_FILE = path.join(SKILL_DIR, '.aic', 'logs', 'app.log');
@@ -50,6 +59,70 @@ function cachedRead(filePath, maxAge = 5000) {
   } catch { return null; }
 }
 function invalidateCache(filePath) { cache.delete(filePath); }
+
+// ponytail: in-memory ring; upgrade to latency_metrics.json-only if multi-instance
+const latencyRing = [];
+
+function percentile(sorted, p) {
+  if (!sorted.length) return 0;
+  const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
+  return sorted[Math.max(0, idx)];
+}
+
+function recordApiLatency(entry) {
+  latencyRing.push(entry);
+  if (latencyRing.length > LATENCY_RING_MAX) latencyRing.shift();
+  let store = { samples: [], updatedAt: null };
+  try {
+    if (fs.existsSync(LATENCY_METRICS_FILE)) {
+      store = JSON.parse(fs.readFileSync(LATENCY_METRICS_FILE, 'utf8'));
+    }
+  } catch {}
+  if (!Array.isArray(store.samples)) store.samples = [];
+  store.samples.push(entry);
+  if (store.samples.length > LATENCY_RING_MAX) store.samples = store.samples.slice(-LATENCY_RING_MAX);
+  store.updatedAt = entry.ts;
+  try {
+    fs.mkdirSync(path.dirname(LATENCY_METRICS_FILE), { recursive: true });
+    fs.writeFileSync(LATENCY_METRICS_FILE, JSON.stringify(store, null, 2));
+  } catch {}
+}
+
+function buildLatencySli(samples) {
+  const api = samples.filter(s => s.kind === 'api');
+  const latencies = api.map(s => s.latencyMs).sort((a, b) => a - b);
+  const total = api.length;
+  const errors = api.filter(s => s.status >= 500).length;
+  const errorRate = total ? errors / total : 0;
+  const budgetConsumedPct = total ? Math.min(100, (errorRate / (ERROR_BUDGET_PCT / 100)) * 100) : 0;
+  const p99 = percentile(latencies, 99);
+  return {
+    windowSamples: total,
+    latencyMs: {
+      p50: percentile(latencies, 50),
+      p95: percentile(latencies, 95),
+      p99,
+    },
+    errorRate: +errorRate.toFixed(4),
+    slo: {
+      apiP99TargetMs: SLO_API_P99_MS,
+      apiP99Met: total === 0 || p99 <= SLO_API_P99_MS,
+      errorBudgetPct: ERROR_BUDGET_PCT,
+      errorBudgetConsumedPct: +budgetConsumedPct.toFixed(2),
+      errorBudgetRemainingPct: +Math.max(0, 100 - budgetConsumedPct).toFixed(2),
+    },
+  };
+}
+
+function getLatencyMetricsSummary() {
+  const samples = latencyRing.length ? latencyRing : (() => {
+    try {
+      const d = JSON.parse(fs.readFileSync(LATENCY_METRICS_FILE, 'utf8'));
+      return Array.isArray(d.samples) ? d.samples : [];
+    } catch { return []; }
+  })();
+  return { sli: buildLatencySli(samples), updatedAt: samples.length ? samples[samples.length - 1].ts : null };
+}
 
 // Task persistence helpers
 function ensureTaskDir(taskId) {
@@ -96,6 +169,38 @@ function getActiveProject() {
 }
 const PORT = parseInt(process.argv[2] || process.env.PORT || '6868', 10);
 
+function parseAllowedOrigins() {
+  const raw = (process.env.AIC_CORS_ORIGINS || '').trim();
+  if (!raw) return null;
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+const ALLOWED_ORIGINS = parseAllowedOrigins();
+
+function resolveCorsOrigin(req) {
+  const origin = req.headers.origin;
+  if (!ALLOWED_ORIGINS) {
+    if (!origin) return '*';
+    return origin;
+  }
+  if (origin && ALLOWED_ORIGINS.includes(origin)) return origin;
+  return null;
+}
+
+function securityHeadersForApi() {
+  return {
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Frame-Options': 'DENY',
+  };
+}
+
+function securityHeadersForStatic() {
+  return {
+    ...securityHeadersForApi(),
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'",
+  };
+}
+
 // Rate limiter: 60 req/min per IP
 const rateLimits = new Map();
 function checkRateLimit(ip) {
@@ -126,12 +231,31 @@ const defaultState = () => {
     phaseBarrier: null,
     pmReview: null,
     rework: null,
+    engine: { paused: false, leases: {} },
     startedAt: Date.now(),
   };
   return s;
 };
 
 let state = defaultState();
+
+let runtimeEngine = null;
+function getRuntimeEngine() {
+  if (!runtimeEngine) {
+    runtimeEngine = createEngine({
+      skillDir: SKILL_DIR,
+      scriptDir: __dirname,
+      tasksDir: TASKS_DIR,
+      workerIds: WORKERS,
+      getState: () => state,
+      setState: (s) => { state = s; },
+      saveState,
+      getActiveProject,
+    });
+    runtimeEngine.startupReconcile();
+  }
+  return runtimeEngine;
+}
 
 function loadState() {
   try {
@@ -179,32 +303,62 @@ function readBody(req) {
   });
 }
 
-function send(res, status, body) {
-  res.writeHead(status, {
+function send(res, status, body, req) {
+  const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
     'Cache-Control': 'no-store',
-  });
+    ...securityHeadersForApi(),
+  };
+  if (req) {
+    const cors = resolveCorsOrigin(req);
+    if (cors) headers['Access-Control-Allow-Origin'] = cors;
+    if (cors && cors !== '*') headers['Vary'] = 'Origin';
+  } else {
+    headers['Access-Control-Allow-Origin'] = '*';
+  }
+  res.writeHead(status, headers);
   res.end(JSON.stringify(body));
+  if (req && req.url) {
+    try {
+      const p = new URL(req.url, `http://127.0.0.1:${PORT}`).pathname;
+      if (p.startsWith('/api')) {
+        recordApiLatency({
+          ts: new Date().toISOString(),
+          kind: 'api',
+          method: req.method,
+          path: p,
+          status,
+          latencyMs: Date.now() - (req._aicStartMs || Date.now()),
+        });
+      }
+    } catch {}
+  }
 }
+
+loadState();
+getRuntimeEngine();
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const pathname = url.pathname;
 
-  // CORS preflight
   if (req.method === 'OPTIONS') {
+    const cors = resolveCorsOrigin(req);
+    if (!cors) return send(res, 403, { error: 'CORS origin not allowed' }, req);
     res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Origin': cors,
+      'Access-Control-Allow-Methods': 'GET,POST,DELETE',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+      'Access-Control-Max-Age': '86400',
+      ...(cors !== '*' ? { Vary: 'Origin' } : {}),
+      ...securityHeadersForApi(),
     });
     return res.end();
   }
 
   // Rate limit: 60 req/min per IP
   // Request logging (I-4)
-  const reqStart = Date.now();
+  req._aicStartMs = Date.now();
   const clientIp = req.socket.remoteAddress || 'unknown';
   log('INFO', 'api', `${req.method} ${pathname}`, { ip: clientIp });
 
@@ -220,14 +374,8 @@ const server = http.createServer(async (req, res) => {
 
   // Dashboard GET /api/status — no auth required (dashboard consumer)
   if (req.method === 'GET' && pathname === '/api/status') {
-    return send(res, 200, {
-      connected: true,
-      workers: state.workers,
-      currentTask: state.currentTask,
-      currentPhase: state.currentPhase,
-      startedAt: state.startedAt,
-      project: getActiveProject(),
-    });
+    const engine = getRuntimeEngine();
+    return send(res, 200, engine.buildSnapshot());
   }
 
   // GET /api/version — version info (no auth required)
@@ -260,83 +408,59 @@ const server = http.createServer(async (req, res) => {
   const publicApi = ['/api/config', '/api/tasks', '/api/metrics'];
   if (pathname.startsWith('/api') && !publicApi.some(p => pathname.startsWith(p)) && !auth.requireAuth(req, res)) return;
 
-  // POST /api/task-start — start a new task (sets currentTask + resets workers)
-  if (req.method === 'POST' && pathname === '/api/task-start') {
+  const engine = getRuntimeEngine();
+
+  if (req.method === 'POST' && pathname === '/api/runtime/intent') {
     const data = await readBody(req);
-    if (data.id || data.title) {
-      const now = new Date();
-      const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
-      const existing = (function() { try { return fs.readdirSync(TASKS_DIR).filter(d => d.startsWith('TASK-')); } catch(e) { return []; } })().filter(t => t.startsWith(`TASK-${ymd}`));
-      let nextSeq = 1;
-      if (existing.length > 0) {
-        const seqs = existing.map(t => parseInt(t.split('-')[2], 10)).filter(n => !isNaN(n));
-        if (seqs.length > 0) nextSeq = Math.max(...seqs) + 1;
-      }
-      const seq = String(nextSeq).padStart(3, '0');
-      const taskId = data.id || `TASK-${ymd}-${seq}`;
-      state.currentTask = {
-        id: taskId,
-        title: data.title || 'Untitled Task',
-        type: data.type || 'general'
-      };
-      state.currentPhase = null;
-      // Reset all workers to idle
-      for (const w of WORKERS) {
-        state.workers[w] = { status: 'idle', engine: null, currentTask: null };
-      }
-      state.workers.dispatcher.status = 'working'; // DF-002: dispatcher active during task
-      // Create task directory with context + state
-      const taskDir = ensureTaskDir(taskId);
-      fs.writeFileSync(path.join(taskDir, 'context.json'), JSON.stringify({
-        taskId, title: data.title || 'Untitled Task',
-        description: data.description || '',
-        classification: data.classification || data.type || 'general',
-        userRequirement: data.userRequirement || data.description || '',
-        createdAt: new Date().toISOString()
-      }, null, 2));
-      fs.writeFileSync(path.join(taskDir, 'state.json'), JSON.stringify({
-        phase: null, status: 'active', lastActivity: new Date().toISOString(), workers: []
-      }, null, 2));
-      saveState();
-      return send(res, 200, { success: true, currentTask: state.currentTask });
-    }
-    return send(res, 400, { error: 'Missing id or title' });
+    const intent = String(data.intent || '');
+    const result = await engine.handleIntent(intent, data);
+    saveState();
+    return send(res, result.ok ? 200 : 400, result);
   }
 
-  // POST /api/task-status — set current task and pipeline phase
-  if (req.method === 'POST' && pathname === '/api/task-status') {
+  if (req.method === 'POST' && pathname === '/api/runtime/lease/issue') {
     const data = await readBody(req);
-    if (data.currentTask !== undefined) {
-      // Auto-generate task ID if not provided
-      if (data.currentTask && !data.currentTask.id) {
-        const now = new Date();
-        const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
-        const existing = (function() { try { return fs.readdirSync(TASKS_DIR).filter(d => d.startsWith('TASK-')); } catch(e) { return []; } })().filter(t => t.startsWith(`TASK-${ymd}`));
-        let nextSeq = 1;
-        if (existing.length > 0) {
-          const seqs = existing.map(t => parseInt(t.split('-')[2], 10)).filter(n => !isNaN(n));
-          if (seqs.length > 0) nextSeq = Math.max(...seqs) + 1;
-        }
-        const seq = String(nextSeq).padStart(3, '0');
-        data.currentTask.id = `TASK-${ymd}-${seq}`;
-      }
-      state.currentTask = data.currentTask;
-    }
-    if (data.currentPhase !== undefined) state.currentPhase = data.currentPhase;
-    // Persist phase transition to task state
-    if (state.currentTask?.id && data.currentPhase !== undefined) {
-      try {
-        const ts = readTaskState(state.currentTask.id) || {};
-        ts.phase = data.currentPhase;
-        ts.lastActivity = new Date().toISOString();
-        if (data.report) {
-          fs.writeFileSync(path.join(TASKS_DIR, state.currentTask.id, 'reports', `${data.currentPhase}.md`), data.report);
-        }
-        fs.writeFileSync(path.join(TASKS_DIR, state.currentTask.id, 'state.json'), JSON.stringify(ts, null, 2));
-      } catch {}
-    }
+    const result = engine.issueLease(data);
     saveState();
-    return send(res, 200, { success: true, currentTask: state.currentTask, currentPhase: state.currentPhase });
+    return send(res, result.ok ? 200 : 403, result);
+  }
+
+  const leaseComplete = pathname.match(/^\/api\/runtime\/lease\/([^/]+)\/complete$/);
+  if (req.method === 'POST' && leaseComplete) {
+    const data = await readBody(req);
+    const result = await engine.finishLease(leaseComplete[1], {
+      exitCode: data.exitCode ?? 1,
+      artifactPath: data.artifactPath,
+    });
+    saveState();
+    return send(res, result.ok ? 200 : 400, result);
+  }
+
+  // POST /api/task-start — delegates to Runtime Engine (create + start)
+  if (req.method === 'POST' && pathname === '/api/task-start') {
+    const data = await readBody(req);
+    if (!data.title && !data.id) return send(res, 400, { error: 'Missing title' });
+    const created = await engine.handleIntent('task.create', {
+      id: data.id,
+      title: data.title || 'Untitled Task',
+      description: data.description || '',
+      projectDir: data.projectDir || data.project_dir || getActiveProject().workspace,
+      type: data.type,
+    });
+    if (!created.ok) return send(res, 400, created);
+    const started = await engine.handleIntent('task.start', {
+      taskId: created.taskId,
+      title: data.title,
+      type: data.type || 'feature',
+      projectDir: data.projectDir || data.project_dir || getActiveProject().workspace,
+    });
+    saveState();
+    return send(res, 200, { success: true, currentTask: state.currentTask, ...started });
+  }
+
+  // Legacy pipeline mutation — blocked (FEAT-001)
+  if (req.method === 'POST' && pathname === '/api/task-status') {
+    return send(res, 403, engine.legacyMutationBlocked());
   }
 
   // GET /api/project — active project info
@@ -393,8 +517,11 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { ok: true, runtimeGate: state.runtimeGate });
   }
 
-  // POST /api/pm-review — batch PM review verdicts
+  // POST /api/pm-review — batch PM review verdicts (blocked when engine owns pipeline)
   if (req.method === 'POST' && pathname === '/api/pm-review') {
+    if (state.currentTask?.pipelineState && state.currentTask.pipelineState !== 'CREATED') {
+      return send(res, 403, engine.legacyMutationBlocked());
+    }
     const data = await readBody(req);
     const phase = String(data.phase || '');
     const verdicts = data.verdicts || {};
@@ -431,32 +558,9 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { ok: true, allPass, failedWorkers, pmReview: state.pmReview, rework: state.rework });
   }
 
-  // POST /api/phase-barrier — update phase barrier state
+  // POST /api/phase-barrier — Runtime Engine owns barriers (FEAT-001)
   if (req.method === 'POST' && pathname === '/api/phase-barrier') {
-    const data = await readBody(req);
-    const action = String(data.action || 'update');
-
-    if (action === 'start') {
-      state.phaseBarrier = {
-        active: true,
-        workers: data.workers || [],
-        completed: {},
-        startedAt: Date.now(),
-        timeout: data.timeout || 600000
-      };
-    } else if (action === 'update') {
-      if (state.phaseBarrier) {
-        const worker = String(data.worker || '');
-        const status = String(data.status || 'complete');
-        if (worker) state.phaseBarrier.completed[worker] = status;
-      }
-    } else if (action === 'clear') {
-      state.phaseBarrier = null;
-    }
-
-    saveState();
-    broadcast('state', state);
-    return send(res, 200, { ok: true, phaseBarrier: state.phaseBarrier });
+    return send(res, 403, engine.legacyMutationBlocked());
   }
 
   // POST /api/sub-agent-status
@@ -495,6 +599,9 @@ const server = http.createServer(async (req, res) => {
     if (!WORKERS.includes(agent)) {
       return send(res, 400, { error: `unknown agent: ${agent}` });
     }
+    if (agent !== 'dispatcher' && state.currentTask?.id?.startsWith('TASK-')) {
+      return send(res, 403, engine.legacyMutationBlocked());
+    }
     // Lifecycle enforcement: reject "working" if worker not allowed in current phase
     if (data.status === 'working' && agent !== 'dispatcher') {
       const phase = (state.currentPhase || '').toLowerCase();
@@ -530,34 +637,9 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { success: true, worker: state.workers[agent] });
   }
 
-  // POST /api/task-complete — mark task done
+  // POST /api/task-complete — Runtime Engine owns completion (FEAT-001)
   if (req.method === 'POST' && pathname === '/api/task-complete') {
-    const data = await readBody(req);
-    const tid = data.taskId || state.currentTask?.id;
-    if (tid) {
-      const taskDir = path.join(TASKS_DIR, tid);
-      const stateFile = path.join(taskDir, 'state.json');
-      if (fs.existsSync(stateFile)) {
-        const ts = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-        ts.status = 'done';
-        ts.lastActivity = new Date().toISOString();
-        fs.writeFileSync(stateFile, JSON.stringify(ts, null, 2));
-      }
-    }
-    // Don't reset workers — let them stay 'complete' so dashboard shows who did what
-    // Workers reset to idle on next task-start
-    state.currentTask = null; // DF-002: clear task on completion
-    saveState();
-    // RP-003.3: Knowledge Auto-Update trigger
-    try {
-      const kDir = path.join(SKILL_DIR, 'knowledge');
-      const kFile = path.join(kDir, 'task-entries.json');
-      const entries = fs.existsSync(kFile) ? JSON.parse(fs.readFileSync(kFile, 'utf8')) : [];
-      entries.push({ task_id: tid, status: 'done', timestamp: Date.now() });
-      fs.mkdirSync(kDir, { recursive: true });
-      fs.writeFileSync(kFile, JSON.stringify(entries, null, 2));
-    } catch (e) { /* knowledge update is best-effort */ }
-    return send(res, 200, { success: true, status: 'done' });
+    return send(res, 403, engine.legacyMutationBlocked());
   }
 
 
@@ -666,7 +748,8 @@ const server = http.createServer(async (req, res) => {
         total: +((summary.totalInput * COST_PER_INPUT) + (summary.totalOutput * COST_PER_OUTPUT)).toFixed(4),
         currency: 'USD'
       };
-      return send(res, 200, { metrics, summary });
+      summary.latency = getLatencyMetricsSummary();
+      return send(res, 200, { metrics, summary }, req);
     } catch (err) {
       return send(res, 500, { error: err.message });
     }
@@ -833,6 +916,7 @@ function serveStatic(req, res, pathname) {
   res.writeHead(200, {
     'Content-Type': mime,
     'Cache-Control': 'no-store',
+    ...securityHeadersForStatic(),
   });
   fs.createReadStream(filePath).pipe(res);
 }
