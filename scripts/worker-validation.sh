@@ -49,6 +49,28 @@ if [[ $HAS_CONTENT -lt 2 ]]; then
   PASS=false
 fi
 
+if [[ "$WORKER" == "backend" || "$WORKER" == "frontend" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+  PHASE="${AIC_PIPELINE_PHASE:-Implementation}"
+  if python3 "$SCRIPT_DIR/phase-contract-loader.py" load "$SKILL_DIR" "$PHASE" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if (d.get('roles') or {}).get('${WORKER}') else 1)" 2>/dev/null; then
+    if ! python3 "$SCRIPT_DIR/validate-phase-artifact.py" "$SKILL_DIR" "$PHASE" "$WORKER" "$ARTIFACT"; then
+      echo "  FAIL: Phase deliverable contract"
+      PASS=false
+    fi
+  fi
+elif [[ "$WORKER" == "pm" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+  PHASE="${AIC_PIPELINE_PHASE:-Investigate}"
+  if python3 "$SCRIPT_DIR/phase-contract-loader.py" load "$SKILL_DIR" "$PHASE" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if (d.get('roles') or {}).get('pm') else 1)" 2>/dev/null; then
+    if ! python3 "$SCRIPT_DIR/validate-phase-artifact.py" "$SKILL_DIR" "$PHASE" "pm" "$ARTIFACT"; then
+      echo "  FAIL: Phase deliverable contract"
+      PASS=false
+    fi
+  fi
+fi
+
 if $PASS; then
   echo "  Result: PASS"
   exit 0

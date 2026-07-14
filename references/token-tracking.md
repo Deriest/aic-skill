@@ -2,13 +2,16 @@
 
 ## Data Flow
 ```
-spawn-worker.sh (capture opencode JSON output)
-  → parse step_finish events for token counts
-  → POST /api/metrics
+opencode --format json (NDJSON)
+  → opencode-token-extract.py (one pass per file; merge on WECP repair paths)
+  → spawn-worker.sh (legacy, no contract) OR worker-execution-pipeline.py (WECP, on PASS)
+  → POST /api/metrics (exactly once per worker execution)
   → server.js appends to .aic/metrics.json
   → dashboard GET /api/metrics (filter by date/tier)
-  → CostsPage.tsx renders charts + table
+  → CostsPage.tsx renders charts + HIT RATE card
 ```
+
+**FIX-023 (2026-07-14):** WECP must POST metrics — contract path bypassed legacy spawn-worker grep. See `references/cache-hit-metrics-wecp-fix023.md`.
 
 ## Metrics Schema
 ```json

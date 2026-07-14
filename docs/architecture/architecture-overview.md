@@ -5,7 +5,7 @@
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
 │  Dashboard   │────▶│  API Server  │────▶│  Dispatcher │
-│  (compiled)  │◀────│  (server.js) │◀────│  (in-proc)  │
+│  (Vite+React)│◀────│  (server.js) │◀────│  (in-proc)  │
 └─────────────┘     └──────────────┘     └──────┬──────┘
                            │                     │
                     ┌──────┴──────┐        ┌─────┴─────┐
@@ -18,17 +18,17 @@
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| API Server | server.js | HTTP API, auth, RBAC, metrics, audit |
-| Dispatcher | server.js (in-process) | Task orchestration, pipeline management |
-| Workers | spawn-worker.sh | opencode-based task execution |
-| Knowledge | knowledge-*.sh | Artifact lifecycle, indexing, search, reuse |
-| Pipeline | pipeline-orchestrator.sh | Phase-based task execution |
-| Dashboard | dist/ (compiled React) | Observability UI |
+| API Server | `scripts/server.js` | HTTP API, auth, RBAC, metrics, audit, serves `dashboard/dist` |
+| Dispatcher | `scripts/server.js` (in-process) + `scripts/engine/` | Task orchestration, FSM, barrier, PM repair |
+| Workers | `scripts/spawn-worker.sh` + `scripts/worker-execution-pipeline.py` | opencode-based task execution |
+| Knowledge | `scripts/knowledge-*.sh` + `scripts/artifact-registry.sh` | Artifact lifecycle, indexing, search, reuse |
+| Pipeline | `scripts/engine/index.js` → `scripts/phase-runner.sh` | Phase-based execution (investigate→closeout) |
+| Dashboard | `dashboard/src/` (Vite + React + Tailwind) → `dashboard/dist/` | Observability UI, self-hosted font |
 
 ## Data Flow
 
 ```
-Task Request → API → Dispatcher → Pipeline Orchestrator
+Task Request → API → Dispatcher → Engine → Phase Runner
                 ↓
 Phase: investigate → planning → implementation → verification → closeout
          ↓               ↓              ↓              ↓            ↓
@@ -36,22 +36,25 @@ Phase: investigate → planning → implementation → verification → closeout
                    research+        frontend
                     workers         workers
                 ↓
-Knowledge Update → Artifact Storage
+Knowledge Update → Artifact Storage (.aic/artifacts/, .aic/tasks/)
 ```
 
 ## Technology Stack
 
-- Runtime: Node.js
-- Workers: opencode CLI (Claude, Gemini, etc.)
-- Database: File-based (.aic/*.json)
-- Dashboard: Compiled React (no source)
-- Auth: API key (X-API-Key header)
-- RBAC: Role-based (owner, admin, member, viewer)
+- Runtime: Node.js (server.js, engine/)
+- Workers: opencode CLI (Claude, Gemini, etc.) via `spawn-worker.sh`
+- Database: File-based (`.aic/*.json`, `.aic/tasks/`, `.aic/artifacts/`)
+- Dashboard: React + Vite + Tailwind, source in `dashboard/src/`, built to `dashboard/dist/`, self-hosted `PressStart2P` in `dashboard/public/fonts/`
+- Auth: API key (`X-API-Key` header, `.aic/auth.json`)
+- RBAC: Role-based (owner, admin, member, viewer) via `auth.js`
+- Phase Contracts: `templates/phase-contracts/` (canonical seed) → `.aic/phase-contracts/` (runtime)
 
 ## Key Design Decisions
 
 - Single-process dispatcher (no IPC overhead)
-- File-based state (no database dependency)
-- Compiled dashboard (no build toolchain)
-- opencode as worker runtime (multi-provider)
-- Phase-based pipeline (investigate→plan→implement→verify→closeout)
+- File-based state (no external DB dependency)
+- Vite-built dashboard with self-hosted pixel font (CSP-safe, FIX-022)
+- opencode as worker runtime (multi-provider via `PROVIDER` env)
+- Phase-based pipeline (investigate→plan→implement→verify→closeout) with Engine FSM + Barrier
+- File-based phase contracts (`templates/phase-contracts/` seed → `.aic/phase-contracts/` runtime)
+- Archive over delete for historical docs (`archive/` governance)

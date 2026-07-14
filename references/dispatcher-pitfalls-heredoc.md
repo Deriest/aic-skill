@@ -39,3 +39,22 @@ When building wrapper scripts (like `spawn-worker.sh`) that write out secondary 
 
 4. **Dispatcher Prompt File Pattern (2026-07-08)**:
    When the Dispatcher (Hermes) spawns workers, inline `cat << 'EOF'` heredocs from the terminal tool will fail if the prompt contains special characters. Use `write_file` tool to write prompts to `/tmp/prompt-*.txt`, then call `spawn-worker.sh` with those paths.
+
+## Nested JSON in Bash -c Pitfall (IMP-024-A, 2026-07-14)
+
+**Symptom:** After editing `spawn-worker.sh`, `bash -n` reports `unexpected EOF while looking for matching ')'` on line 198. The whole task pipeline fails with `pm failed` / `line 198: unexpected EOF`.
+
+**Root cause:** Payload line constructing `COMPLETE_PAYLOAD` with `python3 -c "import json; print(json.dumps({'exitCode': int('${EXIT_CODE}'), 'artifactPath': '''${ARTIFACT_PATH}'''}))"` — the `'''${ARTIFACT_PATH}'''` triple-single-quote trick breaks when script is written via `write_file` / Replit heredoc interpolation. The closing `)` of `$()` is inside mangled quoting → unclosed command substitution.
+
+**Fix pattern (always use this for JSON payloads in bash):**
+
+```bash
+# WRONG — nested ''' interpolation
+COMPLETE_PAYLOAD=$(python3 -c "import json; print(json.dumps({'exitCode': int('${EXIT_CODE}'), 'artifactPath': '''${ARTIFACT_PATH}'''}))")
+
+# RIGHT — env vars + single-quoted python -c
+FINAL_EXIT="$EXIT_CODE" FINAL_PATH="$ARTIFACT_PATH" COMPLETE_PAYLOAD=$(python3 -c 'import json,os; print(json.dumps({"exitCode": int(os.environ.get("FINAL_EXIT","0")), "artifactPath": os.environ.get("FINAL_PATH","")}))')
+```
+
+**Rule:** Never interpolate bash vars inside a `python3 -c "double-quoted"` that constructs JSON. Use `FOO="$bar" python3 -c 'single-quoted reads os.environ'` instead. Validate with `bash -n` after every edit touching this line.
+

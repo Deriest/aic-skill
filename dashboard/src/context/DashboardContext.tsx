@@ -4,9 +4,25 @@ import type { DashboardState, DashboardAction } from '../types';
 export interface MetricsState {
   memory?: { rss: number; heapUsed: number; heapTotal: number };
   cpu?: { loadAvg: number[]; cores: number };
+  total?: number;
   totalRequests?: number;
   totalInput?: number;
   totalOutput?: number;
+  latency?: {
+    sli: {
+      windowSamples: number;
+      latencyMs: { p50: number; p95: number; p99: number };
+      errorRate: number;
+      slo: {
+        apiP99TargetMs: number;
+        apiP99Met: boolean;
+        errorBudgetPct: number;
+        errorBudgetConsumedPct: number;
+        errorBudgetRemainingPct: number;
+      };
+    };
+    updatedAt: string | null;
+  };
 }
 
 const initialState: DashboardState = {

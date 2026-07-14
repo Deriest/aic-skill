@@ -1,13 +1,58 @@
 import { DashboardState } from '../../types';
 import { useState, useEffect } from 'react';
+import {
+  fetchTaskTiming,
+  formatElapsedMs,
+  resolveTaskTiming,
+  type TaskTimingMeta,
+} from '../../utils/taskTimer';
 
-function ElapsedTimer({ startedAt }: { startedAt: number }) {
-  const [elapsed, setElapsed] = useState('00:00:00');
+function TaskRuntimeTimer({
+  task,
+  pipelineRunning,
+}: {
+  task: DashboardState['currentTask'];
+  pipelineRunning?: boolean;
+}) {
+  const [meta, setMeta] = useState<TaskTimingMeta | null>(null);
+  const [display, setDisplay] = useState('00:00:00');
+
   useEffect(() => {
-    const update = () => { const d = Date.now() - startedAt; setElapsed(`${Math.floor(d/3600000).toString().padStart(2,'0')}:${Math.floor((d%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((d%60000)/1000).toString().padStart(2,'0')}`); };
-    update(); const i = setInterval(update, 1000); return () => clearInterval(i);
-  }, [startedAt]);
-  return <span className="text-aic-yellow font-pixel text-[10px] tabular-nums">{elapsed}</span>;
+    if (!task?.id) {
+      setMeta(null);
+      setDisplay('00:00:00');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const m = await fetchTaskTiming(task.id);
+      if (!cancelled) setMeta(m);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [task?.id, task?.pipelineState, task?.phaseStatus]);
+
+  useEffect(() => {
+    if (!task) {
+      setDisplay('00:00:00');
+      return;
+    }
+    const tick = () => {
+      const { displayMs } = resolveTaskTiming(task, meta, pipelineRunning);
+      setDisplay(formatElapsedMs(displayMs));
+    };
+    tick();
+    const { ticking } = resolveTaskTiming(task, meta, pipelineRunning);
+    if (!ticking) return;
+    const i = setInterval(tick, 1000);
+    return () => clearInterval(i);
+  }, [task, meta, pipelineRunning, task?.pipelineState, task?.phaseStatus]);
+
+  if (!task) {
+    return <span className="text-gray-500 font-pixel text-[10px] tabular-nums">00:00:00</span>;
+  }
+  return <span className="text-aic-yellow font-pixel text-[10px] tabular-nums">{display}</span>;
 }
 
 export function PipelineTracker({ state, taskProgress }: { state: DashboardState; taskProgress?: number }) {
@@ -104,7 +149,7 @@ export function PipelineTracker({ state, taskProgress }: { state: DashboardState
                 <span className="text-aic-accent text-[10px]">▶</span>
                 <h3 className="text-[10px] text-aic-accent uppercase tracking-widest">RUNTIME GATE</h3>
               </div>
-              {state.currentTask ? <ElapsedTimer startedAt={(state.currentTask as any).startedAt || state.startedAt} /> : <span className="text-gray-500 font-pixel text-[10px] tabular-nums">00:00:00</span>}
+              <TaskRuntimeTimer task={state.currentTask} pipelineRunning={state.engine?.pipelineRunning} />
             </div>
             <div className="bg-aic-bg-panel border-2 border-aic-border/50 rounded-lg p-2 shadow-lg flex flex-col h-[180px]">
               {state.currentTask ? (

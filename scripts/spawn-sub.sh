@@ -65,6 +65,13 @@ curl_api -X POST "$API_URL/api/sub-agent-status" \
 
 echo "=== Spawning SUB-WORKER $SUB_ID (parent=$PARENT, tier=$TIER, model=$MODEL) ==="
 
+if ! grep -qF 'Worker Invocation Completion Contract (mandatory)' "$PROMPT_FILE"; then
+  PROMPT_WITH_COMPLETION=$(mktemp "${TMPDIR:-/tmp}/aic-sub-prompt-fix006-XXXXXX.txt")
+  { cat "$PROMPT_FILE"; echo ""; "$SCRIPT_DIR/worker-completion-contract.sh"; } > "$PROMPT_WITH_COMPLETION"
+  PROMPT_FILE="$PROMPT_WITH_COMPLETION"
+  CLEANUP_PROMPT=true
+fi
+
 EXIT_CODE=0
 if command -v opencode &>/dev/null; then
   NODE_RUNNER=$(mktemp "${TMPDIR:-/tmp}/aic-subrun-XXXXXX.js")

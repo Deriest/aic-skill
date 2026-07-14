@@ -26,7 +26,7 @@ AIC is a multi-agent orchestration system built on [Hermes Agent](https://hermes
 
 The Operations Control Center runs at `http://localhost:6868`.
 
-![Dashboard Overview](./dashboard-overview-v2.png)
+![Dashboard Overview](./docs/assets/dashboard-overview-v2.png)
 
 | Page | Purpose |
 |------|---------|
@@ -35,11 +35,27 @@ The Operations Control Center runs at `http://localhost:6868`.
 | **Costs** | Token economics — per-worker input/output/cache breakdown, time-filtered bar charts, and cache hit rates |
 | **Configuration** | System settings — environment variables, model tier assignments, and opencode configuration |
 
-![Dashboard Costs](./dashboard-costs-v2.png)
+### Dashboard scripts (scripts/)
 
-![Dashboard History](./dashboard-history-v2.png)
+The Virtual Office at `http://localhost:6868` is available when the control plane is running (default port **6868**).
 
-![Dashboard Config](./dashboard-config-v2.png)
+| Script | Purpose |
+|--------|---------|
+| `scripts/server.js` | Node HTTP control plane: persists `.aic/state.json`, exposes `/api/status` and related APIs, serves built `dashboard/dist`. |
+| `scripts/preflight.sh` | Pre-`/aic` checks: OpenCode, `.env`, API on port 6868, dashboard `dist` (or build when auto-start is enabled). |
+| `scripts/setup.sh` | First-time install: skill layout, `npm install` in `dashboard/`, operator environment. |
+| `scripts/self-test.sh` | Dry-run readiness check including API on 6868 and dashboard `node_modules`. |
+| `scripts/deploy.sh` | Native install/start/stop/restart/validate lifecycle for the API server on port 6868. |
+| `scripts/monitor.sh` | Terminal system monitor (`dashboard` / `alert` / `watch`) for health, metrics summary, errors, and server reachability. |
+| `scripts/health-check.sh` | Records and queries component health into `.aic/health.json` (including server `:6868/health`). |
+| `scripts/metrics.sh` | Runtime metrics collection and summaries for APIs used by Costs and performance views. |
+| `scripts/aic` | Shell CLI for local operator actions (status, task helpers) against `AIC_API_URL` / port 6868. |
+
+![Dashboard Costs](./docs/assets/dashboard-costs-v2.png)
+
+![Dashboard History](./docs/assets/dashboard-history-v2.png)
+
+![Dashboard Config](./docs/assets/dashboard-config-v2.png)
 
 ---
 
@@ -150,15 +166,32 @@ Dashboard opens at `http://localhost:6868`.
 ## Repository Structure
 
 ```
-├── archive/            # Archived milestone reports and defect logs
-├── dashboard/          # Operations Control Center (React + Vite + Tailwind)
-├── docs/               # Documentation (API, architecture, guides, operations)
-├── knowledge/          # Knowledge base scripts and data
-├── references/         # Reference documents (46 files)
-├── scripts/            # Runtime scripts (server, pipeline, workers, setup)
-├── templates/          # Document templates (16 files)
-├── aic                 # CLI entry point
-├── SKILL.md            # Hermes skill definition
+├── archive/            # Historical: milestones, defects, runtime-stabilization, platform-experiments, release-readiness, ops
+│   ├── milestones/       # H..L milestone reports
+│   ├── runtime-stabilization/ # FIX-008..023, IMP-024 lineage, dead orchestrators
+│   ├── platform-experiments/  # Legacy platform scripts (E/J era, superseded)
+│   ├── defects/          # Audit logs
+│   └── release-readiness/
+├── dashboard/          # Operations Control Center (React + Vite + Tailwind, source in src/, built to dist/)
+│   ├── src/            # Vite source (components, context, utils)
+│   ├── public/fonts/   # Self-hosted PressStart2P (FIX-022)
+│   └── dist/           # Built output (ignored)
+├── docs/               # Documentation (api, architecture, guides, operations, assets)
+│   ├── api/
+│   ├── architecture/
+│   ├── guides/
+│   ├── operations/       # runbook + guide
+│   └── assets/           # Dashboard screenshots
+├── knowledge/          # Knowledge ledger (task-entries.json ignored, generated)
+├── references/         # Active reference docs (FIX/IMP lineage, pitfalls, patterns)
+├── scripts/            # Runtime production scripts (engine, workers, setup)
+│   ├── engine/         # FSM, barrier, PM repair, recovery, validation
+│   └── *.sh/*.py/*.js  # Production-only helpers (see archive/platform-experiments for archived)
+├── templates/          # Document templates + phase-contracts seed
+│   └── phase-contracts/ # Canonical contract JSONs (investigate, implementation)
+├── AGENTS.md           # Hermes compatibility (deprecated, points to SKILL.md)
+├── .env.example        # Production config template
+├── SKILL.md            # Hermes skill definition (Router)
 └── README.md
 ```
 
@@ -175,7 +208,7 @@ Entry point: [docs/INDEX.md](./docs/INDEX.md)
 | [Developer Guide](./docs/guides/developer-guide.md) | Setup, repository layout, coding conventions |
 | [Operations Guide](./docs/operations/operations-guide.md) | Deployment, monitoring, recovery |
 | [Operator Guide](./docs/guides/operator-guide.md) | Task management, dashboard usage |
-| [Operations Runbook](./references/operations-runbook.md) | Troubleshooting, escalation procedures |
+| [Operations Runbook](./docs/operations/operations-runbook.md) | Troubleshooting, escalation procedures |
 
 ---
 

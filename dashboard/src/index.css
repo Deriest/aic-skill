@@ -2,13 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/PressStart2P-Regular.ttf') format('truetype');
+}
+
 @layer base {
   html {
     height: 100%;
     overflow: hidden;
   }
   body {
-    @apply font-pixel bg-aic-bg-dark text-aic-text antialiased;
+    @apply font-pixel bg-aic-bg-dark text-aic-text;
     height: 100%;
     overflow: hidden;
   }

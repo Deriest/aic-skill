@@ -24,6 +24,9 @@ audit.json
 history.json
 snapshots/
 cache/
+reports/
+tasks/
+docs/release-readiness/
 
 # AIC Local Database & History
 .aic/auth.json
@@ -33,6 +36,10 @@ cache/
 .aic/metrics.json
 .aic/chat-history.json
 .aic/artifacts/
+.aic/latency_metrics.json
+.aic/phase-contracts/
+.aic/runtime-contracts.json
+.aic/worker-compliance.json
 
 # AIC Runtime State (generated at runtime)
 .aic/server.pid
@@ -44,3 +51,10 @@ cache/
 .aic/worker-targets.json
 .aic/shared-context/
 .aic/logs/
+
+# Python
+__pycache__/
+.pytest_cache/
+
+# Knowledge generated ledger (auto-appended on task-complete, not production config)
+knowledge/task-entries.json

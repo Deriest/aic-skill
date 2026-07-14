@@ -33,6 +33,8 @@ Runtime Gates are first-class synchronization checkpoints in AIC v3.1. They are 
 - `POST /api/runtime-gate` — Set or clear runtime gate state
 - `GET /api/status` — Returns current runtimeGate in state
 
+**FEAT-001:** Engine-owned TASK-* runs: `runtimeGate`, `phaseBarrier`, `pmReview` on snapshot come from **Runtime Engine**. External `POST /api/phase-barrier` and worker `agent-status` return **403**. See `references/runtime-pipeline-authority.md`.
+
 ## Dashboard
 
 Pipeline panel split into two columns:

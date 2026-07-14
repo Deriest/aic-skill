@@ -138,3 +138,85 @@ kill -9 $(lsof -t -i:6868) 2>/dev/null; sleep 1
 ```
 
 Check `process(action='list')` for orphaned processes from earlier test phases. The `proc_*` IDs change each restart — don't assume a previous watch pattern notification means the server is still alive.
+
+## Legacy API block tests (FEAT-001)
+
+`POST /api/task-status`, `phase-barrier`, `agent-status` (during TASK-*), `task-complete` return **403** only **after** auth passes.
+
+**Pitfall:** Unauthenticated curl → **401**, not 403. False FAIL if the script omits `X-API-Key`.
+
+Use `source scripts/api-auth.sh` and `curl_api`, or read key from `.aic/auth.json` → `apiKeys[0].key`.
+
+See also `references/runtime-authority-verification.md` for intent/lease checks.
+
+## Ad-hoc Verification When No Suite Exists (WP-101 Pattern)
+
+When changing only `.gitignore` / docs / archive layout and no canonical test/lint/build command exists:
+
+```bash
+TF=$(mktemp /tmp/hermes-verify-wp101-XXXX.sh)
+cat > "$TF" << 'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+cd /home/tvd/.hermes/skills/workflows/aic
+git check-ignore -q .aic/latency_metrics.json || exit 1
+node --check scripts/server.js
+python3 -m py_compile scripts/*.py
+echo "OK_WP101_HERMES_VERIFY"
+SH
+chmod +x "$TF"; bash "$TF"; rm -f "$TF"
+```
+
+Rules:
+- Prefix MUST be `hermes-verify-` under `/tmp` with `mktemp` (OS-safe)
+- Run focused checks against changed behavior only (e.g. `git check-ignore`, compile, existence)
+- Clean up temp file after run
+- Summarize explicitly as **ad-hoc verification rather than suite green** — never claim full suite PASS
+- If verification not possible, state concrete blocker
+
+Discovered during WP-101: `.gitignore` edits trigger stale verification banner; system expects fresh ad-hoc evidence.
+
+## .gitignore Verification Checklist
+
+```
+grep -Fq "reports/" .gitignore
+git check-ignore -q .aic/latency_metrics.json
+git ls-files --others --exclude-standard | grep -v "^\.aic/" → 0 untracked prod
+```
+
+Fonts `dashboard/public/fonts/*.ttf` must stay tracked. Always verify tracked vs ignored after .gitignore changes.
+
+## WP-102 Governance Verification (Repository Finalization)
+
+When repository is production-ready and governance debt remains (legacy scripts ambiguous, knowledge policy undecided, duplicate PNGs, misleading docs):
+
+```bash
+TF=$(mktemp /tmp/hermes-verify-wp102-XXXX.sh)
+cat > "$TF" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+cd ~/.hermes/skills/workflows/aic
+git check-ignore -q knowledge/task-entries.json || exit 1
+git check-ignore -q .aic/latency_metrics.json || exit 1
+[ -z "$(git ls-files --others --exclude-standard | grep -v "^\.aic/")" ] || exit 1
+[ -z "$(git diff --stat)" ] || exit 1
+node --check scripts/server.js
+for f in scripts/engine/*.js; do node --check "$f"; done
+for f in scripts/*.sh; do bash -n "$f"; done
+python3 -m py_compile scripts/*.py
+[ "$(git diff --cached --stat -- scripts/engine/ scripts/server.js scripts/worker-execution-pipeline.py scripts/spawn-worker.sh scripts/phase-runner.sh | wc -l)" -eq 0 ]
+SH
+chmod +x "$TF"; bash "$TF"; rm -f "$TF"
+```
+
+Governance checklist (WP-102 success criteria):
+- `knowledge/task-entries.json` → IGNORED/GENERATED (check-ignore PASS)
+- `templates/phase-contracts/*.json` canonical seed exists, `.aic/phase-contracts/` runtime ignored
+- `docs/assets/` contains doc-only PNGs, not root
+- 0 ambiguous legacy scripts (KEEP/ARCHIVE/DELETE decided, see `references/repository-finalization-wp102.md`)
+- `docs/architecture/architecture-overview.md` shows Vite source not compiled-only
+- `archive/platform-experiments/` + README, `archive/ops/README.md`, `archive/runtime-stabilization/README.md`
+- Engine diff 0 (no Runtime behavior change)
+
+Scoring: governance 100/100 = 0 undecided, 0 duplicate, 0 misplaced, 0 untracked prod, docs synchronized.
+Overall production readiness 72→94.3→98→100 weighted.

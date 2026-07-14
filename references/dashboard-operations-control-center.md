@@ -19,17 +19,23 @@ Frontend mapping (PipelineTracker.tsx gate logic):
 
 Source: `state.workers?.dispatcher?.status` from backend + frontend context.
 
-## Runtime Timer
+## Runtime Timer (RUNTIME GATE header)
 
-**NEVER show server uptime as task timer.**
+**NEVER use `state.startedAt`, `/health` uptime, or engine uptime** — those are server/process clocks.
 
-- No active task → `00:00:00` (static span)
-- Active task → `(state.currentTask as any).startedAt` → ElapsedTimer
-- Task completed → reset to `00:00:00`
+Implementation: `TaskRuntimeTimer` in `PipelineTracker.tsx` + `dashboard/src/utils/taskTimer.ts`.
 
-Backend: `startedAt` on task-start request sets the epoch. Frontend `Date.now() - startedAt` computes elapsed.
+| State | Display |
+|-------|---------|
+| `currentTask === null` | `00:00:00` |
+| Task running | `now - startedAt`, tick every 1s |
+| Terminal (`COMPLETE`, `BLOCKED`, `failed`, `cancelled`) | **Frozen** at `finishedAt - startedAt` |
 
-Pitfall: `state.startedAt` is the SERVER start time (DashboardContext initialState: `Date.now()`), NOT the task start time. Use `state.currentTask.startedAt` instead.
+**Task timestamps (no Runtime API change):** poll existing public `GET /api/tasks/:id` — `context.createdAt` → `startedAtMs`; `state.lastActivity` (or `finishedAt`) → freeze end. Re-fetch when `task.id` or terminal fields change so dashboard refresh restores correct elapsed/frozen value.
+
+Pitfall (pre-2026-07-14): fallback `state.startedAt` made the gate timer look like **server uptime** after restart.
+
+Pitfall: `currentTask` on `/api/status` does **not** include `startedAt` — do not assume task fields on status payload alone.
 
 ## Performance Panel
 

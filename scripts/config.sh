@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # config.sh — Centralized Configuration for AIC
 # Usage: config.sh <action> [args]
+#
+# Dashboard API URL
+# Set DASHBOARD_API_URL in .env to override the default dashboard endpoint.
+# If not set, scripts default to http://localhost:6868.
+#   e.g. DASHBOARD_API_URL=http://localhost:6868
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -27,7 +32,7 @@ case "$ACTION" in
     echo "Set: $KEY"
     ;;
   validate)
-    REQUIRED=("MODEL_THINKER" "MODEL_CRAFTER" "PROVIDER_ID")
+    REQUIRED=("MODEL_THINKER" "MODEL_CRAFTER" "PROVIDER")
     MISSING=0
     for k in "${REQUIRED[@]}"; do
       if ! grep -q "^$k=" "$ENV_FILE" 2>/dev/null; then

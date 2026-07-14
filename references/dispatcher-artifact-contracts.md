@@ -45,3 +45,7 @@ self_validation: [PASS/FAIL]
 ## File Convention
 
 All artifacts saved to: `.aic/tasks/TASK-XXX/reports/<artifact-name>.md`
+
+## Runtime path (FEAT-001)
+
+Default lease artifact: `reports/{worker}-output.md`. **Implementation** backend/frontend: fixed markdown sections enforced by `scripts/validate-implementation-artifact.py` — load `references/implementation-artifact-contract-fix005.md`. Registry rows 8–9 describe content; runtime validator is the pre-PM gate.

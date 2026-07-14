@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0",
+  "phase": "Investigate",
+  "roles": {
+    "pm": {
+      "artifact": { "filename": "pm-output.md" },
+      "requiredSections": [
+        "# Investigate Report",
+        "## Objective",
+        "## Scope",
+        "## Requirements Identified",
+        "## Assumptions",
+        "## Unknowns",
+        "## Risks",
+        "## Dependencies",
+        "## Acceptance Criteria",
+        "## Recommendation"
+      ],
+      "validation": {
+        "minBytes": 200,
+        "forbiddenPatterns": ["\"type\":\"tool_use\"", "\"sessionID\""],
+        "forbidSessionDump": true
+      },
+      "acceptanceCriteria": [
+        "Self-contained Investigate report in reports/pm-output.md",
+        "Every section has substantive content; no executive summary only",
+        "Requirements, unknowns, risks, dependencies, and acceptance criteria enumerated and explained",
+        "No references to missing external documents"
+      ],
+      "promptRules": [
+        "No executive summary, placeholders, see attached, or counts without full enumeration"
+      ]
+    }
+  }
+}

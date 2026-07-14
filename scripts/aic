@@ -3,17 +3,12 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# --- Auto-Start Infrastructure ---
 API_PORT=6868
 if ! nc -z localhost $API_PORT 2>/dev/null; then
   echo "API Server is down. Starting it now..."
   (cd "$SKILL_DIR" && nohup node "$SCRIPT_DIR/server.js" > /tmp/aic-server.log 2>&1 &)
   sleep 2
 fi
-# ---------------------------------
-
-
-
 
 set -euo pipefail
 
@@ -21,6 +16,7 @@ AIC_DIR="$SKILL_DIR/.aic"
 STATE_FILE="$AIC_DIR/state.json"
 TASKS_DIR="$AIC_DIR/tasks"
 API_URL="${AIC_API_URL:-http://localhost:6868}"
+source "$SCRIPT_DIR/api-auth.sh"
 
 cmd="${1:-help}"
 
@@ -29,55 +25,31 @@ case "$cmd" in
     if [[ ! -f "$STATE_FILE" ]]; then
       echo "No active state found (.aic/state.json missing)."
       exit 1
-    
-    # Use python3 for reliable JSON parsing
-    TASK_ID=$(python3 -c "import sys,json; d=json.load(open('$STATE_FILE')); t=d.get('currentTask'); print(t.get('id') if isinstance(t, dict) else '')" 2>/dev/null)
-    
+    fi
+    TASK_ID=$(python3 -c "import json; d=json.load(open('$STATE_FILE')); t=d.get('currentTask'); print(t.get('id') if isinstance(t, dict) else '')" 2>/dev/null)
     if [[ -z "$TASK_ID" ]]; then
       echo "No current task in state.json."
       exit 1
-    
+    fi
     TASK_DIR="$TASKS_DIR/$TASK_ID"
     if [[ ! -d "$TASK_DIR" ]]; then
       echo "Task directory not found: $TASK_DIR"
       exit 1
-
-    # Show context
+    fi
     echo "=== Resuming $TASK_ID ==="
-    if [[ -f "$TASK_DIR/context.json" ]]; then
-      python3 -c "import json; d=json.load(open('$TASK_DIR/context.json')); print('Title:', d.get('title','')); print('Description:', d.get('description',''))" 2>/dev/null
-
-    # Show task state
-    if [[ -f "$TASK_DIR/state.json" ]]; then
-      python3 -c "import json; d=json.load(open('$TASK_DIR/state.json')); print('Phase:', d.get('phase','unknown')); print('Status:', d.get('status','unknown'))" 2>/dev/null
-
-    # Show last report
-    REPORTS_DIR="$TASK_DIR/reports"
-    if [[ -d "$REPORTS_DIR" ]]; then
-      LATEST=$(ls -t "$REPORTS_DIR"/*.md 2>/dev/null | head -1 || echo "")
-      if [[ -n "$LATEST" ]]; then
-        echo ""
-        echo "=== Last report: $(basename "$LATEST") ==="
-        head -20 "$LATEST"
-        echo "... ($(wc -l < "$LATEST") lines total)"
-
-    echo ""
-    read -rp "Resume this task? [y/N] " answer
+    read -rp "Resume via Runtime Engine? [y/N] " answer
     if [[ "$answer" =~ ^[Yy] ]]; then
-      echo "Resuming $TASK_ID..."
-      curl -sf -X POST "$API_URL/api/task-status" \
+      curl_api -X POST "$API_URL/api/runtime/intent" \
         -H "Content-Type: application/json" \
-        -d "{\"currentTask\":{\"id\":\"$TASK_ID\"}}" > /dev/null 2>&1 || true
-      echo "Task is now active on the dashboard."
+        -d "{\"intent\":\"task.resume\",\"taskId\":\"$TASK_ID\"}" || true
+      echo "Resume intent sent."
     else
       echo "Aborted."
+    fi
     ;;
-
   help|*)
     echo "Usage: aic <command>"
-    echo ""
-    echo "Commands:"
-    echo "  continue    Resume an interrupted task"
+    echo "  continue    Resume interrupted TASK-* via Runtime intent"
     echo "  help        Show this help"
     ;;
 esac

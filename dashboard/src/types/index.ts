@@ -1,7 +1,8 @@
 export interface WorkerState {
-  status: 'idle' | 'working' | 'blocked' | 'error' | 'complete';
+  status: 'idle' | 'working' | 'blocked' | 'error' | 'complete' | 'failed';
   engine: string | null;
   currentTask: string | null;
+  leaseId?: string | null;
   subWorkers?: { id: string; status: string; scope: string; }[];
 }
 
@@ -64,7 +65,13 @@ export interface ProjectInfo {
 export interface DashboardState {
   connected: boolean;
   workers: Record<string, WorkerState>;
-  currentTask: { id: string, title: string, type: string } | null;
+  currentTask: {
+    id: string;
+    title: string;
+    type: string;
+    pipelineState?: string;
+    phaseStatus?: string;
+  } | null;
   currentPhase: string | null;
   runtimeGate: RuntimeGate | null;
   phaseBarrier: PhaseBarrier | null;
@@ -72,6 +79,11 @@ export interface DashboardState {
   rework: ReworkState | null;
   startedAt: number;
   project?: ProjectInfo;
+  engine?: {
+    paused: boolean;
+    pipelineRunning: boolean;
+    events?: { type: string; ts: number }[];
+  };
 }
 
 export type DashboardAction =

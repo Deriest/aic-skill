@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0",
+  "phase": "Implementation",
+  "roles": {
+    "backend": {
+      "artifact": { "filename": "backend-output.md" },
+      "requiredSections": [
+        "# Backend Implementation",
+        "## Objective",
+        "## Files Modified",
+        "## Changes",
+        "## Technical Notes",
+        "## Verification",
+        "## Result"
+      ],
+      "validation": {
+        "minBytes": 200,
+        "forbidSessionDump": true,
+        "forbiddenPatterns": ["\"type\":\"tool_use\"", "\"sessionID\"", "\"callID\""]
+      },
+      "acceptanceCriteria": [
+        "Structured markdown engineering report, not raw session or tool streams",
+        "Self-contained content in backend-output.md"
+      ],
+      "promptRules": [
+        "Forbidden: raw JSON, NDJSON, tool_use streams, session transcripts, report saved elsewhere without full content"
+      ]
+    },
+    "frontend": {
+      "artifact": { "filename": "frontend-output.md" },
+      "requiredSections": [
+        "# Frontend Implementation",
+        "## Objective",
+        "## Files Modified",
+        "## Changes",
+        "## UI Notes",
+        "## Verification",
+        "## Result"
+      ],
+      "validation": {
+        "minBytes": 200,
+        "forbidSessionDump": true,
+        "forbiddenPatterns": ["\"type\":\"tool_use\"", "\"sessionID\"", "\"callID\""]
+      },
+      "acceptanceCriteria": [
+        "Structured markdown engineering report, not raw session or tool streams",
+        "Self-contained content in frontend-output.md"
+      ],
+      "promptRules": [
+        "Forbidden: raw JSON, NDJSON, tool streams, or assistant transcripts"
+      ]
+    }
+  }
+}

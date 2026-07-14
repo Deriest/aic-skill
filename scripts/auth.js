@@ -4,6 +4,15 @@ const path = require('path');
 
 const CREDS_FILE = path.join(__dirname, '..', '.aic', 'auth.json');
 
+function corsOriginForRequest(req) {
+  const raw = (process.env.AIC_CORS_ORIGINS || '').trim();
+  const origin = req.headers.origin;
+  if (!raw) return origin || '*';
+  const allowed = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (origin && allowed.includes(origin)) return origin;
+  return null;
+}
+
 function loadCredentials() {
   try {
     return JSON.parse(fs.readFileSync(CREDS_FILE, 'utf8'));
@@ -61,7 +70,16 @@ function validateRequest(req) {
 function requireAuth(req, res) {
   const result = validateRequest(req);
   if (!result.valid) {
-    res.writeHead(401, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    const cors = corsOriginForRequest(req);
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Content-Type-Options': 'nosniff',
+    };
+    if (cors) {
+      headers['Access-Control-Allow-Origin'] = cors;
+      if (cors !== '*') headers.Vary = 'Origin';
+    }
+    res.writeHead(401, headers);
     res.end(JSON.stringify({ error: result.error }));
     return false;
   }
