@@ -148,11 +148,57 @@ NODESCRIPT
     REPORT_DIR="$SKILL_DIR/.aic/tasks/$TASK_ID/reports"
     mkdir -p "$REPORT_DIR"
     ARTIFACT_PATH="$REPORT_DIR/${WORKER}-output.md"
-    if ! python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" > "$ARTIFACT_PATH" 2>/dev/null; then
-      echo "=== LEGACY: extraction failed — failing worker, NOT dumping raw NDJSON ===" >&2
-      rm -f "$ARTIFACT_PATH" 2>/dev/null || true
-      ARTIFACT_PATH=""
-      EXIT_CODE=1
+if ! python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" > "$ARTIFACT_PATH" 2>/dev/null; then
+      # IMP-024-B: Strategy B parity for legacy runner
+      SID=$(python3 "$SCRIPT_DIR/legacy-extract-sid.py" "$OUTPUT_FILE" 2>/dev/null || true)
+      if [[ -n "$SID" ]]; then
+        echo "=== LEGACY: extraction failed — attempting Strategy B continue sid=$SID ===" >&2
+        CONT_MSG=$(bash "$SCRIPT_DIR/worker-continue-prompt.sh" 2>/dev/null | head -c 800 || echo "Output ONLY the final markdown report. No tools.")
+        CONT_FILE=$(mktemp "${TMPDIR:-/tmp}/aic-cont-XXXXXX.txt")
+        CONT_RUNNER=$(mktemp "${TMPDIR:-/tmp}/aic-cont-run-XXXXXX.js")
+        cat << 'CONTJS' > "$CONT_RUNNER"
+const { execFileSync } = require('child_process');
+const fs = require('fs');
+const message = process.argv[2];
+const model = process.argv[3];
+const cwd = process.argv[4];
+const timeout = parseInt(process.argv[5] || '300') * 1000;
+const outputFile = process.argv[6];
+const sessionId = process.argv[7];
+try {
+  const result = execFileSync('opencode', ['run', message, '-m', model, '--continue', '-s', sessionId, '--auto', '--format', 'json'], {
+    cwd: cwd, timeout: timeout, encoding: 'utf8',
+  });
+  fs.writeFileSync(outputFile, result);
+} catch (e) {
+  if (e.stdout) fs.writeFileSync(outputFile, e.stdout);
+  process.exit(e.status || 1);
+}
+CONTJS
+        node "$CONT_RUNNER" "$CONT_MSG" "$MODEL" "$PROJECT_DIR" "$TIMEOUT" "$CONT_FILE" "$SID" 2>/dev/null || true
+        if [[ -f "$CONT_FILE" && -s "$CONT_FILE" ]]; then
+          if python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$CONT_FILE" > "$ARTIFACT_PATH" 2>/dev/null; then
+            echo "=== LEGACY: Strategy B PASS ===" >&2
+            EXIT_CODE=0
+            rm -f "$OUTPUT_FILE"
+            OUTPUT_FILE="$CONT_FILE"
+            REPORT_DIR="$SKILL_DIR/.aic/tasks/$TASK_ID/reports"
+            mkdir -p "$REPORT_DIR"
+            ARTIFACT_PATH="$REPORT_DIR/${WORKER}-output.md"
+          else
+            echo "=== LEGACY: Strategy B extraction failed — failing worker ===" >&2
+            rm -f "$ARTIFACT_PATH" 2>/dev/null || true; ARTIFACT_PATH=""; EXIT_CODE=1
+            rm -f "$CONT_FILE"
+          fi
+        else
+          echo "=== LEGACY: Strategy B continue no output — failing worker ===" >&2
+          rm -f "$ARTIFACT_PATH" 2>/dev/null || true; ARTIFACT_PATH=""; EXIT_CODE=1
+        fi
+        rm -f "$CONT_RUNNER" 2>/dev/null || true
+      else
+        echo "=== LEGACY: extraction failed (no session for continue) — failing worker, NOT dumping raw NDJSON ===" >&2
+        rm -f "$ARTIFACT_PATH" 2>/dev/null || true; ARTIFACT_PATH=""; EXIT_CODE=1
+      fi
     fi
     # FIX-019: Planning post-gen gate after PM repair respawn (one regen, no PM)
     if [[ "${AIC_PM_REPAIR:-}" == "1" && "${AIC_PIPELINE_PHASE:-}" == "PLANNING" ]]; then
@@ -182,7 +228,7 @@ fi
 
 [[ "${CLEANUP_PROMPT:-false}" == true ]] && rm -f "$PROMPT_FILE"
 
-COMPLETE_PAYLOAD=$(python3 -c "import json; print(json.dumps({'exitCode': int('${EXIT_CODE}'), 'artifactPath': '''${ARTIFACT_PATH}'''}))")
+FINAL_EXIT="$EXIT_CODE" FINAL_PATH="$ARTIFACT_PATH" COMPLETE_PAYLOAD=$(python3 -c 'import json,os; print(json.dumps({"exitCode": int(os.environ.get("FINAL_EXIT","0")), "artifactPath": os.environ.get("FINAL_PATH","")}))')
 curl_api -X POST "$API_URL/api/runtime/lease/${LEASE_ID}/complete" \
   -H "Content-Type: application/json" \
   -d "$COMPLETE_PAYLOAD" > /dev/null 2>&1 || true

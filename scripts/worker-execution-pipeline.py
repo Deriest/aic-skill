@@ -40,24 +40,76 @@ def get_limits(cfg, phase, role):
 
 
 def extract_session_id(json_file):
-    """Last non-empty sessionID from opencode --format json NDJSON."""
+    """Last non-empty sessionID from opencode NDJSON — hardened.
+
+    Supports sessionID/sessionId/session_id, nested part/data, non-JSON prefix,
+    and partial output after TimeoutExpired (scan whatever bytes exist).
+    """
     if not json_file or not os.path.exists(json_file):
         return None
+    KEYS = ("sessionID", "sessionId", "session_id")
     sid = None
-    for line in Path(json_file).read_text(encoding="utf-8", errors="replace").splitlines():
-        line = line.strip()
-        if not line:
+    try:
+        raw = Path(json_file).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+    for line in raw.splitlines():
+        s = line.strip()
+        if not s:
             continue
+        # ignore non-JSON prefixes like "opencode: ..." but try to slice JSON tail
+        if not s.startswith("{"):
+            # attempt to find first { in line
+            idx = s.find("{")
+            if idx == -1:
+                continue
+            s = s[idx:]
         try:
-            o = json.loads(line)
+            o = json.loads(s)
         except json.JSONDecodeError:
             continue
-        for key in ("sessionID", "sessionId"):
-            if o.get(key):
-                sid = o[key]
+        # direct keys
+        for k in KEYS:
+            v = o.get(k)
+            if v and isinstance(v, (str, int)):
+                sid = str(v).strip() or sid
+            # nested part.*
             part = o.get("part") or {}
-            if part.get(key):
-                sid = part[key]
+            if isinstance(part, dict):
+                pv = part.get(k)
+                if pv and isinstance(pv, (str, int)):
+                    sid = str(pv).strip() or sid
+            # nested data.*
+            data = o.get("data") or {}
+            if isinstance(data, dict):
+                dv = data.get(k)
+                if dv and isinstance(dv, (str, int)):
+                    sid = str(dv).strip() or sid
+        # deep-ish: scan any dict value that looks like ses_xxx
+        # fallback: look for ses_<alnum> token in raw string values
+        def scan_obj(obj):
+            nonlocal sid
+            if isinstance(obj, dict):
+                for _kk, _vv in obj.items():
+                    if isinstance(_vv, str) and _vv.startswith("ses_"):
+                        # session id format observed
+                        sid = _vv if len(_vv) > 8 else sid
+                    elif isinstance(_vv, dict):
+                        scan_obj(_vv)
+                    elif isinstance(_vv, list):
+                        for item in _vv:
+                            if isinstance(item, (dict, list)):
+                                scan_obj(item)
+            elif isinstance(obj, list):
+                for item in obj:
+                    if isinstance(item, (dict, list)):
+                        scan_obj(item)
+
+        # only run deep scan if no sid yet to avoid cost
+        if not sid:
+            scan_obj(o)
+
     return sid
 
 
@@ -103,7 +155,15 @@ def run_opencode(prompt_file, model, cwd, timeout_sec):
         path = out if os.path.exists(out) and os.path.getsize(out) > 0 else None
         return path, extract_session_id(path) if path else None
     except subprocess.TimeoutExpired:
-        print(f"=== WECP: opencode timeout ({timeout_sec}s) ===", file=sys.stderr)
+        print(f"=== WECP: opencode timeout ({timeout_sec}s) === (recovering session id from partial)", file=sys.stderr)
+        # partial file may already have been written by node runner before timeout propagation
+        path = out if os.path.exists(out) and os.path.getsize(out) > 0 else None
+        sid2 = extract_session_id(path) if path else None
+        if path and not sid2:
+            # no sid extractable but file exists — still return for metrics salvage (callers handle No sid path)
+            return path, None
+        if path:
+            return path, sid2
         return None, None
     finally:
         safe_unlink(node_script)
