@@ -26,7 +26,7 @@ check from_prd_review from_prd False
 check from_prd_improve from_prd False
 check from_prd_architecture from_prd False
 check from_prd_estimate from_prd False
-check from_prd_build from_prd True
+check from_prd_build from_prd False
 check from_prd_upload_only from_prd False
 
 # Regression: engine untouched

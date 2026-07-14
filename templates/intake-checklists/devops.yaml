@@ -1,0 +1,11 @@
+project_type: devops
+mandatory:
+  - business_goal
+  - infrastructure_target
+  - core_components
+  - deployment_strategy
+  - acceptance_criteria
+optional:
+  - tech_stack
+  - ci_cd_tool
+  - security_constraints

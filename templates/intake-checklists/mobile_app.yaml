@@ -1,0 +1,11 @@
+project_type: mobile_app
+mandatory:
+  - business_goal
+  - target_user
+  - core_features
+  - platform_target
+  - acceptance_criteria
+optional:
+  - tech_stack
+  - offline_support
+  - backend_api

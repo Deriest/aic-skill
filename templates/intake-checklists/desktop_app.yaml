@@ -1,0 +1,11 @@
+project_type: desktop_app
+mandatory:
+  - business_goal
+  - target_user
+  - core_features
+  - os_target
+  - acceptance_criteria
+optional:
+  - tech_stack
+  - offline_support
+  - distribution_method

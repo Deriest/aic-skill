@@ -1,0 +1,10 @@
+project_type: documentation
+mandatory:
+  - purpose
+  - target_reader
+  - topics_covered
+  - format_or_platform
+  - acceptance_criteria
+optional:
+  - tone_of_voice
+  - existing_references

@@ -25,8 +25,9 @@ python3 scripts/intake-evaluate.py --case discovery
 ## Discovery
 
 - Questions: min 3, target 5–7, max 10
+- **Validator** sets `missing_for_planning`; **LLM** words one question from `llm_question_input` / `--discovery-payload` (see `templates/intake-discovery-question-prompt.md`)
 - Output: `PRD_<ProjectName>.md` (use `templates/PRD_TEMPLATE.md`)
-- Stop at 10 → Missing Information List
+- Stop at 10 → Missing Information List + requirement status + recommended next action
 
 ## From PRD — Intent resolution (§1.6)
 

@@ -1,0 +1,11 @@
+project_type: api
+mandatory:
+  - business_goal
+  - target_consumer
+  - endpoints_or_resources
+  - authentication
+  - acceptance_criteria
+optional:
+  - tech_stack
+  - deployment
+  - rate_limiting

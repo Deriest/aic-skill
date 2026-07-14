@@ -1,0 +1,11 @@
+project_type: ai_agent
+mandatory:
+  - business_goal
+  - target_user
+  - core_capabilities
+  - llm_provider
+  - acceptance_criteria
+optional:
+  - tech_stack
+  - deployment
+  - memory_requirements

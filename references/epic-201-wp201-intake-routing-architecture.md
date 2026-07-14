@@ -15,11 +15,19 @@ Intake sits **before** the engineering pipeline (Investigate → Planning → �
 ```
 User message
     ↓
-Intent + Intake Mode (Dispatcher)
+Context Collection (Chat + PRD + Repository)
+    ↓
+LLM Requirement Extractor (Normalize to Object)
+    ↓
+Deterministic Validator (Completeness Checklist)
+    ↓
+Missing Fields
+    ↓
+Dispatcher Decision (Intent + Intake Mode)
     ↓
 [Conversation] → respond only (RH-002)
 [Quick]        → Requirement Completeness PASS → Approval (if needed) → task.create/start
-[Discovery]    → Q&A (3–10) → PRD_<Project>.md → Operator Approval → Architecture → Planning → …
+[Discovery]    → Q&A (LLM Generated) → PRD_<Project>.md → Operator Approval → Architecture → Planning → …
 [From PRD]     → PRD Review → Gap Analysis → Operator Approval → Planning → …
 ```
 
@@ -50,8 +58,18 @@ Dispatcher **never** auto-escalates Conversation → Discovery → Planning (RH-
 ### 1.4 Discovery process rules (frozen)
 
 - **Not mandatory** — only when completeness FAIL.
-- **Questions:** min **3**, target **5–7**, max **10**.
-- After **10** questions still incomplete: **stop** Discovery; emit **Missing Information List** (explicit fields); do **not** ask more.
+- **LLM Question Generation:** The LLM generates clarification questions based *only* on the **Structured Discovery State** (missing fields, count) + existing conversation.
+  - Ask only about missing fields; never ask about completed fields.
+  - Combine multiple missing fields into one question whenever reasonable.
+  - Avoid repeating previous questions and generic/open-ended questions (e.g., "Tell me more").
+  - Prefer specific, answerable questions.
+  - Minimize the total number of questions.
+- **Stop Conditions:** Discovery ends immediately when ANY of the following is true:
+  1. All mandatory fields are complete.
+  2. The validator confirms Planning can safely begin.
+  3. The operator explicitly stops Discovery.
+  4. The maximum question limit (10) is reached.
+- **Limit Reached (10 Qs):** If capped, Dispatcher MUST produce: **Missing Information Summary**, **Current Requirement Status**, and **Recommended Next Action**. Do **not** continue asking questions indefinitely.
 - **Artifact:** `PRD_<ProjectName>.md` (e.g. `PRD_AIC_Website.md`). **No** `DISCOVERY.md` as official output.
 - **Approval gate:** Discovery → PRD → **Operator Approval** → Architecture (spec) → Planning → Implementation.
 
@@ -100,6 +118,12 @@ Answer: **`PASS`** | **`FAIL`** | **`NOT_APPLICABLE`** (Conversation only).
 
 ### 2.2 Evaluator design
 
+**Architecture:** LLM-Assisted, Deterministic-Controlled Intake.
+
+**Responsibilities:**
+- **LLM:** Requirement extraction, normalization, classification, question generation, and PRD drafting. MUST NOT decide routing, approval, execution, or completeness.
+- **Dispatcher / Deterministic Logic:** Completeness validation, gap calculation, routing, approval gating, question limit enforcement, and pipeline execution.
+
 **Component:** `RequirementCompletenessEvaluator` (logical module; implementation in WP-202+).
 
 **Inputs:**
@@ -111,10 +135,13 @@ Answer: **`PASS`** | **`FAIL`** | **`NOT_APPLICABLE`** (Conversation only).
 
 **Process:**
 
-1. Select **checklist** for `project_type` (§4).
-2. For each **mandatory** field: `PRESENT` | `MISSING` | `DERIVABLE` (from repo/docs only—if DERIVABLE, PM/worker may fill in Investigate, not in intake Q&A).
-3. **PASS** iff all mandatory fields are `PRESENT` or `DERIVABLE`.
-4. **FAIL** → list `MISSING` mandatory fields → route **Discovery** (or **From PRD** + Gap Analysis if artifact exists but incomplete).
+1. Context Collection: Gather chat, PRD, and repo heuristics. (Extensible design allows future context providers: GitHub Issues, Jira, Linear, Notion, Local KB).
+2. LLM Extraction: Extract and normalize requirement facts into an object.
+3. Select **checklist** for `project_type` (§4).
+4. For each **mandatory** field (Deterministic Validation): `PRESENT` | `MISSING` | `DERIVABLE` (from repo/docs only).
+5. **PASS** iff all mandatory fields are `PRESENT` or `DERIVABLE`.
+6. **FAIL** → route **Discovery Orchestrator** (or **From PRD** + Gap Analysis if artifact exists but incomplete).
+7. **Discovery Update Cycle:** Iterative loop where the LLM receives the latest **Structured Discovery State** (`project_type`, `known_fields`, `missing_fields`, `question_count`, `max_questions`, `selected_intent`, `operator_approved`) + conversation to generate the next question. The LLM never regenerates from scratch; the Validator remains the source of truth.
 
 **Output (structured, deterministic):**
 
@@ -302,22 +329,33 @@ START: Parse user message
 │
 YES
 │
+├─ Context Collection (Chat + PRD + Repo)
+├─ LLM Requirement Extraction
+│
 ├─ Formal requirement artifact attached? ──YES──► From PRD
 │       │
 │       ├─ Gap Analysis PASS ──► Await Operator Approval ──► Planning+
-│       └─ Gap FAIL ──► Discovery (bounded Q) OR Missing Info List (if at question cap)
+│       └─ Gap FAIL ──► Discovery Orchestrator (bounded Q) OR Missing Info List (if cap reached)
 │
 NO
 │
 ├─ Detect project_type
-├─ Run Requirement Completeness Evaluator
+├─ Deterministic Requirement Completeness Evaluator
 │
 ├─ PASS ──► Quick
-│       └─► Operator confirms scope (lightweight approval if net-new product)
+│       └─► Operator confirms scope
 │       └─► task.create / pipeline per policy
 │
-└─ FAIL ──► Discovery (3–10 Q)
-        └─► PRD_<Project>.md
+└─ FAIL ──► Discovery Orchestrator
+        ├─► Provide Structured Discovery State to LLM
+        ├─► LLM Question Generator (Strict Quality Rules)
+        ├─► User Response
+        ├─► LLM Requirement Extraction
+        ├─► Deterministic Validator Update
+        ├─► Discovery State Update
+        ├─► Check Stop Conditions (PASS, Operator Stop, or Cap 10)
+        │      └─► If Cap 10: Emit Missing Info Summary & Recommended Action
+        └─► Generate PRD_<Project>.md
         └─► Operator Approval
         └─► Architecture → Planning → …
 ```

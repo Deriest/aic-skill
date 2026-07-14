@@ -1,0 +1,10 @@
+project_type: cli
+mandatory:
+  - purpose
+  - target_user
+  - commands_and_args
+  - os_target
+  - acceptance_criteria
+optional:
+  - tech_stack
+  - distribution_method

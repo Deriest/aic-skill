@@ -1,0 +1,10 @@
+project_type: library
+mandatory:
+  - purpose
+  - target_developer
+  - core_functions
+  - package_manager
+  - acceptance_criteria
+optional:
+  - tech_stack
+  - documentation_requirements
