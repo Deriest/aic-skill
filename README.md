@@ -238,16 +238,21 @@ Documentation entry point: [docs/INDEX.md](./docs/INDEX.md)
 
 ## Project Status
 
-**Runtime Baseline** — production-ready at commit `c6faeac`.
+**AIC version:** **v3.1.3** (global — product, runtime API, Hermes skill, dashboard). See [CHANGELOG](./CHANGELOG.md) and [Version policy](./docs/guides/version-policy.md).
 
 | Milestone | Status |
 |-----------|--------|
 | Runtime Stabilization (FIX-008 → FIX-023, IMP-024) | **COMPLETE** |
 | Repository Finalization (WP-101 / WP-102) | **COMPLETE** |
-| Intelligent Intake (EPIC-201) | **COMPLETE** |
-| Production ready | **Yes** — operator deploy via Quick Start + [docs/INDEX.md](./docs/INDEX.md) |
+| Intelligent Intake (EPIC-201) | **COMPLETE** (shipped in **v3.1.3**) |
+| Production ready | **Yes** — [docs/INDEX.md](./docs/INDEX.md) |
 
-Hermes skill version: **3.1.2** (`SKILL.md`).
+| Component | Version |
+|-----------|---------|
+| AIC (global) | **3.1.3** |
+| Runtime API `GET /api/version` | **3.1.3** |
+| Hermes skill (`SKILL.md`) | **3.1.3** |
+| Dashboard (`dashboard/package.json`) | **3.1.3** |
 
 ---
 

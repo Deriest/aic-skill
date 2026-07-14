@@ -380,7 +380,7 @@ const server = http.createServer(async (req, res) => {
 
   // GET /api/version — version info (no auth required)
   if (req.method === 'GET' && pathname === '/api/version') {
-    return send(res, 200, { version: '2.0.0', milestone: 'J' });
+    return send(res, 200, { version: '3.1.3', milestone: 'J' });
   }
 
   // Auth management endpoints (protected)

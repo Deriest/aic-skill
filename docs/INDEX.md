@@ -7,6 +7,7 @@
 - [Developer Guide](guides/developer-guide.md) — Setup & conventions
 - [Operations Guide](operations/operations-guide.md) — Deployment, monitoring, recovery
 - [Operator Guide](guides/operator-guide.md) — Task management, dashboard usage
+- [Version policy](guides/version-policy.md) — Product vs runtime vs skill semver
 - [Operations Runbook](operations/operations-runbook.md) — Troubleshooting, escalation
 - [.env.example](../.env.example) — Production configuration template
 - [Assets](assets/) — Dashboard screenshots

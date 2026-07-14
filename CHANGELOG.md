@@ -2,9 +2,9 @@
 
 All notable releases and historical task entries.
 
-## [1.1.0] — Intelligent Intake (EPIC-201) — 2026-07-14
+## [3.1.3] — Intelligent Intake (EPIC-201) — 2026-07-14
 
-Dispatcher pre-pipeline intake: four modes, deterministic requirement completeness, project-scoped state, domain checklists, and Option C (LLM-assisted clarification question wording only).
+**AIC v3.1.3** (global release). Dispatcher pre-pipeline intake: four modes, deterministic requirement completeness, project-scoped state, domain checklists, and Option C (LLM-assisted clarification question wording only).
 
 ### Intake (EPIC-201)
 
