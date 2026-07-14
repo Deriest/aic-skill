@@ -56,6 +56,7 @@ IF first time setup → load `references/dispatcher-setup.md`
 IF understanding workflow → load `references/dispatcher-lifecycle.md`
 IF understanding architecture → load `references/architect-rules.md`
 IF RH-001 / dispatcher operational behavior / restart policy / speculative root cause / structured failure reporting / RH-002 intent boundary / RH-003 internal thinking visibility → load `dispatcher-discipline-aic`
+IF intake routing / EPIC-201 / Quick Conversation Discovery From PRD / PRD approval gate / requirement completeness checklist → load `dispatcher-discipline-aic` + `references/epic-201-wp201-intake-routing-architecture.md`
 
 ### Dashboard & API
 IF dashboard/API issues → load `references/dispatcher-dashboard.md`
@@ -142,6 +143,7 @@ IF freezing user visual/language constraints → copy `templates/promo-design-br
 **Planning gate (website):** After Architect, spawn **Designer** for `docs/design-spec.md` before Implementation. Architect-only + Frontend is a process gap — user correction *"kita ga pakai designer ? kan ini website"*.
 
 ### Discovery & Phase Review
+IF intake / EPIC-201 / PRD_<Project>.md / skip discovery / requirement completeness → load `references/epic-201-wp201-intake-routing-architecture.md` and `dispatcher-discipline-aic` (RH-004)
 IF discovery workflow → load `references/dispatcher-discovery.md`
 IF phase review gate → load `references/dispatcher-phase-review.md`
 IF QA validation policy → load `references/dispatcher-qa-validation.md`

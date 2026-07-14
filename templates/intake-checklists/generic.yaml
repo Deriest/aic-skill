@@ -1,0 +1,10 @@
+project_type: generic
+mandatory:
+  - business_goal
+  - target_user_or_consumer
+  - scope_in_out
+  - constraints
+  - acceptance_criteria
+  - deployment_or_delivery
+optional:
+  - tech_stack

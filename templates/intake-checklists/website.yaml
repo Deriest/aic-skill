@@ -1,0 +1,12 @@
+project_type: website
+mandatory:
+  - business_goal
+  - target_user
+  - pages_or_ia
+  - core_features
+  - deployment
+  - acceptance_criteria
+optional:
+  - tech_stack
+  - brand_constraints
+  - out_of_scope

@@ -4,7 +4,11 @@
 
 Discovery is part of the Investigate phase. PM evaluates requirement completeness before writing specifications.
 
-## Confidence Scoring
+## Intake routing (EPIC-201)
+
+**Dispatcher pre-pipeline** uses deterministic checklists (`scripts/intake-evaluate.py`, `references/intake-routing-epic201.md`) — **not** the confidence % below. Four modes: Conversation, Quick, Discovery, From PRD.
+
+## Confidence Scoring (in-pipeline PM narrative only — deprecated for intake routing)
 
 PM evaluates the user request against:
 
