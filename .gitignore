@@ -30,6 +30,7 @@ docs/release-readiness/
 
 # AIC Local Database & History
 .aic/auth.json
+.aic/intake/
 .aic/tasks/
 .aic/prompts/
 .aic/state.json

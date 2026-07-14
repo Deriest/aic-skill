@@ -17,6 +17,7 @@ AIC is a multi-agent orchestration system built on [Hermes Agent](https://hermes
 - **Pixel Office Dashboard** — Real-time operations control center with virtual office, pipeline tracking, and metrics
 - **Observability** — Live worker status, pipeline progress, runtime gate, memory, CPU, and request throughput
 - **Cost Tracking** — Per-worker token breakdown (input/output/cache) with time-filtered charts
+- **Intelligent Intake (EPIC-201)** — Pre-pipeline requirement routing: Conversation, Quick, Discovery, From PRD; deterministic completeness; intake state; Option C LLM question wording
 - **Task History** — Paginated task records with expandable context and resume support
 - **Configuration** — Runtime config viewer with environment, model tier, and project settings
 
@@ -107,6 +108,8 @@ User (natural language)
     ↓
 Dispatcher (Hermes) — classification, routing, orchestration
     ↓
+Intelligent Intake (EPIC-201) — optional pre-pipeline: completeness, Discovery, PRD intents
+    ↓
 Pipeline (5 phases) — lifecycle enforcement, phase barriers
     ↓
 Engineering Teams — specialized roles, Thinker/Crafter/Sprinter tiers
@@ -117,6 +120,24 @@ Dashboard — real-time monitoring, metrics, configuration
 ```
 
 Detailed architecture: [Architecture Overview](./docs/architecture/architecture-overview.md)
+
+### Intelligent Intake (EPIC-201)
+
+Before net-new engineering work enters the pipeline, the Dispatcher classifies intake:
+
+| Mode | When | Pipeline |
+|------|------|----------|
+| **Conversation** | No engineering task | Never |
+| **Quick** | Task + requirement completeness **PASS** | After policy / approval |
+| **Discovery** | Task + completeness **FAIL** | After PRD + operator approval |
+| **From PRD** | Formal PRD/BRD/issue | Build only after gap + approval |
+
+- **Completeness:** Deterministic YAML checklists (`templates/intake-checklists/`), PASS/FAIL — no confidence % for routing.
+- **Context:** Chat, optional PRD file, lightweight repo signals (`scripts/intake-evaluate.py`).
+- **State:** Project-scoped `.aic/intake/session.json` (question count, missing fields, approval).
+- **Option C:** LLM words one clarification question from structured payload only; validator stays authoritative. See `references/intake-routing-epic201.md` and `templates/intake-discovery-question-prompt.md`.
+
+Debug: `python3 scripts/intake-evaluate.py --text "..." --dir "$PROJECT"`. Verify: `scripts/verify-wp202-intake.sh`, `verify-option-c-intake.sh`.
 
 ---
 
@@ -184,6 +205,7 @@ Dashboard opens at `http://localhost:6868`.
 │   └── assets/           # Dashboard screenshots
 ├── knowledge/          # Knowledge ledger (task-entries.json ignored, generated)
 ├── references/         # Active reference docs (FIX/IMP lineage, pitfalls, patterns)
+│   └── archive/        # Optional: superseded one-off investigations (see references/archive/README.md)
 ├── scripts/            # Runtime production scripts (engine, workers, setup)
 │   ├── engine/         # FSM, barrier, PM repair, recovery, validation
 │   └── *.sh/*.py/*.js  # Production-only helpers (see archive/platform-experiments for archived)
@@ -222,6 +244,7 @@ Documentation entry point: [docs/INDEX.md](./docs/INDEX.md)
 |-----------|--------|
 | Runtime Stabilization (FIX-008 → FIX-023, IMP-024) | **COMPLETE** |
 | Repository Finalization (WP-101 / WP-102) | **COMPLETE** |
+| Intelligent Intake (EPIC-201) | **COMPLETE** |
 | Production ready | **Yes** — operator deploy via Quick Start + [docs/INDEX.md](./docs/INDEX.md) |
 
 Hermes skill version: **3.1.2** (`SKILL.md`).

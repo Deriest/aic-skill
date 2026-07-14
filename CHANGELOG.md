@@ -2,6 +2,21 @@
 
 All notable releases and historical task entries.
 
+## [1.1.0] — Intelligent Intake (EPIC-201) — 2026-07-14
+
+Dispatcher pre-pipeline intake: four modes, deterministic requirement completeness, project-scoped state, domain checklists, and Option C (LLM-assisted clarification question wording only).
+
+### Intake (EPIC-201)
+
+- **WP-201 / WP-202:** Conversation, Quick, Discovery, From PRD routing; PASS/FAIL checklists; PRD intent resolution; approval gate before `task.start` for net-new scope.
+- **Phase 2:** Context engine (chat + PRD file + lightweight repo heuristics); `.aic/intake/session.json` state; ten domain YAML packs under `templates/intake-checklists/`.
+- **Option C:** Structured `llm_question_input` / `--discovery-payload`; prompt template `templates/intake-discovery-question-prompt.md`; validator remains authoritative (no LLM routing in scripts).
+- **Verify:** `scripts/verify-wp202-intake.sh`, `verify-intake-phase2.sh`, `verify-option-c-intake.sh`.
+- **Docs:** `references/epic-201-wp201-intake-routing-architecture.md`, `references/intake-routing-epic201.md`, closeout/verification refs under `references/epic-201-*`.
+- **Runtime:** Engine, FSM, Barrier, WECP, workers, dashboard unchanged.
+
+---
+
 ## [1.0.0] — Runtime Baseline — 2026-07-14
 
 First production baseline (`c6faeac`). Engineering complete; no further runtime stabilization work in this line.
