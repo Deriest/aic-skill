@@ -9,7 +9,7 @@ User asks for a **one-page marketing site** to promote the **aic-skill** GitHub 
 - **Content source:** `README.md`, `references/dispatcher-github-readme.md`, worker names/personalities from README "The Team" section.
 
 ## Dispatcher workflow
-1. `POST /api/task-start` with `{id, title, type: "feature"}`.
+1. `POST /api/task-start` with `{id, title, description, type: "feature", projectDir}`. The `description` field is mandatory (minimum 40 characters).
 2. Spawn **PM (Investigate)** with prompt referencing repo URL and publish goal.
 3. When user states visual/language constraints mid-flight, write **`<project>/.aic/prompts/<TASK-ID>-design-brief.md`** (allowed prompt artifact). Reference it in all later worker prompts (Designer, Frontend).
 4. **Never** implement HTML/CSS/React in Dispatcher — Frontend Engineer only.

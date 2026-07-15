@@ -60,9 +60,10 @@ IF intake routing / EPIC-201 / Quick Conversation Discovery From PRD / PRD appro
 
 ### Dashboard & API
 IF dashboard/API issues → load `references/dispatcher-dashboard.md`
-IF health-check marks knowledge as unhealthy on cold start → load `references/health-check-knowledge-pitfall.md`
-IF auth/API key setup or Invalid API key errors on port 6868 → load `references/dispatcher-auth-reset.md`
+IF health-check marks knowledge as unhealthy on cold start → load `references/health-check-knowledge-lazy-evaluation.md`
 IF Config page FETCH MODELS fails / Failed to fetch / LAN baseURL from browser → load `references/dashboard-config-fetch-models.md` + `references/dispatcher-pitfalls-ui.md`
+IF dashboard config reverts to 127.0.0.1 or saves literal asterisks for API key → load `references/dashboard-config-provider-selection-pitfall.md`
+IF user asks about API key overwrites or config selection bugs → load `references/dashboard-config-save-pitfall.md`
 IF control plane endpoints → load `references/dispatcher-control-plane.md`
 IF pipeline UI sizing → load `references/dispatcher-pipeline-ui.md`
 
@@ -116,10 +117,15 @@ IF IMP-024-A/B/C / focused smoke / worker-layer post Runtime Stability → load 
 IF dashboard pixel font / Press Start 2P / self-host font / font-src CSP → load `references/dashboard-fix022-selfhost-pixel-font.md`
 IF barrier completion tracking bug / pm+research not recorded in phaseBarrier.completed / sequential spawn barrier desync → load `references/barrier-completion-tracking-bug.md`
 IF stop all tasks / pause runtime / kill OAT pollers → load `references/runtime-stop-all-tasks.md`
+IF manual spawn-worker.sh fails with "No runtime lease" → load `references/runtime-lease-pitfall.md`
+IF pipeline-orchestrator fails at task-start or phase-runner throws Invalid worker format → load `references/orchestration-script-pitfalls.md`
+IF dashboard config saves literal asterisks for API key or overrides models → load `references/dashboard-config-save-pitfall.md`
 IF Phase Deliverable Contract architecture / IMP-001 / dedupe prompts vs PM vs runtime-contracts.json → load `references/phase-deliverable-contract-investigation-imp001.md`
+IF pipeline-orchestrator.sh failures / task-start empty / API key not injected / python3 -c triple-quote fragility / security scan blocks credential edits → load `references/pipeline-orchestrator-reliability-pitfalls.md`
 IF general troubleshooting → load `references/dispatcher-troubleshooting.md`
 
 ### Documentation Consolidation & Release
+IF user issues PM FINAL INVESTIGATION ORDER or PM FINAL RELEASE ORDER → load `references/pm-orders-response-format.md`
 IF consolidating documentation after milestones → load `references/documentation-consolidation-pattern.md`
 IF creating a release → load `references/release-process.md`
 IF production readiness cleanup / WP-101 / repo hygiene / .gitignore hardening / archive pattern → load `references/production-readiness-cleanup-wp101.md`
@@ -160,6 +166,7 @@ IF artifact contracts → load `references/dispatcher-artifact-contracts.md`
 IF worker state machine → load `references/dispatcher-state-machine.md`
 
 ### Architecture Decisions
+IF health-check script logic / lazy evaluation policy for Knowledge subsystem → load `references/health-check-knowledge-pitfall.md`
 IF runtime gate system → load `references/runtime-gate-system.md`
 IF scheduler policy → load `references/official-scheduler-policy.md`
 IF parallel execution model → load `references/parallel-execution-model.md`
@@ -348,6 +355,7 @@ Key lessons: git tracking pitfall, public endpoints, OAT timeouts, cascading dep
 IF modifying server.js → load `references/server-modification-pitfalls.md`
 Key lessons: AIC_DIR vs SKILL_DIR, auth.apiKeys vs loadCredentials(), RBAC try-catch, terminal safety blocks, `local` outside functions, metrics response shape, dispatcher state sync, SIGTERM cascade, variable shadowing in RBAC.
 IF server.js runtime behavior bugs (dual auth gates, code-after-return, test JSON path) → load `references/server-modification-pitfalls-k.md`
+IF EADDRINUSE errors or server startup loops → load `references/server-startup-eaddrinuse-pitfall.md`
 IF adding API endpoint fields → load `references/server-modification-pitfalls-ops-shadow.md`
 Key lesson: ops-endpoints.js runs BEFORE server.js — if it handles the route, server.js code is unreachable.
 
@@ -396,9 +404,11 @@ Phases: investigate → planning → implementation → verification → closeou
 - Triggers knowledge auto-update via `/api/task-complete` (RP-003.3)
 - Tracks phase progression via `GET /api/pipeline/status`
 
-**API contract:** `/api/task-start` requires `{title, type}`, NOT `{task, project_dir}`. The orchestrator uses `python3 -c` to build proper JSON.
+**API contract:** `/api/task-start` requires `{title, description, type, projectDir}`. The `description` field is mandatory (minimum 40 characters). The orchestrator uses a Python heredoc to build proper JSON.
 
 **Knowledge auto-update:** After `POST /api/task-complete`, server.js automatically writes to `knowledge/task-entries.json`. No manual trigger needed.
+
+**Pitfall:** Dispatcher bypassing pipeline when scripts fail. When `pipeline-orchestrator.sh` or `spawn-worker.sh` fails, the Dispatcher MUST NOT manually curl API endpoints, inject task IDs, or call workers directly to "work around" the failure. User correction: *"harusnya dispatcher ga boleh ngide kan sudah di setup sebelumnya, ga boleh langsung bypass"*. Correct behavior: investigate root cause → report to user → await PM approval → fix the script → retry through pipeline. Bypassing creates state corruption, orphaned tasks, and lease conflicts.
 
 **Pitfall:** Thinker tier (Opus) workers occasionally timeout at 180s. This is a model availability issue, not a pipeline defect. Sprinter/Crafter tiers are more reliable for testing.
 

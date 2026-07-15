@@ -17,7 +17,21 @@ log "=== AIC Pipeline (Runtime Engine) ==="
 log "Task: $TASK_DESC"
 log "Project: $PROJECT_DIR"
 
-TASK_JSON=$(python3 -c "import json; print(json.dumps({'title': '''$TASK_DESC''', 'type': 'feature', 'projectDir': '''$PROJECT_DIR'''}))")
+export _AIC_TASK_DESC="$TASK_DESC"
+export _AIC_PROJECT_DIR="$PROJECT_DIR"
+TASK_JSON=$(python3 << 'PYEOF'
+import json, os, datetime
+desc = os.environ["_AIC_TASK_DESC"]
+proj = os.environ["_AIC_PROJECT_DIR"]
+d = {
+    "title": desc,
+    "description": f"Pipeline task: {desc} | Workspace: {proj} | Invoked via pipeline-orchestrator.sh at {datetime.datetime.utcnow().isoformat()}Z",
+    "type": "feature",
+    "projectDir": proj
+}
+print(json.dumps(d))
+PYEOF
+)
 RESP=$(curl_api -X POST "$API_URL/api/task-start" -H "Content-Type: application/json" -d "$TASK_JSON" 2>&1) || fail "task-start: $RESP"
 TASK_ID=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('taskId') or (d.get('currentTask') or {}).get('id',''))" 2>/dev/null || echo "")
 log "Engine started task: ${TASK_ID:-unknown}"

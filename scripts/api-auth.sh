@@ -22,12 +22,28 @@ _aic_get_api_key() {
 curl_api() {
   local key
   key=$(_aic_get_api_key) || true
+  local http_status body_file auth_flag
+  body_file=$(mktemp)
+  trap "rm -f '$body_file'" RETURN
   if [ -n "$key" ]; then
-    curl -sf -H "X-API-Key: $key" "$@"
+    auth_flag="X-API-Key: $key"
+    http_status=$(curl -s -o "$body_file" -w "%{http_code}" -H "$auth_flag" "$@")
   else
-    # No key available — run without auth (dev mode)
-    curl -sf "$@"
+    http_status=$(curl -s -o "$body_file" -w "%{http_code}" "$@")
   fi
+  local exit_code=$?
+  if [ $exit_code -ne 0 ]; then
+    echo "curl failed (exit=$exit_code)" >&2
+    cat "$body_file" >&2
+    return $exit_code
+  fi
+  if [ "$http_status" -ge 400 ] 2>/dev/null; then
+    echo "HTTP $http_status: $(cat "$body_file")" >&2
+    cat "$body_file"
+    return 1
+  fi
+  cat "$body_file"
+  return 0
 }
 
 # Log errors instead of silently swallowing
