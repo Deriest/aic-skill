@@ -25,22 +25,41 @@ case "$ACTION" in
     check_knowledge() { if [[ -d "$SKILL_DIR/.aic/knowledge" ]]; then echo "healthy"; else echo "lazy"; fi; }
     check_filesystem() { touch "$SKILL_DIR/.aic/.health_test" && rm -f "$SKILL_DIR/.aic/.health_test"; }
     
+    check_permission() { 
+      local cf="${TMPDIR:-/tmp}/.aic-hc-canary"
+      echo "ok" > "$cf"
+      if command -v opencode &>/dev/null; then
+        local out
+        out=$(opencode run "cat $cf" --auto --format json 2>&1 || true)
+        rm -f "$cf"
+        if echo "$out" | grep -qi "permission\|rejected\|denied"; then
+          echo "unhealthy"
+        else
+          echo "healthy"
+        fi
+      else
+        rm -f "$cf"
+        echo "skipped"
+      fi
+    }
+    
     R_SERVER=$(check_component "server" "check_server" | cut -d: -f2)
     R_AUTH=$(check_component "auth" "check_auth" | cut -d: -f2)
     R_KNOWLEDGE=$(check_knowledge)
     R_FS=$(check_component "filesystem" "check_filesystem" | cut -d: -f2)
+    R_PERM=$(check_permission)
     
-    for r in "$R_SERVER" "$R_AUTH" "$R_KNOWLEDGE" "$R_FS"; do
+    for r in "$R_SERVER" "$R_AUTH" "$R_KNOWLEDGE" "$R_FS" "$R_PERM"; do
       [[ "$r" == "unhealthy" ]] && STATE="degraded"
     done
     [[ "$R_SERVER" == "unhealthy" ]] && STATE="unhealthy"
     
-    export STATE R_SERVER R_AUTH R_KNOWLEDGE R_FS
+    export STATE R_SERVER R_AUTH R_KNOWLEDGE R_FS R_PERM
     python3 << 'PYEOF'
 import json, time, os
 hf = os.environ.get("HEALTH_FILE", ".aic/health.json")
 state = os.environ.get("STATE", "unknown")
-components = {"server": os.environ.get("R_SERVER","unknown"), "auth": os.environ.get("R_AUTH","unknown"), "knowledge": os.environ.get("R_KNOWLEDGE","unknown"), "filesystem": os.environ.get("R_FS","unknown")}
+components = {"server": os.environ.get("R_SERVER","unknown"), "auth": os.environ.get("R_AUTH","unknown"), "knowledge": os.environ.get("R_KNOWLEDGE","unknown"), "filesystem": os.environ.get("R_FS","unknown"), "permission": os.environ.get("R_PERM","unknown")}
 entry = {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "state": state, "components": components}
 history = []
 try:

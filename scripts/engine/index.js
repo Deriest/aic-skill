@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { createEventBus } = require('./events');
+const { ArtifactProvider } = require('../artifact-provider');
 const {
   PHASE_PLANS,
   normalizePhase,
@@ -20,12 +21,6 @@ const {
   clearBarrier,
   resetWorkersForRepair,
 } = require('./barrier');
-const {
-  getMaxPmRepairAttempts,
-  parseWorkersFromPmVerdict,
-  resolvePmRepairTargets,
-  readPmVerdictFile,
-} = require('./pm-repair');
 const {
   ensureTaskDir,
   readCheckpoint,
@@ -227,6 +222,27 @@ function createEngine(opts) {
       metadata: null,
     };
     saveState();
+
+// WP-3.3: Mechanical Validation Gate
+    const targetWorkers = artifacts.map(a => path.basename(a, '-output.md'));
+    const valCode = await spawnBash(
+      path.join(scriptDir, 'validate-framework-invariants.sh'),
+      [path.join(tasksDir, taskId), targetWorkers.join(',')]
+    );
+
+    if (valCode !== 0) {
+      console.log(`[engine] Mechanical Validation Gate FAILED for ${taskId}`);
+      state.pmReview = {
+        phase,
+        verdicts: { all: 'BLOCKED' },
+        feedback: { verdict: 'BLOCKED', reason: 'InvalidArtifact', decision_package: { owner: 'Worker', root_cause: 'Mechanical Validation Failed', engineering_objective: 'Ensure deliverables have H1 and meet minimum length', expected_deliverables: targetWorkers.map(w => w + '-output.md'), completion_criteria: [] } },
+        completedAt: Date.now(),
+        exitCode: 2,
+      };
+      saveState();
+      bus.emit('pm.review.completed', { phase, allPass: false });
+      return { allPass: false, exitCode: 2 };
+    }
 
     const code = await spawnBash(
       path.join(scriptDir, 'pm-review.sh'),
@@ -446,11 +462,12 @@ function createEngine(opts) {
     phaseLabel,
     cp
   ) {
-    const maxAttempts = getMaxPmRepairAttempts(contracts);
+    const maxAttempts = 3;
     let attempt = cp.rework?.attempt || 0;
 
     while (true) {
       const pm = await runPmReview(phaseLabel, projectDir, taskId);
+
       if (pm.allPass) {
         cp.rework = null;
         cp.phaseStatus = 'idle';
@@ -461,14 +478,14 @@ function createEngine(opts) {
         return { ok: true, cp };
       }
 
-      if (pm.exitCode === 2 || pm.exitCode === 3) {
+      if (pm.exitCode === 2 || pm.infrastructureFailure) {
         cp.phaseStatus = 'failed';
         cp.pipelineState = 'BLOCKED';
         cp.rework = {
           phase: pipelineState,
           attempt,
           repairedWorkers: [],
-          lastVerdict: pm.exitCode === 2 ? 'BLOCKED' : 'UNKNOWN',
+          lastVerdict: 'BLOCKED',
         };
         writeCheckpoint(tasksDir, taskId, cp);
         syncDashboardFromCheckpoint(cp, taskId);
@@ -478,172 +495,94 @@ function createEngine(opts) {
 
       attempt += 1;
       if (attempt > maxAttempts) {
-        console.error(
-          '[engine] pm repair limit exceeded',
-          JSON.stringify({ taskId, phase: pipelineState, attempt, maxAttempts })
-        );
+        console.error('[engine] pm repair limit exceeded');
         cp.phaseStatus = 'failed';
         cp.pipelineState = 'BLOCKED';
-        cp.rework = {
-          phase: pipelineState,
-          attempt,
-          repairedWorkers: [],
-          lastVerdict: 'REWORK',
-        };
+        cp.rework = { phase: pipelineState, attempt, repairedWorkers: [], lastVerdict: 'REWORK' };
         writeCheckpoint(tasksDir, taskId, cp);
         syncDashboardFromCheckpoint(cp, taskId);
         saveState();
         return { ok: false, pm: false, repairLimit: true, cp };
       }
 
-      const verdictText = readPmVerdictFile(tasksDir, taskId);
-      const resolved = resolvePmRepairTargets(
-        verdictText,
-        pipelineState,
-        plan,
-        PHASE_PLANS
-      );
-      let targets = resolved.workers;
-      let repairSpawnPlan = resolved.spawnPlan;
-      if (!targets.length) {
-        targets = plan.map((p) => String(p.worker).toLowerCase());
-        repairSpawnPlan = plan;
-        console.log(
-          '[engine] pm repair full-phase fallback',
-          JSON.stringify({ taskId, phase: pipelineState })
-        );
-      } else if (resolved.artifactPhase) {
-        console.log(
-          '[engine] pm repair cross-phase targets',
-          JSON.stringify({
-            taskId,
-            repairPipelinePhase: pipelineState,
-            artifactPhase: resolved.artifactPhase,
-            targets,
-          })
-        );
+      // M2: Read EDP from pm-review.sh output
+      let edp = null;
+      try {
+        edp = JSON.parse(fs.readFileSync(path.join(tasksDir, taskId, 'reports', '.pm-last-edp.json'), 'utf8'));
+      } catch (e) {
+        console.error('[engine] Failed to parse EDP JSON:', e.message);
+        cp.phaseStatus = 'failed';
+        cp.pipelineState = 'BLOCKED';
+        writeCheckpoint(tasksDir, taskId, cp);
+        syncDashboardFromCheckpoint(cp, taskId);
+        saveState();
+        return { ok: false, pm: false, cp };
       }
+
+      const pkg = edp.decision_package || {};
+      const owner = String(pkg.owner || '').toLowerCase();
+      let targets = [];
+      if (owner) {
+        const allowed = plan.map(p => String(p.worker).toLowerCase());
+        if (allowed.includes(owner)) targets = [owner];
+        else targets = allowed;
+      } else {
+        targets = plan.map(p => String(p.worker).toLowerCase());
+      }
+
+      const repairSpawnPlan = plan.filter(p => targets.includes(String(p.worker).toLowerCase()));
 
       cp.rework = {
         phase: pipelineState,
         attempt,
         repairedWorkers: targets,
         lastVerdict: 'REWORK',
-        artifactPhase: resolved.artifactPhase || null,
       };
       cp.phaseStatus = 'pm_repair';
       resetWorkersForRepair(cp.phaseBarrier, targets);
       writeCheckpoint(tasksDir, taskId, cp);
       syncDashboardFromCheckpoint(cp, taskId);
       saveState();
-      bus.emit('pm.repair.started', {
-        taskId,
-        phase: pipelineState,
-        attempt,
-        targets,
-      });
+      bus.emit('pm.repair.started', { taskId, phase: pipelineState, attempt, targets });
 
-      const verdictPath = path.join(
-        tasksDir,
-        taskId,
-        'reports',
-        '.pm-last-verdict.txt'
-      );
+      const verdictPath = path.join(tasksDir, taskId, 'reports', '.pm-last-verdict.txt');
       const ctxPath = path.join(tasksDir, taskId, 'context.json');
       const delCode = await spawnNode(
         path.join(scriptDir, 'pm-repair-respawn.js'),
-        [
-          'delete-artifacts',
-          skillDir,
-          taskId,
-          targets.join(','),
-        ],
+        ['delete-artifacts', skillDir, taskId, targets.join(',')],
         {}
       );
       if (delCode !== 0) {
-        console.error(
-          '[engine] pm repair delete-artifacts failed',
-          JSON.stringify({ taskId, code: delCode })
-        );
+        console.error('[engine] pm repair delete-artifacts failed', JSON.stringify({ taskId, code: delCode }));
       }
-
-      const spawnPipelineState =
-        resolved.artifactPhase && repairSpawnPlan.length
-          ? resolved.artifactPhase
-          : pipelineState;
 
       const repairEnv = {
         AIC_PM_REPAIR: '1',
         AIC_PM_VERDICT_FILE: verdictPath,
         AIC_PM_REPAIR_WORKERS: targets.join(','),
         AIC_CONTEXT_FILE: ctxPath,
+        AIC_EDP_OBJECTIVE: pkg.engineering_objective || '',
+        AIC_EDP_ROOT_CAUSE: pkg.root_cause || '',
       };
-
-      if (
-        spawnPipelineState !== pipelineState &&
-        repairSpawnPlan.length
-      ) {
-        console.log(
-          '[engine] pm repair cross-phase re-entry',
-          JSON.stringify({
-            taskId,
-            interruptedPhase: pipelineState,
-            artifactPhase: spawnPipelineState,
-            targets,
-            attempt,
-          })
-        );
-        writeCheckpoint(tasksDir, taskId, cp);
-        syncDashboardFromCheckpoint(cp, taskId);
-        saveState();
-        const reenter = await runPhase(taskId, spawnPipelineState, projectDir, {
-          repairSubset: repairSpawnPlan,
-          repairEnv,
-        });
-        if (!reenter.ok) {
-          cp = readCheckpoint(tasksDir, taskId) || cp;
-          cp.pipelineState = 'BLOCKED';
-          cp.phaseStatus = 'failed';
-          writeCheckpoint(tasksDir, taskId, cp);
-          syncDashboardFromCheckpoint(cp, taskId);
-          saveState();
-          return { ok: false, crossPhase: true, cp };
-        }
-        cp = readCheckpoint(tasksDir, taskId) || cp;
-        cp.pipelineState = pipelineState;
-        cp.phaseStatus = 'spawning';
-        cp.phaseBarrier = startBarrier(plan.map((p) => p.worker));
-        cp.rework = {
-          phase: pipelineState,
-          attempt,
-          repairedWorkers: targets,
-          lastVerdict: 'REWORK',
-          artifactPhase: spawnPipelineState,
-        };
-        writeCheckpoint(tasksDir, taskId, cp);
-        syncDashboardFromCheckpoint(cp, taskId);
-        saveState();
-        continue;
-      }
 
       cp.phaseStatus = 'spawning';
       writeCheckpoint(tasksDir, taskId, cp);
-      const spawn = await spawnWorkersForPhase(
+      const spawnResult = await spawnWorkersForPhase(
         taskId,
-        spawnPipelineState,
+        pipelineState,
         projectDir,
         repairSpawnPlan,
         cp,
         repairEnv
       );
-      if (!spawn.ok) {
+      if (!spawnResult.ok) {
         cp.pipelineState = 'BLOCKED';
         writeCheckpoint(tasksDir, taskId, cp);
         syncDashboardFromCheckpoint(cp, taskId);
         saveState();
-        return { ok: false, spawn: false, cp: spawn.cp || cp };
+        return { ok: false, spawn: false, cp: spawnResult.cp || cp };
       }
-      cp = spawn.cp;
+      cp = spawnResult.cp;
     }
   }
 

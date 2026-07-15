@@ -84,7 +84,28 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 5. Set dispatcher to working & Open Dashboard
+# 5. Permission canary — test Smart Approval doesn't block read-only ops
+CANARY_FILE="${TMPDIR:-/tmp}/.aic-permission-canary"
+echo "permission-ok" > "$CANARY_FILE"
+PERM_OK=false
+if command -v opencode &>/dev/null; then
+  CANARY_OUT=$(opencode run "cat $CANARY_FILE and print its content" --auto --format json 2>&1 || true)
+  if echo "$CANARY_OUT" | grep -qi "permission\|rejected\|denied"; then
+    echo "✗ Permission canary: Smart Approval may block read-only operations"
+    echo "  → PM Review sessions may fail. Check Hermes approval config."
+    FAIL=$((FAIL+1))
+  else
+    echo "✓ Permission canary"
+    PASS=$((PASS+1))
+    PERM_OK=true
+  fi
+else
+  echo "○ Permission canary: opencode not found (skipped)"
+  PERM_OK=true
+fi
+rm -f "$CANARY_FILE"
+
+# 6. Set dispatcher to working & Open Dashboard
 if [[ $FAIL -eq 0 ]]; then
   curl_api -X POST "$API_URL/api/agent-status" \
     -H "Content-Type: application/json" \

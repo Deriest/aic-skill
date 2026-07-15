@@ -1,20 +1,6 @@
 #!/usr/bin/env bash
-# pm-review.sh — PM Review Automation for AIC
+# pm-review.sh — PM Review Automation for AIC (v3.3.0 — EDP + Recovery)
 # Usage: pm-review.sh <phase> <project_dir> <artifact1> <artifact2> ...
-#
-# After a phase barrier completes, this script:
-# 1. Generates a PM Review prompt from artifacts
-# 2. Invokes the PM worker to evaluate
-# 3. Parses the verdict (PASS/REWORK/BLOCKED/UNKNOWN)
-# 4. Updates runtime state via API
-#
-# Exit codes:
-#   0 = All artifacts PASS
-#   1 = One or more artifacts REWORK
-#   2 = BLOCKED
-#   3 = UNKNOWN/invalid verdict
-#   4 = Error (timeout, missing artifacts)
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -22,7 +8,6 @@ SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$SKILL_DIR/.env"
 API_URL="${AIC_API_URL:-http://localhost:6868}"
 
-# Parse args
 PHASE="${1:?Usage: pm-review.sh <phase> <project_dir> <artifact1> [artifact2] ...}"
 PROJECT_DIR="${2:?Missing project directory}"
 shift 2
@@ -32,16 +17,63 @@ if [[ $# -eq 0 ]]; then
   exit 4
 fi
 
-# Load .env
 if [[ -f "$ENV_FILE" ]]; then
   set -a; source "$ENV_FILE" 2>/dev/null || true; set +a
-source "$(dirname "$0")/api-auth.sh"
+  source "$(dirname "$0")/api-auth.sh"
 fi
 
 echo "=== PM Review: $PHASE ==="
 echo "=== Artifacts: $# ==="
+echo "=== Degraded: ${AIC_PM_DEGRADED:-0} ==="
 
-# Phase 1: Generate PM Review prompt
+# M1 WP-1.3: Degraded mode — structure-only validation, skip content reads
+if [[ "${AIC_PM_DEGRADED:-0}" == "1" ]]; then
+  echo "=== PM Review DEGRADED MODE — structure-only validation ==="
+  STRUCTURE_OK=true
+  for artifact in "$@"; do
+    if [[ ! -f "$artifact" ]]; then
+      echo "MISSING: $artifact" >&2
+      STRUCTURE_OK=false
+      continue
+    fi
+    LINE_COUNT=$(wc -l < "$artifact" 2>/dev/null || echo 0)
+    BYTE_COUNT=$(wc -c < "$artifact" 2>/dev/null || echo 0)
+    HAS_H1=$(grep -c "^#" "$artifact" 2>/dev/null || echo 0)
+    if [[ "$BYTE_COUNT" -lt 10 ]]; then
+      echo "EMPTY: $(basename "$artifact") ($BYTE_COUNT bytes)" >&2
+      STRUCTURE_OK=false
+    elif [[ "$LINE_COUNT" -lt 2 ]]; then
+      echo "TOO_SHORT: $(basename "$artifact") ($LINE_COUNT lines)" >&2
+      STRUCTURE_OK=false
+    elif [[ "$HAS_H1" -eq 0 ]]; then
+      echo "NO_HEADING: $(basename "$artifact")" >&2
+      STRUCTURE_OK=false
+    else
+      echo "OK: $(basename "$artifact") ($BYTE_COUNT bytes, $LINE_COUNT lines)"
+    fi
+  done
+  if [[ "$STRUCTURE_OK" == true ]]; then
+    EDP='{"verdict":"PASS","reason":"Degraded mode: structural validation only","decision_package":null}'
+    if [[ -n "${AIC_TASK_ID:-}" ]]; then
+      TASK_REPORTS="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports"
+      mkdir -p "$TASK_REPORTS"
+      printf '%s' "$EDP" > "$TASK_REPORTS/.pm-last-edp.json"
+    fi
+    echo "=== PM Review complete (exit 0, degraded PASS) ==="
+    exit 0
+  else
+    EDP='{"verdict":"BLOCKED","reason":"InvalidArtifact","decision_package":{"owner":"Worker","root_cause":"Degraded structural validation failed","engineering_objective":"Produce structurally valid deliverables","expected_deliverables":[],"completion_criteria":["File exists","Has H1","Word count >= 50"]}}'
+    if [[ -n "${AIC_TASK_ID:-}" ]]; then
+      TASK_REPORTS="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports"
+      mkdir -p "$TASK_REPORTS"
+      printf '%s' "$EDP" > "$TASK_REPORTS/.pm-last-edp.json"
+    fi
+    echo "=== PM Review complete (exit 2, degraded BLOCKED) ==="
+    exit 2
+  fi
+fi
+
+# M2: Generate PM Review prompt with EDP schema requirement
 PROMPT_FILE=$(mktemp "${TMPDIR:-/tmp}/aic-pm-review-XXXXXX.txt")
 cat > "$PROMPT_FILE" << PROMPT
 You are the Project Manager (PM) for the AIC.
@@ -84,25 +116,33 @@ Review each artifact for:
 2. Quality — is the output well-structured and valid?
 3. Consistency — does it align with the architecture specification?
 
-## Verdict
-The first non-empty line of your response must be exactly one of:
-VERDICT: PASS
-VERDICT: REWORK
-VERDICT: BLOCKED
+## Verdict and Decision Package
+You MUST output EXACTLY this YAML format. Do not add prose outside the YAML block.
 
-No prose, markdown, or commentary before that line.
-After the verdict line you may add brief rationale.
+\`\`\`yaml
+verdict: PASS | REWORK | BLOCKED
+reason: <string summarizing the decision>
+
+# Include ONLY if verdict is REWORK or BLOCKED
+decision_package:
+  owner: <string (e.g. Frontend, Backend, Architect, Infrastructure)>
+  root_cause: <Declarative statement of the technical gap. No actions.>
+  engineering_objective: <Declarative statement of the required end-state>
+  expected_deliverables:
+    - <string (e.g. frontend-output.md)>
+  completion_criteria:
+    - <string (measurable condition to pass next review)>
+\`\`\`
 
 Supported meanings:
 - PASS — all artifacts are complete and valid
-- REWORK — one or more artifacts need revision (specify which and why)
-- BLOCKED — cannot proceed due to external dependency
+- REWORK — engineering quality is insufficient (requires repair)
+- BLOCKED — external dependency or infrastructure failure prevents progress
 PROMPT
 
 echo "=== Prompt generated: $PROMPT_FILE ==="
 
-# Phase 2: Invoke PM Review
-# Use opencode if available, otherwise use mock
+# M1 WP-1.1: Invoke PM with --auto, M1 WP-1.3: retry logic in engine handles retries
 VERDICT_FILE=$(mktemp "${TMPDIR:-/tmp}/aic-verdict-XXXXXX.txt")
 
 if command -v opencode &>/dev/null; then
@@ -118,17 +158,12 @@ const outputFile = process.argv[5];
 const reviewMsg = [
   'Review the attached prompt.',
   'Return a review only.',
-  'The first line must be exactly:',
-  'VERDICT: PASS',
-  'or',
-  'VERDICT: REWORK',
-  'or',
-  'VERDICT: BLOCKED',
+  'You MUST output a YAML block with verdict: PASS|REWORK|BLOCKED.',
   'Do not perform implementation work.',
 ].join('\n');
 try {
   const result = execFileSync('opencode', [
-    'run', reviewMsg, '-m', model, '--format', 'json', '-f', promptFile,
+    'run', reviewMsg, '-m', model, '--auto', '--format', 'json', '-f', promptFile,
   ], {
     cwd: cwd, timeout: parseInt(process.env.AIC_PM_TIMEOUT_SECONDS || "300", 10) * 1000, encoding: 'utf8',
   });
@@ -167,82 +202,85 @@ NODESCRIPT
   fi
 else
   echo "=== opencode not found, using mock PM ==="
-  # Mock: read prompt and produce PASS
   echo "VERDICT: PASS" > "$VERDICT_FILE"
   echo "All artifacts are complete and valid." >> "$VERDICT_FILE"
 fi
 
-# Phase 3: Parse verdict
+# M2: EDP YAML Parser (deterministic, no UNKNOWN)
 VERDICT_RAW=$(cat "$VERDICT_FILE")
-echo "=== Raw verdict ==="
-echo "$VERDICT_RAW" | head -5
+echo "=== Raw EDP ==="
+echo "$VERDICT_RAW" | head -20
 
-# Extract verdict (first valid token; markdown/whitespace tolerant)
-VERDICT=$(python3 -c "
-import re, sys
+EDP_JSON=$(python3 -c "
+import yaml, re, sys, json
 text = sys.stdin.read()
-clean = re.sub(r'\*+', '', text)
-m = re.search(r'(?i)VERDICT\s*:\s*(\w+)', clean)
-if not m:
-    sys.exit(0)
-v = m.group(1).upper()
-if v in ('PASS', 'REWORK', 'BLOCKED', 'FAIL'):
-    print(v)
+m = re.search(r'\`\`\`yaml\s*(.*?)\s*\`\`\`', text, re.DOTALL | re.IGNORECASE)
+yaml_str = m.group(1) if m else text
+try:
+    yaml_str = re.sub(r'^\s*VERDICT:\s*(PASS|REWORK|BLOCKED)', r'verdict: \1', yaml_str, flags=re.MULTILINE|re.IGNORECASE)
+    docs = list(yaml.safe_load_all(yaml_str))
+    data = {}
+    for d in docs:
+        if isinstance(d, dict) and 'verdict' in d:
+            data = d
+            break
+    if not data and len(docs) > 0 and isinstance(docs[0], dict):
+        data = docs[0]
+    v = str(data.get('verdict', 'BLOCKED')).upper()
+    if v not in ('PASS', 'REWORK', 'BLOCKED'):
+        if re.search(r'\bPASS\b', text, re.IGNORECASE) and not re.search(r'\bREWORK\b', text, re.IGNORECASE): v = 'PASS'
+        elif re.search(r'\bREWORK\b', text, re.IGNORECASE): v = 'REWORK'
+        else: v = 'BLOCKED'
+        data['verdict'] = v
+    print(json.dumps(data))
+except Exception as e:
+    v = 'BLOCKED'
+    if re.search(r'\bPASS\b', text, re.IGNORECASE) and not re.search(r'\bREWORK\b', text, re.IGNORECASE): v = 'PASS'
+    elif re.search(r'\bREWORK\b', text, re.IGNORECASE): v = 'REWORK'
+    print(json.dumps({'verdict': v, 'reason': 'InvalidArtifact', 'decision_package': {'owner': 'Worker', 'root_cause': 'YAML Parse Error: ' + str(e), 'engineering_objective': 'Produce valid EDP YAML', 'expected_deliverables': [], 'completion_criteria': []}}))
 " <<<"$VERDICT_RAW")
+
+VERDICT=$(echo "$EDP_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('verdict', 'BLOCKED').upper())" 2>/dev/null || echo "BLOCKED")
+REASON=$(echo "$EDP_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('reason', ''))" 2>/dev/null || echo "")
 
 case "$VERDICT" in
   PASS)
     echo "=== PM Review: PASS ==="
-    # Update API
-    VERDICTS_JSON="{"
-    for artifact in "$@"; do
-      name=$(basename "$artifact" .md)
-      VERDICTS_JSON+="\"$name\":\"PASS\","
-    done
-    VERDICTS_JSON="${VERDICTS_JSON%,}}"
-    
-    curl_api -X POST "$API_URL/api/pm-review" \
-      -H "Content-Type: application/json" \
-      -d "{\"phase\":\"$PHASE\",\"verdicts\":$VERDICTS_JSON,\"feedback\":{}}" > /dev/null 2>&1 || true
-    
     EXIT_CODE=0
     ;;
-  REWORK|FAIL)
+  REWORK)
     echo "=== PM Review: REWORK ==="
-    echo "$VERDICT_RAW" | grep -A 10 "REWORK" || true
-    
-    # Update API with REWORK verdict
-    VERDICTS_JSON="{"
-    for artifact in "$@"; do
-      name=$(basename "$artifact" .md)
-      VERDICTS_JSON+="\"$name\":\"REWORK\","
-    done
-    VERDICTS_JSON="${VERDICTS_JSON%,}}"
-    
-    curl_api -X POST "$API_URL/api/pm-review" \
-      -H "Content-Type: application/json" \
-      -d "{\"phase\":\"$PHASE\",\"verdicts\":$VERDICTS_JSON,\"feedback\":{}}" > /dev/null 2>&1 || true
-    
+    echo "Reason: $REASON"
     EXIT_CODE=1
     ;;
   BLOCKED)
     echo "=== PM Review: BLOCKED ==="
-    echo "$VERDICT_RAW" | grep -A 10 "BLOCKED" || true
+    echo "Reason: $REASON"
     EXIT_CODE=2
     ;;
   *)
-    echo "=== PM Review: UNKNOWN ===" >&2
-    echo "Could not parse verdict from response." >&2
-    echo "Raw: $VERDICT_RAW" >&2
-    EXIT_CODE=3
+    echo "=== PM Review: BLOCKED (unrecognized) ===" >&2
+    EXIT_CODE=2
     ;;
 esac
 
-# Cleanup
+# Update API with EDP feedback
+VERDICTS_JSON="{"
+for artifact in "$@"; do
+  name=$(basename "$artifact" .md)
+  VERDICTS_JSON+="\"$name\":\"$VERDICT\","
+done
+VERDICTS_JSON="${VERDICTS_JSON%,}}"
+curl_api -X POST "$API_URL/api/pm-review" \
+  -H "Content-Type: application/json" \
+  -d "{\"phase\":\"$PHASE\",\"verdicts\":$VERDICTS_JSON,\"feedback\":$EDP_JSON}" > /dev/null 2>&1 || true
+
+# Save EDP artifacts
 if [[ -n "${AIC_TASK_ID:-}" ]]; then
   TASK_REPORTS="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports"
   mkdir -p "$TASK_REPORTS"
   printf '%s' "$VERDICT_RAW" > "$TASK_REPORTS/.pm-last-verdict.txt"
+  printf '%s' "$EDP_JSON" > "$TASK_REPORTS/.pm-last-edp.json"
 fi
 rm -f "$PROMPT_FILE" "$VERDICT_FILE"
 

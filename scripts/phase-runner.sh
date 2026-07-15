@@ -28,6 +28,31 @@ export AIC_PM_VERDICT_FILE="${AIC_PM_VERDICT_FILE:-}"
 export AIC_PM_REPAIR_WORKERS="${AIC_PM_REPAIR_WORKERS:-}"
 export AIC_CONTEXT_FILE="${AIC_CONTEXT_FILE:-}"
 
+# M3 WP-3.1: Canonical Spec injection for Planning phase
+CANONICAL_SPEC_BLOCK=""
+if [[ "${PHASE,,}" == "planning" && "${AIC_PM_REPAIR:-}" != "1" && "${AIC_SKIP_SPEC:-0}" != "1" ]]; then
+  SPEC_ARTIFACT="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports/spec-output.md"
+  if [[ -f "$SPEC_ARTIFACT" ]]; then
+    SPEC_WORDS=$(wc -w < "$SPEC_ARTIFACT" 2>/dev/null || echo 0)
+    if [[ "$SPEC_WORDS" -gt 10 ]]; then
+      CANONICAL_SPEC_BLOCK=$(cat << SPECEOF
+CANONICAL SPECIFICATION (frozen — all architectural decisions below are mandatory)
+
+You MUST align your output with every technology choice, directory structure, and constraint listed in this spec.
+Do not contradict, override, or substitute any spec decision. If the spec says Tailwind v3, use v3.
+
+$(cat "$SPEC_ARTIFACT")
+SPECEOF
+)
+      echo "=== M3: Canonical Spec injected into Planning prompts ($SPEC_WORDS words) ==="
+    else
+      echo "=== M3: Canonical Spec too short ($SPEC_WORDS words), skipped ==="
+    fi
+  else
+    echo "=== M3: Canonical Spec not yet generated (skipped) ==="
+  fi
+fi
+
 TASK_SCOPE=""
 PLANNING_AUTHORITY_BLOCK=""
 CTX=""
@@ -170,6 +195,7 @@ Phase: ${PHASE}
 Execute your assigned tasks for this phase.
 Project directory: ${PROJECT_DIR}
 ${PLANNING_AUTHORITY_BLOCK}
+${CANONICAL_SPEC_BLOCK}
 ${PM_REPAIR_BLOCK}
 ${CLOSEOUT_CONTEXT_BLOCK}
 ${TASK_SCOPE}
