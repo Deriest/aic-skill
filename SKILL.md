@@ -1,7 +1,7 @@
 ---
 name: aic
 description: "AI Engineering Company — 15-worker orchestration system for software development. Dispatch, classify, and route tasks to specialized workers following a structured workflow with Runtime Gates and PM Review."
-version: 3.1.3
+version: 3.1.5
 author: TVD
 platforms: [linux, macos, windows]
 metadata:
@@ -65,6 +65,8 @@ IF control plane endpoints → load `references/dispatcher-control-plane.md`
 IF pipeline UI sizing → load `references/dispatcher-pipeline-ui.md`
 
 ### Pitfalls & Troubleshooting
+IF context window is too small / detect-context fallback → load `references/detect-context-pitfall.md`
+IF OpenCode limit object missing fields / max_tokens payload / crash on startup → load `references/opencode-limit-object-pitfall.md`
 IF dashboard bugs → load `references/dispatcher-pitfalls-dashboard.md`
 IF browser/GUI issues → load `references/dispatcher-pitfalls-browser.md`
 IF UI issues → load `references/dispatcher-pitfalls-ui.md`

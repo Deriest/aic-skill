@@ -41,7 +41,7 @@ query_context_api() {
   # Try /models/{model_id} first
   local resp
   resp=$(curl -s --connect-timeout 5 \
-    -H "Authorization: Bearer $api_key" \
+    -H "Authorization: Bearer ***" \
     "${base_url}/models/${model}" 2>/dev/null || echo "{}")
 
   # Parse context_length from various provider formats
@@ -78,7 +78,7 @@ query_context_list() {
 
   local resp
   resp=$(curl -s --connect-timeout 5 \
-    -H "Authorization: Bearer $api_key" \
+    -H "Authorization: Bearer ***" \
     "${base_url}/models" 2>/dev/null || echo '{"data":[]}')
 
   local ctx
@@ -136,44 +136,57 @@ get_context() {
   fi
 
   # 3. Fallback: conservative default
-  echo "128000"
+  echo "256000"
 }
 
-# Calculate limits proportional to context window
-# Thinker: 80% context, 8% output
-# Crafter: 60% context, 6% output
-# Sprinter: 40% context, 4% output
+# Output policy: OpenCode compatibility default (32000)
+# It is not calculated from context. It is not provider capability.
+# It replaces the previous heuristic implementation.
+OPENCODE_DEFAULT_OUTPUT=32000
+
 calc_limits() {
   local ctx="$1"
-  local pct_ctx="$2"
-  local pct_out="$3"
 
-  local limit_ctx=$(( ctx * pct_ctx / 100 ))
-  local limit_out=$(( ctx * pct_out / 100 ))
+  local limit_ctx=$ctx
+  local limit_out=$OPENCODE_DEFAULT_OUTPUT
 
   # Minimums
   [[ $limit_ctx -lt 4096 ]] && limit_ctx=4096
-  [[ $limit_out -lt 2048 ]] && limit_out=2048
 
   echo "$limit_ctx $limit_out"
 }
 
 # Main
 echo "Detecting context windows..." >&2
+echo "" >&2
 
 CTHINKER=$(get_context "$MODEL_THINKER")
 CCRAFTER=$(get_context "$MODEL_CRAFTER")
 CSPRINTER=$(get_context "$MODEL_SPRINTER")
 
-read -r TC TO <<< "$(calc_limits "$CTHINKER" 80 8)"
-read -r CC CO <<< "$(calc_limits "$CCRAFTER" 60 6)"
-read -r SC SO <<< "$(calc_limits "$CSPRINTER" 40 4)"
+read -r TC TO <<< "$(calc_limits "$CTHINKER")"
+read -r CC CO <<< "$(calc_limits "$CCRAFTER")"
+read -r SC SO <<< "$(calc_limits "$CSPRINTER")"
 
+echo "Provider Context:" >&2
+echo "$CTHINKER" >&2
 echo "" >&2
-echo "Detected context windows:" >&2
-echo "  Thinker  ($MODEL_THINKER):  ${CTHINKER} → limit: context=${TC}, output=${TO}" >&2
-echo "  Crafter  ($MODEL_CRAFTER):  ${CCRAFTER} → limit: context=${CC}, output=${CO}" >&2
-echo "  Sprinter ($MODEL_SPRINTER): ${CSPRINTER} → limit: context=${SC}, output=${SO}" >&2
+echo "Output Policy:" >&2
+echo "OpenCode Default ($OPENCODE_DEFAULT_OUTPUT)" >&2
+echo "" >&2
+echo "Applied:" >&2
+echo "" >&2
+echo "Thinker" >&2
+echo "Context: ${TC}" >&2
+echo "Output: ${TO}" >&2
+echo "" >&2
+echo "Crafter" >&2
+echo "Context: ${CC}" >&2
+echo "Output: ${TO}" >&2
+echo "" >&2
+echo "Sprinter" >&2
+echo "Context: ${SC}" >&2
+echo "Output: ${SO}" >&2
 
 # Output as JSON for setup.sh to consume
-printf '{"thinker":{"context":%d,"output":%d,"window":%d},"crafter":{"context":%d,"output":%d,"window":%d},"sprinter":{"context":%d,"output":%d,"window":%d}}' "$TC" "$TO" "$CTHINKER" "$CC" "$CO" "$CCRAFTER" "$SC" "$SO" "$CSPRINTER" 
+printf '{"thinker":{"context":%d,"output":%d,"window":%d},"crafter":{"context":%d,"output":%d,"window":%d},"sprinter":{"context":%d,"output":%d,"window":%d}}' "$TC" "$TO" "$CTHINKER" "$CC" "$CO" "$CCRAFTER" "$SC" "$SO" "$CSPRINTER"

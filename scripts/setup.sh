@@ -256,7 +256,7 @@ generate_config() {
     SC=$(echo "$LIMITS" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['sprinter']['context'])" 2>/dev/null || echo "256000")
     SO=$(echo "$LIMITS" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['sprinter']['output'])" 2>/dev/null || echo "16000")
   else
-    TC=800000; TO=64000; CC=512000; CO=32000; SC=256000; SO=16000
+    TC=256000; TO=32000; CC=256000; CO=32000; SC=256000; SO=32000
   fi
 
   echo "    Thinker limits:  context=${TC} output=${TO}"
