@@ -689,7 +689,7 @@ function createEngine(opts) {
   function triggerKnowledgeAsync(taskId) {
     bus.emit('knowledge.started', { taskId });
     try {
-      const kDir = path.join(skillDir, 'knowledge');
+      const kDir = path.join(skillDir, '.aic', 'knowledge');
       const kFile = path.join(kDir, 'task-entries.json');
       const entries = fs.existsSync(kFile)
         ? JSON.parse(fs.readFileSync(kFile, 'utf8'))

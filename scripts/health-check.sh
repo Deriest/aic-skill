@@ -22,12 +22,12 @@ case "$ACTION" in
     STATE="healthy"; RESULTS="{}"
     check_server() { curl -sf http://localhost:6868/health >/dev/null 2>&1; }
     check_auth() { [[ -f "$SKILL_DIR/.aic/auth.json" ]]; }
-    check_knowledge() { [[ -d "$SKILL_DIR/.aic/knowledge" ]]; }
+    check_knowledge() { if [[ -d "$SKILL_DIR/.aic/knowledge" ]]; then echo "healthy"; else echo "lazy"; fi; }
     check_filesystem() { touch "$SKILL_DIR/.aic/.health_test" && rm -f "$SKILL_DIR/.aic/.health_test"; }
     
     R_SERVER=$(check_component "server" "check_server" | cut -d: -f2)
     R_AUTH=$(check_component "auth" "check_auth" | cut -d: -f2)
-    R_KNOWLEDGE=$(check_component "knowledge" "check_knowledge" | cut -d: -f2)
+    R_KNOWLEDGE=$(check_knowledge)
     R_FS=$(check_component "filesystem" "check_filesystem" | cut -d: -f2)
     
     for r in "$R_SERVER" "$R_AUTH" "$R_KNOWLEDGE" "$R_FS"; do

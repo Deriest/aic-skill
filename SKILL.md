@@ -1,7 +1,7 @@
 ---
 name: aic
 description: "AI Engineering Company — 15-worker orchestration system for software development. Dispatch, classify, and route tasks to specialized workers following a structured workflow with Runtime Gates and PM Review."
-version: 3.1.5
+version: 3.1.6
 author: TVD
 platforms: [linux, macos, windows]
 metadata:
@@ -60,12 +60,14 @@ IF intake routing / EPIC-201 / Quick Conversation Discovery From PRD / PRD appro
 
 ### Dashboard & API
 IF dashboard/API issues → load `references/dispatcher-dashboard.md`
+IF health-check marks knowledge as unhealthy on cold start → load `references/health-check-knowledge-pitfall.md`
+IF auth/API key setup or Invalid API key errors on port 6868 → load `references/dispatcher-auth-reset.md`
 IF Config page FETCH MODELS fails / Failed to fetch / LAN baseURL from browser → load `references/dashboard-config-fetch-models.md` + `references/dispatcher-pitfalls-ui.md`
 IF control plane endpoints → load `references/dispatcher-control-plane.md`
 IF pipeline UI sizing → load `references/dispatcher-pipeline-ui.md`
 
 ### Pitfalls & Troubleshooting
-IF context window is too small / detect-context fallback → load `references/detect-context-pitfall.md`
+IF context limits, detect-context policy, or opencode limit object → load `references/opencode-context-policy.md`
 IF OpenCode limit object missing fields / max_tokens payload / crash on startup → load `references/opencode-limit-object-pitfall.md`
 IF dashboard bugs → load `references/dispatcher-pitfalls-dashboard.md`
 IF browser/GUI issues → load `references/dispatcher-pitfalls-browser.md`
@@ -73,6 +75,7 @@ IF UI issues → load `references/dispatcher-pitfalls-ui.md`
 IF heredoc escaping issues → load `references/dispatcher-pitfalls-heredoc.md`
 IF historical pitfalls → load `references/dispatcher-pitfalls-history.md`
 IF auth/API key issues → load `references/runtime-auth-pattern.md`
+IF GitHub PAT injection blocked / dotfile overwrite security scan → load `references/security-pat-injection-pitfall.md`
 IF FEAT-001 runtime authority / legacy 403 / canonical verify → load `references/runtime-authority-verification.md`
 IF Runtime OAT BLOCKED with empty reports / wrong task on dashboard → load `references/runtime-checkpoint-task-isolation.md`
 IF Runtime OAT Investigate drift / empty task description / PM REWORK on artifact quality → load `references/runtime-oat-investigate-scope.md`

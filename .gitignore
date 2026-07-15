@@ -58,4 +58,4 @@ __pycache__/
 .pytest_cache/
 
 # Knowledge generated ledger (auto-appended on task-complete, not production config)
-knowledge/task-entries.json
+.aic/knowledge/task-entries.json
