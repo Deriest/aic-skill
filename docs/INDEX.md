@@ -2,7 +2,7 @@
 
 ## Product Documentation
 
-- [API Reference](api/api-reference.md) — All 21 endpoints
+- [API Reference](api/api-reference.md) — All 27 endpoints (21 core + 6 observability)
 - [Architecture Overview](architecture/architecture-overview.md) — System design, current
 - [Developer Guide](guides/developer-guide.md) — Setup & conventions
 - [Operations Guide](operations/operations-guide.md) — Deployment, monitoring, recovery
@@ -17,6 +17,11 @@
 - [references/](../references/) — Active reference docs (FIX/IMP lineage, pitfalls, patterns) — 105 files
 - [templates/](../templates/) — Worker artifact templates + phase-contracts seed
 - [archive/](../archive/) — Historical (milestones, runtime-stabilization, platform-experiments, defects, release-readiness, ops)
+
+## Runtime Observability (WP-80)
+
+- [Architecture Plan](wp-80-architecture-plan.md) — Runtime Observability Platform blueprint
+- [Runtime Observability Reference](../references/runtime-observability-wp80.md) — When to load, key findings, architecture summary
 
 ## Governance
 

@@ -2,6 +2,37 @@
 
 All notable releases and historical task entries.
 
+## [3.2.0] — Runtime Observability Platform (WP-80) — 2026-07-15
+
+### Added
+- **Runtime Observability Layer:** Read-only service aggregating engine state, checkpoints, filesystem, and events into a unified snapshot.
+- **`GET /api/observability/runtime`** — Canonical runtime snapshot (engine, workers, leases, pipeline, knowledge, health, metrics, recent events).
+- **`GET /api/observability/workers/:id`** — Single worker detail with lease history.
+- **`GET /api/observability/events`** — Paginated event timeline with filtering (`?limit=&type=&taskId=&phase=`).
+- **`GET /api/observability/pipeline/:taskId`** — Historical pipeline state for a specific task.
+- **`GET /api/observability/knowledge/:taskId`** — Knowledge entry for a specific task.
+- **`GET /api/observability/tasks/:taskId/artifacts`** — Artifact listing for a task.
+- **Append-only JSONL Event Store** (`scripts/engine/event-store.js`) with rotation (10MB) and corruption recovery.
+
+### Improved
+- Read-only Observability Service (`scripts/engine/observability.js`) with TTL-based filesystem caching (5s).
+- Event bus (`scripts/engine/events.js`) now supports persistence hook for JSONL event store.
+- Dashboard backward compatibility preserved — existing `/api/status` endpoint unchanged.
+- System Validation integration — SV-007 through SV-017 can now consume observability APIs.
+
+### Fixed
+- Event store rotation no longer runs `statSync` on every append (optimized to every 100 appends).
+- URL parsing in observability handler no longer uses hardcoded localhost.
+- Health and metrics filesystem reads now use TTL cache instead of raw `readFileSync` per request.
+
+### Compatibility
+- **No breaking API changes.**
+- Existing endpoints remain fully compatible: `/health`, `/api/status`, `/api/metrics`, `/api/task-start`, `/api/runtime/intent`.
+- New functionality available under `/api/observability/*`.
+
+---
+
+
 ## [3.1.3] — Intelligent Intake (EPIC-201) — 2026-07-14
 
 **AIC v3.1.3** (global release). Dispatcher pre-pipeline intake: four modes, deterministic requirement completeness, project-scoped state, domain checklists, and Option C (LLM-assisted clarification question wording only).

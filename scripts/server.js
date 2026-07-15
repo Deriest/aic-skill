@@ -12,6 +12,7 @@ const auth = require('./auth');
 const { handleOpsEndpoint } = require('./ops-endpoints');
 const { handleEnterpriseEndpoint } = require('./enterprise-endpoints');
 const { createEngine } = require('./engine');
+const { createObservabilityHandler } = require('./observability-handler');
 
 function broadcast() {
   /* ponytail: no-op; dashboard polls GET /api/status */
@@ -378,6 +379,12 @@ function send(res, status, body, req) {
 
 loadState();
 getRuntimeEngine();
+const obsHandler = createObservabilityHandler({
+  skillDir: SKILL_DIR,
+  tasksDir: TASKS_DIR,
+  getState: () => state,
+  engine: getRuntimeEngine(),
+});
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
@@ -934,6 +941,13 @@ const server = http.createServer(async (req, res) => {
 
   // Ops endpoints (Milestone I)
   if (await handleOpsEndpoint(req, res, send, readBody, { ...state, port: PORT })) return;
+
+    // === Runtime Observability Platform (WP-80) ===
+  if (pathname.startsWith('/api/observability/')) {
+    if (!auth.requireAuth(req, res)) return;
+    const handled = obsHandler.handleObservability(req, res, pathname, send);
+    if (handled !== false) return;
+  }
 
   return send(res, 404, { error: 'not found' });
 });

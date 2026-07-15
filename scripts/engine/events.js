@@ -2,13 +2,17 @@
 
 const MAX_EVENTS = 500;
 
-function createEventBus() {
+function createEventBus(persistFn) {
   const events = [];
 
   function emit(type, payload = {}) {
     const ev = { type, ts: Date.now(), ...payload };
     events.push(ev);
     if (events.length > MAX_EVENTS) events.shift();
+    // Persist to JSONL event store if configured
+    if (persistFn) {
+      try { persistFn(ev); } catch {}
+    }
     return ev;
   }
 

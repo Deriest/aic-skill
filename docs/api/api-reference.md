@@ -108,3 +108,33 @@ Invalid/missing key → 401.
   }
 }
 ```
+
+---
+
+## Runtime Observability (WP-80)
+
+Read-only observability endpoints. Auth required.
+
+### GET /api/observability/runtime
+
+Canonical runtime snapshot. Returns engine, active task, workers, leases, pipeline, knowledge, health, metrics, and recent events.
+
+### GET /api/observability/workers/:id
+
+Single worker detail with lease history.
+
+### GET /api/observability/events
+
+Paginated event timeline. Query params: `?limit=50&type=X&taskId=Y&phase=Z`
+
+### GET /api/observability/pipeline/:taskId
+
+Detailed pipeline state for a specific task with phase history.
+
+### GET /api/observability/knowledge/:taskId
+
+Knowledge entry for a specific task.
+
+### GET /api/observability/tasks/:taskId/artifacts
+
+List artifacts (reports) produced by a task.

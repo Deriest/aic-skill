@@ -63,6 +63,7 @@ IF dashboard/API issues → load `references/dispatcher-dashboard.md`
 IF health-check marks knowledge as unhealthy on cold start → load `references/health-check-knowledge-lazy-evaluation.md`
 IF Config page FETCH MODELS fails / Failed to fetch / LAN baseURL from browser → load `references/dashboard-config-fetch-models.md` + `references/dispatcher-pitfalls-ui.md`
 IF dashboard config reverts to 127.0.0.1 or saves literal asterisks for API key → load `references/dashboard-config-provider-selection-pitfall.md`
+IF dashboard config UI keeps changing provider/baseUrl/apiKey on restart → load `references/dashboard-config-provider-selection-pitfall.md` (root cause: `ConfigPage.tsx` `Object.keys().find()` picks first non-openai/non-anthropic provider — if INTERCEPT exists before AIC in JSON, it always wins)
 IF user asks about API key overwrites or config selection bugs → load `references/dashboard-config-save-pitfall.md`
 IF control plane endpoints → load `references/dispatcher-control-plane.md`
 IF pipeline UI sizing → load `references/dispatcher-pipeline-ui.md`
@@ -122,6 +123,8 @@ IF pipeline-orchestrator fails at task-start or phase-runner throws Invalid work
 IF dashboard config saves literal asterisks for API key or overrides models → load `references/dashboard-config-save-pitfall.md`
 IF Phase Deliverable Contract architecture / IMP-001 / dedupe prompts vs PM vs runtime-contracts.json → load `references/phase-deliverable-contract-investigation-imp001.md`
 IF pipeline-orchestrator.sh failures / task-start empty / API key not injected / python3 -c triple-quote fragility / security scan blocks credential edits → load `references/pipeline-orchestrator-reliability-pitfalls.md`
+IF Runtime Observability / WP-80 / runtime snapshot API / event store / SV-007–SV-017 blocked by hidden engine internals / observability gap → load `references/runtime-observability-wp80.md`
+IF health-check reports knowledge unhealthy when folder missing on fresh install → load `references/health-check-knowledge-lazy-evaluation.md` + `references/health-check-knowledge-pitfall.md`
 IF general troubleshooting → load `references/dispatcher-troubleshooting.md`
 
 ### Documentation Consolidation & Release
