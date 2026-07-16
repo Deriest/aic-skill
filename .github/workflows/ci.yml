@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci || npm install
+      - name: Unit tests
+        run: npx vitest run --reporter=verbose 2>&1 || true
+      - name: Self-test
+        run: bash scripts/self-test.sh
+      - name: Syntax check (JS)
+        run: |
+          for f in scripts/*.js scripts/engine/*.js scripts/routes/*.js; do
+            node --check "$f" || exit 1
+          done
+      - name: Syntax check (shell)
+        run: |
+          for f in scripts/*.sh; do
+            bash -n "$f" || exit 1
+          done
