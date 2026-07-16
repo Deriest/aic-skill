@@ -108,6 +108,22 @@ for artifact in "$@"; do
   fi
 done
 
+# ── Inject Consistency Report if available (PLANNING phase) ──
+if [[ -n "${AIC_TASK_ID:-}" && "${PHASE,,}" == "planning" ]]; then
+  CONSISTENCY_REPORT="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports/consistency-report.md"
+  if [[ -f "$CONSISTENCY_REPORT" ]]; then
+    CC_BYTES=$(wc -c < "$CONSISTENCY_REPORT" 2>/dev/null || echo 0)
+    if [[ "$CC_BYTES" -gt 20 ]]; then
+      echo "" >> "$PROMPT_FILE"
+      echo "### Consistency Report (auto-generated before PM Review)" >> "$PROMPT_FILE"
+      echo '```' >> "$PROMPT_FILE"
+      cat "$CONSISTENCY_REPORT" >> "$PROMPT_FILE"
+      echo '```' >> "$PROMPT_FILE"
+      echo "=== Consistency Report injected into PM Review context ==="
+    fi
+  fi
+fi
+
 cat >> "$PROMPT_FILE" << PROMPT
 
 ## Instructions

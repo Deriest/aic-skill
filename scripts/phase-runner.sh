@@ -28,6 +28,30 @@ export AIC_PM_VERDICT_FILE="${AIC_PM_VERDICT_FILE:-}"
 export AIC_PM_REPAIR_WORKERS="${AIC_PM_REPAIR_WORKERS:-}"
 export AIC_CONTEXT_FILE="${AIC_CONTEXT_FILE:-}"
 export AIC_REPAIR_ATTEMPT="${AIC_REPAIR_ATTEMPT:-}"
+export AIC_EXECUTION_PLAN="${AIC_EXECUTION_PLAN:-}"
+
+# ── Execution Plan injection for downstream PLANNING workers ──
+EXECUTION_PLAN_BLOCK=""
+SIBLING_ARTIFACTS_BLOCK=""
+if [[ "${PHASE,,}" == "planning" && -n "$AIC_TASK_ID" ]]; then
+  EXECUTION_PLAN_PATH="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports/execution-plan.md"
+  if [[ -f "$EXECUTION_PLAN_PATH" ]] && [[ "${AIC_EXECUTION_PLAN:-}" == "1" || "${AIC_PM_REPAIR:-}" == "1" ]]; then
+    EP_WORDS=$(wc -w < "$EXECUTION_PLAN_PATH" 2>/dev/null || echo 0)
+    if [[ "$EP_WORDS" -gt 10 ]]; then
+      EXECUTION_PLAN_BLOCK=$(cat << EPEOF
+EXECUTION PLAN (single source of truth — produced by PM)
+
+You MUST align your output with this execution plan.
+Every deliverable, constraint, and acceptance criterion below is mandatory.
+Do not contradict the execution plan. If you disagree, explain why in a dedicated section.
+
+$(cat "$EXECUTION_PLAN_PATH")
+EPEOF
+)
+      echo "=== Execution Plan injected into $worker prompt ($EP_WORDS words) ==="
+    fi
+  fi
+fi
 
 # M3 WP-3.1: Canonical Spec injection for Planning phase
 CANONICAL_SPEC_BLOCK=""
@@ -119,8 +143,31 @@ for worker_arg in "$@"; do
   COMPLETION_BLOCK=$("$SCRIPT_DIR/worker-completion-contract.sh")
   PM_REPAIR_BLOCK=""
   if [[ "${AIC_PM_REPAIR:-}" == "1" && -n "${AIC_PM_VERDICT_FILE:-}" && -f "${AIC_PM_VERDICT_FILE}" ]]; then
-    if [[ ",${AIC_PM_REPAIR_WORKERS:-}," == *",${worker},"* ]]; then
+    if [[ ",${AIC_PM_REPAIR_WORKERS:-}," == *",$worker,"* ]]; then
       PM_REPAIR_BLOCK=$(node "$SCRIPT_DIR/pm-repair-respawn.js" repair-block "$worker" "$AIC_PM_VERDICT_FILE" "${CTX:-${AIC_CONTEXT_FILE:-}}" || true)
+    fi
+  fi
+
+  # ── Collaborative Repair: inject sibling artifacts for PLANNING repair workers ──
+  if [[ "${AIC_PM_REPAIR:-}" == "1" && "${PHASE,,}" == "planning" ]]; then
+    SIBLING_ARTIFACTS_BLOCK=""
+    REPORT_DIR="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports"
+    for sibling_worker in architect research designer; do
+      [[ "$sibling_worker" == "$worker" ]] && continue
+      sib_art="$REPORT_DIR/${sibling_worker}-output.md"
+      if [[ -f "$sib_art" ]]; then
+        sib_bytes=$(wc -c < "$sib_art" 2>/dev/null || echo 0)
+        if [[ "$sib_bytes" -gt 50 ]]; then
+          SIBLING_ARTIFACTS_BLOCK+="
+SIBLING ARTIFACT: ${sibling_worker}-output.md (peer worker output you must consider)
+$(cat "$sib_art")
+
+"
+        fi
+      fi
+    done
+    if [[ -n "$SIBLING_ARTIFACTS_BLOCK" ]]; then
+      echo "=== Collaborative Repair: sibling artifacts injected for $worker ==="
     fi
   fi
   RESEARCH_PLANNING_BLOCK=""
@@ -190,6 +237,52 @@ Populate every section with real {label.lower()} work for the current task scope
   if [[ "${PHASE,,}" == "closeout" && -n "${AIC_TASK_ID:-}" ]]; then
     CLOSEOUT_CONTEXT_BLOCK=$(python3 "$SCRIPT_DIR/closeout-context-block.py" "$SKILL_DIR" "$AIC_TASK_ID" "${CTX:-}" 2>/dev/null || true)
   fi
+
+  # ── PM Execution Plan instruction (PM in PLANNING must produce execution-plan.md) ──
+  PM_EXECUTION_PLAN_BLOCK=""
+  if [[ "${PHASE,,}" == "planning" && "$worker" == "pm" && -n "${AIC_TASK_ID:-}" ]]; then
+    EP_REPORTS_DIR="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports"
+    PM_EXECUTION_PLAN_BLOCK=$(cat << EPIEOF
+MANDATORY DELIVERABLE: execution-plan.md
+
+You MUST produce a file at: ${EP_REPORTS_DIR}/execution-plan.md
+
+Use this exact structure:
+
+# Execution Plan
+
+## Objective
+[What this task achieves — one paragraph]
+
+## Scope
+[What IS included — bullet list]
+
+## Non-Scope  
+[What is explicitly OUT of scope — bullet list]
+
+## Assumptions
+[Technical assumptions — bullet list]
+
+## Constraints
+[Technical/business constraints — bullet list]
+
+## Deliverables
+[Concrete outputs per worker — table: Worker | Deliverable | Acceptance Criteria]
+
+## Risks
+[Known risks with mitigation — table: Risk | Impact | Mitigation]
+
+## Acceptance Criteria
+[Measurable criteria for task completion — numbered list]
+
+This file is the SINGLE SOURCE OF TRUTH for all downstream workers.
+Every worker (architect, research, designer) will read this plan and align their work to it.
+Be specific. Be concrete. No vague statements.
+
+ALSO produce your pm-output.md report as usual.
+EPIEOF
+)
+  fi
   cat > "$PROMPT_FILE" << PROMPT
 You are the ${worker} for the AIC.
 Phase: ${PHASE}
@@ -197,7 +290,10 @@ Execute your assigned tasks for this phase.
 Project directory: ${PROJECT_DIR}
 ${PLANNING_AUTHORITY_BLOCK}
 ${CANONICAL_SPEC_BLOCK}
+${PM_EXECUTION_PLAN_BLOCK}
+${EXECUTION_PLAN_BLOCK}
 ${PM_REPAIR_BLOCK}
+${SIBLING_ARTIFACTS_BLOCK}
 ${CLOSEOUT_CONTEXT_BLOCK}
 ${TASK_SCOPE}
 ${TRIVIAL_TASK_BLOCK}
