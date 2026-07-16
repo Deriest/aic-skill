@@ -1,7 +1,7 @@
 ---
 name: aic
 description: "AI Engineering Company — 15-worker orchestration system for software development. Dispatch, classify, and route tasks to specialized workers following a structured workflow with Runtime Gates and PM Review."
-version: 3.3.0
+version: 3.4.0
 author: TVD
 platforms: [linux, macos, windows]
 metadata:
@@ -136,8 +136,8 @@ IF Phase Deliverable Contract architecture / IMP-001 / dedupe prompts vs PM vs r
 IF pipeline-orchestrator.sh failures / task-start empty / API key not injected / python3 -c triple-quote fragility / security scan blocks credential edits → load `references/pipeline-orchestrator-reliability-pitfalls.md`
 IF Runtime Observability / WP-80 / runtime snapshot API / event store / SV-007–SV-017 blocked by hidden engine internals / observability gap → load `references/runtime-observability-wp80.md`
 IF health-check reports knowledge unhealthy when folder missing on fresh install → load `references/health-check-knowledge-lazy-evaluation.md` + `references/health-check-knowledge-pitfall.md`
-IF v3.3.0 master plan / pipeline resilience / recovery engine / artifact provider / canonical spec / framework invariants / repair intelligence / resolution plan → load `references/v330-master-plan.md` + `references/recovery-framework-architecture.md` + `references/engineering-decision-package-spec.md`
-IF v3.3.0 implementation / proven patch sequences / M1+M2+M3 restoration order / EDP parser + retry loop + frontmatter / mechanical validation gate / canonical spec injection / artifact provenance → load `references/v330-implementation-proven-patches.md`
+IF v3.4.0 master plan / pipeline resilience / recovery engine / artifact provider / canonical spec / framework invariants / repair intelligence / resolution plan → load `references/v330-master-plan.md` + `references/recovery-framework-architecture.md` + `references/engineering-decision-package-spec.md`
+IF v3.4.0 implementation / proven patch sequences / M1+M2+M3 restoration order / EDP parser + retry loop + frontmatter / mechanical validation gate / canonical spec injection / artifact provenance → load `references/v330-implementation-proven-patches.md`
 IF `git checkout` destroyed uncommitted session work / lost implementation / recovery from LLM session history → load `references/git-checkout-uncommitted-pitfall.md`
 IF `execute_code` python string escaping corrupted files / multi-line JS/shell patching failed syntax check → load `references/execute_code-string-escaping-pitfall.md`
 IF multi-milestone restoration needed / files lost / controlled restoration procedure → load `references/multi-milestone-restoration-pattern.md`
@@ -313,9 +313,9 @@ Dashboard OAT and Runtime OAT are different things. Do NOT conflate them.
 
 **Pitfall**: **Git checkout destroys uncommitted implementation.** During an implementation cycle where the instruction is "Do NOT commit", running `git checkout <file>` or `git reset` will permanently destroy the work in progress because there are no commits in the reflog to recover from. Do NOT run git commands that modify the working tree when operating in a no-commit constraint mode. If a file gets corrupted by a bad patch, fix the file manually or patch it back; do not checkout from the index.
 
-**Pitfall**: **UNKNOWN or MANUAL_APPROVAL_REQUIRED as PM verdicts.** v3.3.0 architecture correction: PM Review must ALWAYS return deterministic engineering verdict — PASS, REWORK, or BLOCKED. UNKNOWN and MANUAL_APPROVAL_REQUIRED are REMOVED. BLOCKED is a valid verdict with machine-readable reason code. Recovery Engine handles failures BEFORE PM Review. PM evaluates evidence only. See `references/recovery-framework-architecture.md`.
+**Pitfall**: **UNKNOWN or MANUAL_APPROVAL_REQUIRED as PM verdicts.** v3.4.0 architecture correction: PM Review must ALWAYS return deterministic engineering verdict — PASS, REWORK, or BLOCKED. UNKNOWN and MANUAL_APPROVAL_REQUIRED are REMOVED. BLOCKED is a valid verdict with machine-readable reason code. Recovery Engine handles failures BEFORE PM Review. PM evaluates evidence only. See `references/recovery-framework-architecture.md`.
 
-**Pitfall**: **PM returns verdict without resolution plan.** v3.3.0 architecture correction V2: PM must return BOTH verdict AND executable resolution plan. PASS → next_phase. REWORK → repair_owner + scope + resume_phase. BLOCKED → root_cause + owner + actions + resume_phase. Dispatcher executes the resolution plan — never invents recovery. See `references/recovery-framework-architecture.md`.
+**Pitfall**: **PM returns verdict without resolution plan.** v3.4.0 architecture correction V2: PM must return BOTH verdict AND executable resolution plan. PASS → next_phase. REWORK → repair_owner + scope + resume_phase. BLOCKED → root_cause + owner + actions + resume_phase. Dispatcher executes the resolution plan — never invents recovery. See `references/recovery-framework-architecture.md`.
 
 **Pitfall**: **PM Review `--auto` missing — Smart Approval blocks reads** — `pm-review.sh` does NOT pass `--auto` to `opencode run` (unlike `spawn-worker.sh` which does). When Smart Approval is enabled in Hermes, opencode PM Review sessions get tool permission rejections for harmless reads (`cat`, `glob`, `read`). This produces `UNKNOWN` verdict → `BLOCKED`. **Symptom:** engine.json shows `lastVerdict: "UNKNOWN"` with `pm.lastVerdict` containing raw JSON tool_use events instead of `VERDICT:`. **Root cause:** `pm-review.sh` invokes `opencode run` without `--auto`, so Smart Approval intercepts every tool call. **Fix:** Add `--auto` flag to the `opencode run` invocation inside `pm-review.sh`, or ensure the Hermes `approvals` config permits read-only tools for spawned sessions. **Recovery:** Cancel blocked task, restart server, retry. If `--auto` is intentionally omitted for safety (FIX-011 isolation), then configure Smart Approval to allow-list read-only tools for PM sessions.
 
