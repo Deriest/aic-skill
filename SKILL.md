@@ -22,7 +22,7 @@ You are the **Dispatcher** — the user-facing orchestrator for an AI Engineerin
 
 When activated via `/aic`:
 1. Preflight: `opencode --version` + `curl localhost:6868/health`
-2. Set dispatcher status: `POST /api/agent-status` (requires API key — read from `.aic/config.json` or `scripts/config.sh` in the project dir; if no project dir set yet, skip silently — no API key available before step 3)
+2. Set dispatcher status: `POST /api/agent-status` (requires API key — read from `.aic/auth.json` → `apiKeys[0].key`, or via `scripts/api-auth.sh`; if no project dir set yet, skip silently — no API key available before step 3)
 3. Ask user: "Which project folder? Use: `./aic project <path>`"
 4. User sets folder → THEN greet with **compact** pipeline status (task id, phase, idle/busy) and ask what they want to do
 
@@ -78,10 +78,12 @@ IF pipeline UI sizing → load `references/dispatcher-pipeline-ui.md`
 
 ### Pitfalls & Troubleshooting
 IF context limits, detect-context policy, or opencode limit object → load `references/opencode-context-policy.md`
+IF investigating shell scripts for syntax or bugs → be aware Hermes terminal redacts sensitive variables (like `$key`) into `***` in command output. This makes valid code look like broken string literals (e.g. `auth_flag="X-API-Key: ***`). Verify with `xxd` or `python3 -c "open('f','rb').read()"` before declaring a bug.
 IF OpenCode limit object missing fields / max_tokens payload / crash on startup → load `references/opencode-limit-object-pitfall.md`
 IF dashboard bugs → load `references/dispatcher-pitfalls-dashboard.md`
 IF browser/GUI issues → load `references/dispatcher-pitfalls-browser.md`
 IF UI issues → load `references/dispatcher-pitfalls-ui.md`
+IF shell injection audit / bash heredoc security / Python-in-shell escaping → load `references/shell-injection-fix-pattern.md`
 IF heredoc escaping issues → load `references/dispatcher-pitfalls-heredoc.md`
 IF historical pitfalls → load `references/dispatcher-pitfalls-history.md`
 IF auth/API key issues → load `references/runtime-auth-pattern.md`
@@ -140,6 +142,11 @@ IF `git checkout` destroyed uncommitted session work / lost implementation / rec
 IF `execute_code` python string escaping corrupted files / multi-line JS/shell patching failed syntax check → load `references/execute_code-string-escaping-pitfall.md`
 IF multi-milestone restoration needed / files lost / controlled restoration procedure → load `references/multi-milestone-restoration-pattern.md`
 IF general troubleshooting → load `references/dispatcher-troubleshooting.md`
+IF EIP investigation / engineering performance audit / performance findings / security review / test coverage gaps / benchmarking gaps / subprocess overhead / version mismatch → load `references/eip-investigation-findings.md`
+IF EIP-2 architecture audit / module boundaries / dependency graph / configuration management / code duplication / script responsibilities / internal contracts / reference document organization / God Object / circular state coupling / PHASE_PLANS drift → load `references/eip2-architecture-audit-2026-07-16.md`
+IF EIP-1 reliability audit / api-auth broken string / non-atomic state writes / FSM canAdvance bug / lease completion suppressed / RBAC fail-open / exit code semantics → load `references/eip1-reliability-audit-2026-07-16.md`
+IF EIP execution / running EIP phases / implementing engineering improvements / master verification / vitest setup / input validation middleware / shell injection fix → load `references/eip-execution-pattern.md`
+IF all EIP investigation findings consolidated → load `references/eip-consolidated.md`
 
 ### Documentation Consolidation & Release
 IF user issues PM FINAL INVESTIGATION ORDER or PM FINAL RELEASE ORDER → load `references/pm-orders-response-format.md`
@@ -171,14 +178,6 @@ IF freezing user visual/language constraints → copy `templates/promo-design-br
 
 **Planning gate (website):** After Architect, spawn **Designer** for `docs/design-spec.md` before Implementation. Architect-only + Frontend is a process gap — user correction *"kita ga pakai designer ? kan ini website"*.
 
-### Discovery & Phase Review
-IF Engineering Decision Package (EDP) / PM verdicts (PASS/REWORK/BLOCKED) / PM responsibility vs Dispatcher routing → load `references/engineering-decision-package.md`
-IF architecture invariants / milestone commit policy / recovery vs review boundary → load `references/architecture-invariants-v3.md`
-IF intake / EPIC-201 / PRD_<Project>.md / skip discovery / requirement completeness → load `references/epic-201-wp201-intake-routing-architecture.md` and `dispatcher-discipline-aic` (RH-004)
-### Discovery & Phase Review
-IF Engineering Decision Package (EDP) / PM verdicts (PASS/REWORK/BLOCKED) / PM responsibility vs Dispatcher routing → load `references/engineering-decision-package.md`
-IF architecture invariants / milestone commit policy / recovery vs review boundary → load `references/architecture-invariants-v3.md`
-IF intake / EPIC-201 / PRD_<Project>.md / skip discovery / requirement completeness → load `references/epic-201-wp201-intake-routing-architecture.md` and `dispatcher-discipline-aic` (RH-004)
 IF discovery workflow → load `references/dispatcher-discovery.md`
 IF phase review gate → load `references/dispatcher-phase-review.md`
 IF QA validation policy → load `references/dispatcher-qa-validation.md`
@@ -310,6 +309,8 @@ Dashboard OAT and Runtime OAT are different things. Do NOT conflate them.
 
 **Pitfall**: **Multi-milestone restoration after data loss** — When a bad `git checkout` destroys uncommitted M1+M2 work, and M3 patches were applied on top of the reverted baseline, the resulting file state is critically broken (importing deleted modules, missing critical functions). Recovery requires applying ALL milestone patches in exact dependency order from session history or backup files. Each file must pass syntax validation before proceeding to the next. Use `/tmp/aic-backup-YYYYMMDD/` as safety net. See `references/v330-implementation-proven-patches.md` for exact restoration order.
 
+**CRITICAL RESTORATION LESSON:** When `git checkout` destroys uncommitted work, NEVER use `execute_code` with python string interpolation to patch files — the quoting/escaping corrupts the code (syntax errors on JS/bash). Instead: (1) back up current files to `/tmp/aic-backup-YYYYMMDD/`, (2) use the `write_file` tool to write COMPLETE file contents from session history, (3) apply remaining patches via the `patch` tool with exact context strings. The safest approach for large files like `engine/index.js` is to write the COMPLETE file in one shot rather than chaining many small patches — each patch that fails mid-sequence leaves the file in a partially-reverted state. Always verify with `node --check` or `bash -n` AFTER EACH patch before proceeding to the next one.
+
 **Pitfall**: **Git checkout destroys uncommitted implementation.** During an implementation cycle where the instruction is "Do NOT commit", running `git checkout <file>` or `git reset` will permanently destroy the work in progress because there are no commits in the reflog to recover from. Do NOT run git commands that modify the working tree when operating in a no-commit constraint mode. If a file gets corrupted by a bad patch, fix the file manually or patch it back; do not checkout from the index.
 
 **Pitfall**: **UNKNOWN or MANUAL_APPROVAL_REQUIRED as PM verdicts.** v3.3.0 architecture correction: PM Review must ALWAYS return deterministic engineering verdict — PASS, REWORK, or BLOCKED. UNKNOWN and MANUAL_APPROVAL_REQUIRED are REMOVED. BLOCKED is a valid verdict with machine-readable reason code. Recovery Engine handles failures BEFORE PM Review. PM evaluates evidence only. See `references/recovery-framework-architecture.md`.
@@ -357,21 +358,6 @@ Verification levels (ascending):
 4. Does it actually execute end-to-end? (run it)
 
 If step 2-4 are missing, the feature is NOT complete regardless of how well step 1 is documented.
-
-### Work Package Structure
-
-Work Packages represent **business capabilities**, not implementation details. Internal wiring, helper functions, PID handling belong to the capability that requires them. Never create a WP for "execution wiring" — it belongs in the WP that needs it.
-
-### Parallel Scheduler Pattern
-Runtime supports parallel execution via bash `&` + `wait`:
-```bash
-spawn-worker.sh backend crafter /dir /prompt --background &
-PID_BE=$!
-spawn-worker.sh frontend crafter /dir /prompt --background &
-PID_FE=$!
-wait $PID_BE $PID_FE   # phase barrier
-```
-Load `references/parallel-execution-model.md` for full dependency matrix and barrier rules.
 
 ### Work Package Structure
 
@@ -521,6 +507,41 @@ Discovered during Milestone H artifact-registry.sh, knowledge-lessons.sh, knowle
     KEY="$2"; VALUE="$3"  # override global positions
     [[ -z "$KEY" ]] && ...
 ```
+
+**Sub-pitfall: shell injection into Python heredocs.** When bash variables containing user input are interpolated into `python3 << PYEOF ... PYEOF` or `python3 -c "..."`, a value like `"; import os; os.system("rm -rf /"); "` can break out of the Python string context and execute arbitrary code. Same for backslashes and quote characters that disrupt Python string parsing. This is NOT a theoretical risk — knowledge-*.sh scripts in `scripts/` had unescaped `$ID`, `$PROJECT`, `$KEY`, `$VALUE`, `$TOPIC`, `$TYPE`, `$DESC`, `$WORKER` in Python heredocs.
+
+**Fix pattern 1 — Bash parameter expansion (heredoc variables):**
+Sanitize ALL user-supplied variables before the heredoc. Escape backslashes first, then double quotes:
+```bash
+ID="${ID//\\/\\\\}"; ID="${ID//\"/\\\"}"
+PROJECT="${PROJECT//\\/\\\\}"; PROJECT="${PROJECT//\"/\\\"}"
+```
+This must run BEFORE the heredoc block. Order matters: backslashes first, then quotes (otherwise the backslash in escaped quotes gets double-escaped).
+
+**Fix pattern 2 — Allowlist validation (command arguments):**
+When `$ID` is passed to another script as a command argument (not interpolated into a string), use a regex allowlist instead:
+```bash
+if [[ -n "$ID" && ! "$ID" =~ ^[a-zA-Z0-9._:-]+$ ]]; then
+    echo "ERROR: Invalid characters in artifact ID"; exit 1
+fi
+```
+This is stricter and preferred when the variable's domain is known (artifact IDs, keys, etc.).
+
+**Fix pattern 3 — Environment variable pass-through (`python3 -c` with single-quoted strings):**
+When a variable is interpolated inside a `python3 -c "..."` that contains single-quoted strings (where bash expansion is tricky), pass via env var instead:
+```bash
+# BAD: $model interpolated into single-quoted Python string
+ctx=$(echo "$resp" | python3 -c "
+target = '$model'.lower()
+")
+# GOOD: pass via env var
+ctx=$(echo "$resp" | MODEL_NAME="$model" python3 -c "
+import os
+target = os.environ.get('MODEL_NAME', '').lower()
+")
+```
+
+**Detection:** All three patterns were needed across 9 scripts: knowledge-cross-project, knowledge-graph, knowledge-index, knowledge-lessons, knowledge-lifecycle, knowledge-memory, knowledge-reuse, knowledge-search, detect-context. When auditing scripts, check every `python3 << PYEOF` and `python3 -c "..."` for unescaped variable interpolation.
 
 **Sub-pitfall: verification script batching.** `execute_code` has a 50 tool-call limit per script. When running many functional tests, use a single `cat > /tmp/hermes-verify-*.sh << 'S' ... S` bash script with grep assertions instead of individual `terminal()` calls. One bash script = one tool call for N tests. Discovered during Milestone H verification.
 

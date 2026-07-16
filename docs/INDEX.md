@@ -14,9 +14,19 @@
 
 ## Reference Documents
 
-- [references/](../references/) — Active reference docs (FIX/IMP lineage, pitfalls, patterns) — 105 files
+- [references/](../references/) — Active reference docs (23 files)
+- [references/archive/](../references/archive/) — Archived originals (135 files)
 - [templates/](../templates/) — Worker artifact templates + phase-contracts seed
-- [archive/](../archive/) — Historical (milestones, runtime-stabilization, platform-experiments, defects, release-readiness, ops)
+
+## EIP Reports
+
+- [EIP Master Program](../reports/eip-master-program.md) — Charter, scope, governance
+- [EIP Master Investigation](../reports/eip-master-investigation.md) — 62 findings baseline
+- [EIP Master Planning](../reports/eip-master-planning.md) — 49 work items, 4 phases
+- [EIP-1 Reliability](../reports/eip-1-reliability.md) — 20/20 items complete
+- [EIP-2 Architecture](../reports/eip-2-architecture.md) — 11/12 items complete
+- [EIP-3 Performance](../reports/eip-3-performance.md) — 7/8 items complete
+- [EIP-4 Excellence](../reports/eip-4-excellence.md) — Implementation report
 
 ## Runtime Observability (WP-80)
 
