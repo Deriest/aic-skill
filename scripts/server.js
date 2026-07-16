@@ -152,6 +152,7 @@ const routeCtx = {
   saveState,
   getActiveProject,
   tasksDir: TASKS_DIR,
+  skillDir: SKILL_DIR,
   metricsFile: METRICS_FILE,
   latencyMetricsFile: LATENCY_METRICS_FILE,
   recordApiLatency: latencyTracker.record,
