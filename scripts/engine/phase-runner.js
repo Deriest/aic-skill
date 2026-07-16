@@ -217,8 +217,17 @@ function createPhaseRunner(ctx) {
         const planPath = path.join(tasksDir, taskId, 'reports', 'execution-plan.md');
         const planExists = fs.existsSync(planPath) && fs.statSync(planPath).size > 50;
         if (!planExists) {
-          console.error('[engine] PM did not produce execution-plan.md, falling back to parallel');
-          // Fall through to normal parallel spawn
+          console.error('[engine] PM did not produce execution-plan.md, spawning downstream only');
+          // PM already ran — spawn only downstream workers
+          bus.emit('phase.started', { taskId, phase: pipelineState, subPhase: 'downstream-fallback' });
+          const dsSpawn = await _spawnAndBarrier(
+            taskId, pipelineState, projectDir, downstreamPlan, cp,
+            phaseOpts.repairEnv || {}, phaseLabel
+          );
+          if (!dsSpawn.ok) return dsSpawn;
+          cp = dsSpawn.cp;
+          const repaired = await ctx.pmRepairLoop(taskId, pipelineState, projectDir, plan, phaseLabel, cp);
+          return repaired.ok ? { ok: true } : { ok: false, pm: false };
         } else {
           console.log(`[engine] Execution Plan ready (${fs.statSync(planPath).size} bytes), spawning downstream workers`);
           bus.emit('phase.started', { taskId, phase: pipelineState, subPhase: 'downstream-planning' });

@@ -243,10 +243,7 @@ def update_metrics(skill_dir, task_id, evidence, analysis):
     """Update cumulative engineering metrics."""
     metrics_path = Path(skill_dir) / '.aic' / 'engineering-metrics.json'
 
-    if metrics_path.exists():
-        metrics = load_json(metrics_path)
-    else:
-        metrics = _init_metrics()
+    metrics = load_json(metrics_path) or _init_metrics()
 
     # Pipeline metrics
     metrics['pipeline']['total_tasks'] += 1

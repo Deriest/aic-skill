@@ -91,8 +91,25 @@ function createPmReview(ctx) {
 
     const maxCycles = STRATEGIES.length + 2; // Hard ceiling: strategies + grace
     let attempt = cp.rework?.attempt || 0;
+    let savedHistory = cp.reworkHistory || [];
 
     while (true) {
+      attempt += 1;
+
+      // Hard ceiling: check BEFORE PM review to avoid wasted invocation
+      if (attempt > maxCycles) {
+        console.log(`[engine] hard ceiling reached (${maxCycles} cycles) — shipping with caveats`);
+        cp.rework = null;
+        cp.phaseStatus = 'idle';
+        cp.pmReview = getState().pmReview;
+        cp.shipWithCaveats = true;
+        writeCheckpoint(tasksDir, taskId, cp);
+        syncDashboardFromCheckpoint(getState, cp, taskId);
+        saveState();
+        bus.emit('phase.passed', { taskId, phase: pipelineState, caveats: true });
+        return { ok: true, cp };
+      }
+
       const pm = await runPmReview(phaseLabel, projectDir, taskId);
 
       if (pm.allPass) {
@@ -114,22 +131,6 @@ function createPmReview(ctx) {
         syncDashboardFromCheckpoint(getState, cp, taskId);
         saveState();
         return { ok: false, pm: false, cp };
-      }
-
-      attempt += 1;
-
-      // Hard ceiling: prevent infinite loops regardless of strategy
-      if (attempt > maxCycles) {
-        console.log(`[engine] hard ceiling reached (${maxCycles} cycles) — shipping with caveats`);
-        cp.rework = null;
-        cp.phaseStatus = 'idle';
-        cp.pmReview = getState().pmReview;
-        cp.shipWithCaveats = true;
-        writeCheckpoint(tasksDir, taskId, cp);
-        syncDashboardFromCheckpoint(getState, cp, taskId);
-        saveState();
-        bus.emit('phase.passed', { taskId, phase: pipelineState, caveats: true });
-        return { ok: true, cp };
       }
 
       // M2: Read EDP from pm-review.sh output
@@ -171,6 +172,7 @@ function createPmReview(ctx) {
         rootCause: pkg.root_cause || '',
         verdict: 'REWORK',
       });
+      savedHistory = cp.reworkHistory; // D-25: sync for preservation after spawn
 
       // Evaluate progress
       const progress = evaluateProgress(cp);
@@ -312,6 +314,8 @@ function createPmReview(ctx) {
         return { ok: false, spawn: false, cp: spawnResult.cp || cp };
       }
       cp = spawnResult.cp;
+      // D-25: Preserve reworkHistory across checkpoint overwrite
+      cp.reworkHistory = cp.reworkHistory || savedHistory;
     }
   }
 
