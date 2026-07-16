@@ -141,8 +141,13 @@ function createPmReview(ctx) {
       let targets = [];
       if (owner) {
         const allowed = plan.map(p => String(p.worker).toLowerCase());
-        if (allowed.includes(owner)) targets = [owner];
-        else targets = allowed;
+        // Handle slash-separated owners like "Architect/Research"
+        const ownerParts = owner.split('/').map(s => s.trim()).filter(Boolean);
+        for (const part of ownerParts) {
+          if (allowed.includes(part)) targets.push(part);
+        }
+        // Fallback to all workers if no individual owner matched
+        if (!targets.length) targets = allowed;
       } else {
         targets = plan.map(p => String(p.worker).toLowerCase());
       }
