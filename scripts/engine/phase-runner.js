@@ -300,7 +300,7 @@ function createPhaseRunner(ctx) {
       child.on('error', () => resolve({ code: 1, stdout: '' }));
     });
 
-    return { hasConflicts: result.code === 2, report: stdout };
+    return { hasConflicts: result.code === 2, report: result.stdout };
   }
 
   ctx.reconcilePhaseBarrier = reconcilePhaseBarrier;

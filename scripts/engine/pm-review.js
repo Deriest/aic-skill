@@ -118,6 +118,20 @@ function createPmReview(ctx) {
 
       attempt += 1;
 
+      // Hard ceiling: prevent infinite loops regardless of strategy
+      if (attempt > maxCycles) {
+        console.log(`[engine] hard ceiling reached (${maxCycles} cycles) — shipping with caveats`);
+        cp.rework = null;
+        cp.phaseStatus = 'idle';
+        cp.pmReview = getState().pmReview;
+        cp.shipWithCaveats = true;
+        writeCheckpoint(tasksDir, taskId, cp);
+        syncDashboardFromCheckpoint(getState, cp, taskId);
+        saveState();
+        bus.emit('phase.passed', { taskId, phase: pipelineState, caveats: true });
+        return { ok: true, cp };
+      }
+
       // M2: Read EDP from pm-review.sh output
       let edp = null;
       try {
