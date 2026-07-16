@@ -29,7 +29,7 @@ async function handleEnterpriseEndpoint(req, res, send, readBody, state) {
     const pid = p.split('/').pop();
     const projects = readJson(path.join(aicDir, 'projects.json'), []);
     const proj = projects.find(x => x.id === pid);
-    if (!proj) send(res, 404, { error: 'project not found' }); return true;
+    if (!proj) { send(res, 404, { error: 'project not found' }); return true; }
     writeJson(path.join(aicDir, 'active-project.json'), { project_dir: proj.dir, task_type: 'feature', timestamp: Date.now(), branch: 'main', project_id: pid });
     send(res, 200, { selected: pid }); return true;
   }

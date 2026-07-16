@@ -1,18 +1,13 @@
 // Production Operations Endpoints (Milestone I)
 const fs = require('fs');
 const path = require('path');
+const { percentile } = require('./utils');
 
 const SKILL_DIR = path.join(__dirname, '..');
 const METRICS_FILE = path.join(SKILL_DIR, '.aic', 'metrics.json');
 const LATENCY_METRICS_FILE = path.join(SKILL_DIR, '.aic', 'latency_metrics.json');
 const SLO_API_P99_MS = 250;
 const ERROR_BUDGET_PCT = 1;
-
-function percentile(sorted, p) {
-  if (!sorted.length) return 0;
-  const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
-  return sorted[Math.max(0, idx)];
-}
 
 function buildLatencySli(samples) {
   const api = samples.filter(s => s.kind === 'api');

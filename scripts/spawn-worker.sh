@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # spawn-worker.sh — Worker executor (FEAT-001: lease + completion contract)
+# Exit codes: 0=success, 1=error (worker failure, infrastructure issue)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -43,8 +44,8 @@ if [[ ! -f "$PROMPT_FILE" ]]; then
   exit 1
 fi
 
-if [[ "$SKIP_CONTEXT" == false ]] && [[ -x "$SCRIPT_DIR/context-gather.sh" ]]; then
-  CONTEXT=$("$SCRIPT_DIR/context-gather.sh" "$PROJECT_DIR" --tier "$TIER" 2>/dev/null || echo "")
+if [[ "$SKIP_CONTEXT" == false ]] && [[ -x "$SCRIPT_DIR/cache-context.sh" ]]; then
+  CONTEXT=$("$SCRIPT_DIR/cache-context.sh" "$PROJECT_DIR" "$TIER" 2>/dev/null || echo "")
   if [[ -n "$CONTEXT" ]]; then
     FULL_PROMPT_FILE=$(mktemp "${TMPDIR:-/tmp}/aic-prompt-XXXXXX.txt")
     {
@@ -63,14 +64,14 @@ TASK_ID="${AIC_TASK_ID:-}"
 LEASE_ID="${AIC_LEASE_ID:-}"
 
 if [[ -z "$TASK_ID" ]]; then
-  TASK_ID=$(curl_api "$API_URL/api/status" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print((d.get('currentTask') or {}).get('id',''))" 2>/dev/null || echo "")
+  TASK_ID=$(curl_api "$API_URL/api/status" 2>/dev/null | jq -r '.currentTask.id // empty' 2>/dev/null || echo "")
 fi
 
 if [[ -z "$LEASE_ID" && -n "$TASK_ID" ]]; then
   LEASE_JSON=$(curl_api -X POST "$API_URL/api/runtime/lease/issue" \
     -H "Content-Type: application/json" \
     -d "{\"taskId\":\"$TASK_ID\",\"worker\":\"$WORKER\",\"tier\":\"$TIER\",\"projectDir\":\"$PROJECT_DIR\"}" 2>/dev/null || echo "")
-  LEASE_ID=$(echo "$LEASE_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('leaseId',''))" 2>/dev/null || echo "")
+  LEASE_ID=$(echo "$LEASE_JSON" | jq -r '.leaseId // empty' 2>/dev/null || echo "")
 fi
 
 if [[ -z "$LEASE_ID" ]]; then
@@ -81,11 +82,12 @@ fi
 echo "=== Spawning $WORKER (tier=$TIER, lease=$LEASE_ID) ==="
 
 EXIT_CODE=0
+WORKER_START_TS=$(date +%s)
 
 # WECP: delegate to compliance pipeline for contract-covered phases/roles
 PIPE_PHASE="${AIC_PIPELINE_PHASE:-Implementation}"
 HAS_CONTRACT=$(python3 "$SCRIPT_DIR/phase-contract-loader.py" load "$SKILL_DIR" "$PIPE_PHASE" 2>/dev/null \
-  | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if (d.get('roles') or {}).get('$WORKER') else 1)" 2>/dev/null && echo yes || echo no)
+  | jq -e ".roles.$WORKER" >/dev/null 2>&1 && echo yes || echo no)
 
 if [[ "$HAS_CONTRACT" == "yes" ]]; then
   echo "=== Using Worker Execution Compliance Pipeline (WECP) ==="
@@ -131,11 +133,17 @@ NODESCRIPT
 
     if [[ -f "$OUTPUT_FILE" ]]; then
       TOKEN_JSON=$(python3 "$SCRIPT_DIR/opencode-token-extract.py" "$OUTPUT_FILE" 2>/dev/null || echo '{"input":0}')
-      INPUT_TOKENS=$(echo "$TOKEN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('input',0))")
+      INPUT_TOKENS=$(echo "$TOKEN_JSON" | jq -r '.input // 0' 2>/dev/null || echo "0")
       if [[ "${INPUT_TOKENS:-0}" != "0" ]]; then
+        WORKER_END_TS=$(date +%s)
+        DURATION=$((WORKER_END_TS - WORKER_START_TS))
+        METRICS_PAYLOAD=$(jq -n \
+          --arg w "$WORKER" --arg t "$TIER" --arg m "$MODEL" \
+          --argjson tokens "$TOKEN_JSON" --argjson dur "$DURATION" \
+          '{worker:$w, tier:$t, model:$m, tokens:$tokens, durationSec:$dur}')
         curl_api -X POST "$API_URL/api/metrics" \
           -H "Content-Type: application/json" \
-          -d "$(echo "$TOKEN_JSON" | python3 -c "import sys,json; t=json.load(sys.stdin); print(json.dumps({'worker':'$WORKER','tier':'$TIER','model':'$MODEL','tokens':t,'durationSec':0}))")" > /dev/null 2>&1 || true
+          -d "$METRICS_PAYLOAD" > /dev/null 2>&1 || true
       fi
     fi
   else
@@ -245,10 +253,12 @@ fi
 
 [[ "${CLEANUP_PROMPT:-false}" == true ]] && rm -f "$PROMPT_FILE"
 
-FINAL_EXIT="$EXIT_CODE" FINAL_PATH="$ARTIFACT_PATH" COMPLETE_PAYLOAD=$(python3 -c 'import json,os; print(json.dumps({"exitCode": int(os.environ.get("FINAL_EXIT","0")), "artifactPath": os.environ.get("FINAL_PATH","")}))')
-curl_api -X POST "$API_URL/api/runtime/lease/${LEASE_ID}/complete" \
+FINAL_EXIT="$EXIT_CODE" FINAL_PATH="$ARTIFACT_PATH" COMPLETE_PAYLOAD=$(jq -n --argjson ec "${FINAL_EXIT:-0}" --arg ap "${FINAL_PATH:-}" '{exitCode:$ec, artifactPath:$ap}')
+if ! curl_api -X POST "$API_URL/api/runtime/lease/${LEASE_ID}/complete" \
   -H "Content-Type: application/json" \
-  -d "$COMPLETE_PAYLOAD" > /dev/null 2>&1 || true
+  -d "$COMPLETE_PAYLOAD" > /dev/null 2>&1; then
+  echo "WARN: Lease completion API call failed for $LEASE_ID" >&2
+fi
 
 [[ -n "${OUTPUT_FILE:-}" ]] && rm -f "$OUTPUT_FILE"
 

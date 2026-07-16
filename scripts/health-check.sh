@@ -25,12 +25,12 @@ case "$ACTION" in
     check_knowledge() { if [[ -d "$SKILL_DIR/.aic/knowledge" ]]; then echo "healthy"; else echo "lazy"; fi; }
     check_filesystem() { touch "$SKILL_DIR/.aic/.health_test" && rm -f "$SKILL_DIR/.aic/.health_test"; }
     
-    check_permission() { 
+    check_permission() {
       local cf="${TMPDIR:-/tmp}/.aic-hc-canary"
       echo "ok" > "$cf"
       if command -v opencode &>/dev/null; then
         local out
-        out=$(opencode run "cat $cf" --auto --format json 2>&1 || true)
+        out=$(timeout 10 opencode run "cat $cf" --auto --format json 2>&1 || true)
         rm -f "$cf"
         if echo "$out" | grep -qi "permission\|rejected\|denied"; then
           echo "unhealthy"
@@ -54,7 +54,7 @@ case "$ACTION" in
     done
     [[ "$R_SERVER" == "unhealthy" ]] && STATE="unhealthy"
     
-    export STATE R_SERVER R_AUTH R_KNOWLEDGE R_FS R_PERM
+    export STATE R_SERVER R_AUTH R_KNOWLEDGE R_FS R_PERM HEALTH_FILE
     python3 << 'PYEOF'
 import json, time, os
 hf = os.environ.get("HEALTH_FILE", ".aic/health.json")

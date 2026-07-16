@@ -3,6 +3,7 @@
 # AI Engineering Company (AIC) — Auto Setup
 # ============================================
 # Usage: bash setup.sh
+set -euo pipefail
 # Or:    curl -fsSL https://raw.githubusercontent.com/Deriest/aic-skill/main/scripts/setup.sh | bash
 # ============================================
 

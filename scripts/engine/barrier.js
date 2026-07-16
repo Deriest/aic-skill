@@ -1,19 +1,30 @@
 'use strict';
 
 function startBarrier(workers) {
-  const list = [...new Set(workers.map((w) => String(w).toLowerCase()))];
-  return {
-    active: true,
-    workers: list,
-    completed: {},
-    failed: {},
-    startedAt: Date.now(),
-    timeout: 600000,
-  };
+  try {
+    const list = [...new Set(workers.map((w) => String(w).toLowerCase()))];
+    return {
+      active: true,
+      workers: list,
+      completed: {},
+      failed: {},
+      startedAt: Date.now(),
+      timeout: 600000,
+    };
+  } catch (err) {
+    console.error('[barrier] startBarrier error:', err.message);
+    return { active: false, workers: [], completed: {}, failed: {}, startedAt: Date.now(), timeout: 600000 };
+  }
 }
 
 function barrierSatisfied(barrier) {
   if (!barrier || !barrier.active) return false;
+  // Enforce barrier timeout — if expired, treat as satisfied (fail-open for timeout)
+  if (Date.now() - barrier.startedAt > barrier.timeout) {
+    barrier.active = false;
+    barrier.timedOut = true;
+    return true;
+  }
   const required = barrier.workers || [];
   if (required.length === 0) return true;
   return required.every((w) => barrier.completed[w] === 'complete');

@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { writeJsonSafe } = require('../atomic-write');
 
 function ensureTaskDir(tasksDir, taskId) {
   const taskDir = path.join(tasksDir, taskId);
@@ -22,22 +23,18 @@ function readCheckpoint(tasksDir, taskId) {
 function writeCheckpoint(tasksDir, taskId, checkpoint) {
   const taskDir = ensureTaskDir(tasksDir, taskId);
   const f = path.join(taskDir, 'engine.json');
-  fs.writeFileSync(f, JSON.stringify(checkpoint, null, 2));
+  writeJsonSafe(f, checkpoint);
   const legacy = path.join(taskDir, 'state.json');
-  fs.writeFileSync(
-    legacy,
-    JSON.stringify(
-      {
-        id: taskId,
-        phase: checkpoint.pipelineState,
-        phaseStatus: checkpoint.phaseStatus,
-        status: checkpoint.pipelineState === 'COMPLETE' ? 'done' : 'active',
-        lastActivity: new Date().toISOString(),
-      },
-      null,
-      2
-    )
-  );
+  // Map pipelineState to legacy status field consistently
+  const terminalStates = { COMPLETE: 'done', CANCELLED: 'cancelled', BLOCKED: 'blocked' };
+  const status = terminalStates[checkpoint.pipelineState] || 'active';
+  writeJsonSafe(legacy, {
+    id: taskId,
+    phase: checkpoint.pipelineState,
+    phaseStatus: checkpoint.phaseStatus,
+    status,
+    lastActivity: new Date().toISOString(),
+  });
 }
 
 function allocateTaskId(tasksDir) {

@@ -11,9 +11,20 @@ mkdir -p "$(dirname "$GRAPH")"
 ACTION="${1:?}"
 ID="${2:-}"
 
+# Validate inputs: prevent injection
+if [[ -n "$ID" && ! "$ID" =~ ^[a-zA-Z0-9._:/@-]+$ ]]; then
+    echo "ERROR: Invalid characters in ID" >&2
+    exit 1
+fi
+
+# Sanitize ID for safe interpolation into Python heredoc strings
+ID="${ID//\\/\\\\}"; ID="${ID//\"/\\\"}"
+
 case "$ACTION" in
   add-node)
     TYPE="${3:?Missing node type}"; LABEL="${4:?Missing label}"
+    TYPE="${TYPE//\\/\\\\}"; TYPE="${TYPE//\"/\\\"}"
+    LABEL="${LABEL//\\/\\\\}"; LABEL="${LABEL//\"/\\\"}"
     python3 << PYEOF
 import json
 g = json.load(open("$GRAPH"))
@@ -27,6 +38,8 @@ PYEOF
     ;;
   add-edge)
     TO="${3:?Missing target}"; TYPE="${4:?Missing edge type}"
+    TO="${TO//\\/\\\\}"; TO="${TO//\"/\\\"}"
+    TYPE="${TYPE//\\/\\\\}"; TYPE="${TYPE//\"/\\\"}"
     python3 << PYEOF
 import json
 g = json.load(open("$GRAPH"))

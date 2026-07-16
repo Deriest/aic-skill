@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # api-auth.sh — Internal runtime authentication helper
 # Source this file in runtime scripts that call server.js APIs.
 # Usage: source "$(dirname "$0")/api-auth.sh"
@@ -7,11 +8,18 @@
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AUTH_FILE="$SKILL_DIR/.aic/auth.json"
 
+_AIC_CACHED_KEY=""
+
 _aic_get_api_key() {
+  if [[ -n "$_AIC_CACHED_KEY" ]]; then
+    echo "$_AIC_CACHED_KEY"
+    return 0
+  fi
   if [ -f "$AUTH_FILE" ]; then
     local key
-    key=$(python3 -c "import json; d=json.load(open('$AUTH_FILE')); print(d['apiKeys'][0]['key'])" 2>/dev/null)
+    key=$(jq -r '.apiKeys[0].key // empty' "$AUTH_FILE" 2>/dev/null)
     if [ -n "$key" ]; then
+      _AIC_CACHED_KEY="$key"
       echo "$key"
       return 0
     fi

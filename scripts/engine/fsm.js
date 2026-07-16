@@ -40,8 +40,15 @@ function nextPhase(pipelineState) {
 
 function canAdvance(from, barrierComplete, pmPass) {
   if (!barrierComplete || !pmPass) return false;
-  const n = nextPhase(from);
-  return n != null && n !== 'COMPLETE' || (from === 'CLOSEOUT' && pmPass);
+  try {
+    const n = nextPhase(from);
+    // ponytail: explicit parenthesization for operator precedence clarity
+    if (from === 'CLOSEOUT' && pmPass) return true;
+    return n != null && n !== 'COMPLETE';
+  } catch (err) {
+    console.error('[fsm] canAdvance error:', err.message);
+    return false;
+  }
 }
 
 function phaseToCurrentPhase(pipelineState) {

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # context-gather.sh
 PROJECT_DIR="${1:-.}"
 OUTPUT_FILE="${2:-context.json}"

@@ -11,6 +11,15 @@ mkdir -p "$(dirname "$REGISTRY")"
 ACTION="${1:?}"
 FIELD="${2:-}"
 
+# Validate inputs: prevent injection
+if [[ -n "$FIELD" && ! "$FIELD" =~ "^[a-zA-Z0-9._:/@ -]+$" ]]; then
+    echo "ERROR: Invalid characters in FIELD" >&2
+    exit 1
+fi
+
+# Sanitize user input for safe interpolation into Python heredoc strings
+FIELD="${FIELD//\\/\\\\}"; FIELD="${FIELD//\"/\\\"}"
+
 case "$ACTION" in
   rebuild)
     [ -f "$REGISTRY" ] || { echo "  No registry found"; exit 1; }
@@ -34,6 +43,7 @@ PYEOF
   query)
     [ -f "$INDEX" ] || { echo "  No index found — run rebuild first"; exit 1; }
     VALUE="${3:-}"
+    VALUE="${VALUE//\\/\\\\}"; VALUE="${VALUE//\"/\\\"}"
     [ -z "$FIELD" ] && { echo "  Usage: knowledge-index.sh query <type|tag|status> <value>"; exit 1; }
     python3 << PYEOF
 import json

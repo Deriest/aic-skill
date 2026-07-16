@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # FIX-006: shared Worker Invocation Completion Contract (all roles/phases)
 cat << 'COMPLETION'
 Worker Invocation Completion Contract (mandatory):

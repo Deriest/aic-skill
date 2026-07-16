@@ -8,6 +8,12 @@ REGISTRY="$SCRIPT_DIR/artifact-registry.sh"
 ACTION="${1:?}"
 ID="${2:-}"
 
+# Validate ID: allow only safe characters to prevent injection
+if [[ -n "$ID" && ! "$ID" =~ ^[a-zA-Z0-9._:-]+$ ]]; then
+    echo "ERROR: Invalid characters in artifact ID"
+    exit 1
+fi
+
 VALID_TRANSITIONS="draft:validated,validated:approved,any:deprecated"
 
 is_valid_transition() {

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # IMP-007 Strategy B: single shared continue prompt (WECP only)
 cat << 'CONTINUE'
 Output ONLY the final assistant message containing the complete markdown report required by the task and phase deliverable contract.

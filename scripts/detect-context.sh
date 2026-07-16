@@ -82,12 +82,12 @@ query_context_list() {
     "${base_url}/models" 2>/dev/null || echo '{"data":[]}')
 
   local ctx
-  ctx=$(echo "$resp" | python3 -c "
-import sys, json
+  ctx=$(echo "$resp" | MODEL_NAME="$model" python3 -c "
+import sys, json, os
 try:
     d = json.load(sys.stdin)
     models = d.get('data', d.get('models', []))
-    target = '$model'.lower()
+    target = os.environ.get('MODEL_NAME', '').lower()
     for m in models:
         mid = (m.get('id', '') or m.get('name', '')).lower()
         if mid == target or mid.endswith('/' + target):

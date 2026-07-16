@@ -6,10 +6,17 @@ const _fsCache = new Map();
 function _cachedRead(fp, ttlMs = 5000) {
   const now = Date.now();
   const e = _fsCache.get(fp);
-  if (e && now - e.ts < ttlMs) return e.data;
+  // TTL + mtime check: invalidate if file changed on disk
+  if (e && now - e.ts < ttlMs) {
+    try {
+      const st = fs.statSync(fp);
+      if (st.mtimeMs === e.mtime) return e.data;
+    } catch {}
+  }
   try {
     const data = fs.readFileSync(fp, 'utf8');
-    _fsCache.set(fp, { data, ts: now });
+    const mtime = fs.statSync(fp).mtimeMs;
+    _fsCache.set(fp, { data, ts: now, mtime });
     return data;
   } catch { return null; }
 }

@@ -13,6 +13,19 @@ ACTION="${1:?}"
 KEY="${2:-}"
 VALUE="${3:-}"
 
+# Validate inputs: prevent injection
+for _v in KEY VALUE; do
+    eval "_val="$_v""
+    if [[ -n "$_val" && ! "$_val" =~ ^[a-zA-Z0-9._:\ /@+-]+$ ]]; then
+        echo "ERROR: Invalid characters in $_v" >&2
+        exit 1
+    fi
+done
+
+# Sanitize user input for safe interpolation into Python heredoc strings
+KEY="${KEY//\\/\\\\}"; KEY="${KEY//\"/\\\"}"
+VALUE="${VALUE//\\/\\\\}"; VALUE="${VALUE//\"/\\\"}"
+
 case "$ACTION" in
   store)
     [ -z "$KEY" ] && { echo "ERROR: Missing key"; exit 1; }

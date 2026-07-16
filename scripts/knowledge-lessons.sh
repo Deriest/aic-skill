@@ -12,9 +12,21 @@ LESSONS_FILE="$LESSONS_DIR/lessons.json"
 ACTION="${1:?}"
 TOPIC="${2:-}"
 
+# Validate inputs: prevent injection
+if [[ -n "$TOPIC" && ! "$TOPIC" =~ ^[a-zA-Z0-9._:/@\ -]+$ ]]; then
+    echo "ERROR: Invalid characters in TOPIC" >&2
+    exit 1
+fi
+
+# Sanitize TOPIC for safe interpolation into Python heredoc strings
+TOPIC="${TOPIC//\\/\\\\}"; TOPIC="${TOPIC//\"/\\\"}"
+
 case "$ACTION" in
   capture)
     TYPE="${3:?Missing type}"; DESC="${4:?Missing description}"; WORKER="${5:-system}"
+    TYPE="${TYPE//\\/\\\\}"; TYPE="${TYPE//\"/\\\"}"
+    DESC="${DESC//\\/\\\\}"; DESC="${DESC//\"/\\\"}"
+    WORKER="${WORKER//\\/\\\\}"; WORKER="${WORKER//\"/\\\"}"
     python3 << PYEOF
 import json, time
 f = "$LESSONS_FILE"

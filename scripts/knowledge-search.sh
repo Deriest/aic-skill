@@ -12,14 +12,28 @@ QUERY="${1:?Missing search query}"
 TYPE_FILTER="${2:-}"
 TAG_FILTER="${3:-}"
 
+# Validate inputs: prevent injection
+for _v in TYPE_FILTER TAG_FILTER; do
+    eval "_val="$_v""
+    if [[ -n "$_val" && ! "$_val" =~ "^[a-zA-Z0-9._:/@ -]+$" ]]; then
+        echo "ERROR: Invalid characters in $_v" >&2
+        exit 1
+    fi
+done
+
+# Sanitize user input for safe interpolation into Python heredoc strings
+QUERY="${QUERY//\\/\\\\}"; QUERY="${QUERY//\"/\\\"}"
+TYPE_FILTER="${TYPE_FILTER//\\/\\\\}"; TYPE_FILTER="${TYPE_FILTER//\"/\\\"}"
+TAG_FILTER="${TAG_FILTER//\\/\\\\}"; TAG_FILTER="${TAG_FILTER//\"/\\\"}"
+
 [ -f "$REGISTRY" ] || { echo "  No registry found"; exit 1; }
 
-python3 -c "
+python3 << PYEOF
 import json, os, subprocess
 
-query = '$QUERY'.lower()
-type_filter = '$TYPE_FILTER'
-tag_filter = '$TAG_FILTER'
+query = "$QUERY".lower()
+type_filter = "$TYPE_FILTER"
+tag_filter = "$TAG_FILTER"
 reg = json.load(open('$REGISTRY'))
 results = []
 
@@ -39,7 +53,7 @@ results.sort(key=lambda x: -x[0])
 if not results:
     print('  No results found')
 else:
-    print(f'  Found {len(results)} results:')
+    print('  Found %d results:' % len(results))
     for score, a in results[:10]:
-        print(f'    [{a[\"status\"]}] {a[\"id\"]} — {a[\"title\"]} (score:{score})')
-"
+        print('    [%s] %s — %s (score:%d)' % (a['status'], a['id'], a['title'], score))
+PYEOF

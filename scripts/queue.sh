@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
 # queue.sh — Task Queue for AIC
+# Exit codes: 0=success, 1=error
 # Usage: queue.sh <action> [args]
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 QUEUE_FILE="$SKILL_DIR/.aic/queue.json"
 DEAD_FILE="$SKILL_DIR/.aic/queue-dead.json"
+QUEUE_LOCK="$SKILL_DIR/.aic/queue.lock"
 mkdir -p "$SKILL_DIR/.aic"
 ACTION="${1:?Usage: queue.sh <enqueue|dequeue|status|list|retry>}"
+
+# Serialize mutating operations via flock
+with_lock() {
+  flock -w 10 "$QUEUE_LOCK" "$@"
+}
 
 case "$ACTION" in
   enqueue)
     TASK_ID="${2:?Missing task_id}"; PRIORITY="${3:-2}"; WORKER="${4:-auto}"
-    python3 << 'PYEOF'
+    with_lock python3 << 'PYEOF'
 import json, sys, os, time
 qf = os.environ.get("QUEUE_FILE", ".aic/queue.json")
 task_id, priority, worker = sys.argv[1], int(sys.argv[2]), sys.argv[3]
@@ -27,7 +34,7 @@ print("Enqueued: %s (priority=%d)" % (task_id, priority))
 PYEOF
     ;;
   dequeue)
-    python3 << 'PYEOF'
+    with_lock python3 << 'PYEOF'
 import json, os
 qf = os.environ.get("QUEUE_FILE", ".aic/queue.json")
 q = []
@@ -67,7 +74,7 @@ PYEOF
     ;;
   retry)
     TASK_ID="${2:?Missing task_id}"
-    python3 << 'PYEOF'
+    with_lock python3 << 'PYEOF'
 import json, sys, os
 qf = os.environ.get("QUEUE_FILE", ".aic/queue.json")
 df = os.environ.get("DEAD_FILE", ".aic/queue-dead.json")

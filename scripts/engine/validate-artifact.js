@@ -6,19 +6,23 @@ const path = require('path');
 const crypto = require('crypto');
 
 function validateArtifactFile(filePath, minBytes = 10, minContentLines = 2) {
-  if (!fs.existsSync(filePath)) {
-    return { ok: false, error: 'artifact not found', path: filePath };
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { ok: false, error: 'artifact not found', path: filePath };
+    }
+    const stat = fs.statSync(filePath);
+    if (stat.size < minBytes) {
+      return { ok: false, error: 'artifact too small', path: filePath };
+    }
+    const text = fs.readFileSync(filePath, 'utf8');
+    const contentLines = text.split('\n').filter((l) => /[a-zA-Z]/.test(l)).length;
+    if (contentLines < minContentLines) {
+      return { ok: false, error: 'insufficient content', path: filePath };
+    }
+    return { ok: true, path: filePath };
+  } catch (err) {
+    return { ok: false, error: err.message, path: filePath };
   }
-  const stat = fs.statSync(filePath);
-  if (stat.size < minBytes) {
-    return { ok: false, error: 'artifact too small', path: filePath };
-  }
-  const text = fs.readFileSync(filePath, 'utf8');
-  const contentLines = text.split('\n').filter((l) => /[a-zA-Z]/.test(l)).length;
-  if (contentLines < minContentLines) {
-    return { ok: false, error: 'insufficient content', path: filePath };
-  }
-  return { ok: true, path: filePath };
 }
 
 function resolveArtifactPath(taskDir, worker, contracts) {

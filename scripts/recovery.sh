@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # recovery.sh — Runtime Recovery for AIC
+# Exit codes: 0=success, 1=error, 2=blocked
 # Usage: recovery.sh <action> [args]
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -42,6 +43,11 @@ case "$ACTION" in
     echo "Restored: $TAG"
     ;;
   recover)
+    if [[ "${RECOVERY_RECURSIVE:-}" == "1" ]]; then
+      echo "ERROR: Recursive recovery detected" >&2
+      exit 1
+    fi
+    export RECOVERY_RECURSIVE=1
     echo "=== Auto-Recovery ==="
     # Check health
     HEALTH_STATE=$(bash "$SCRIPT_DIR/health-check.sh" check 2>/dev/null | grep "^State:" | cut -d' ' -f2)

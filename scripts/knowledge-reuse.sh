@@ -10,6 +10,15 @@ mkdir -p "$(dirname "$REGISTRY")"
 ACTION="${1:?}"
 KEYWORD="${2:-}"
 
+# Validate inputs: prevent injection
+if [[ -n "$KEYWORD" && ! "$KEYWORD" =~ "^[a-zA-Z0-9._:/@ +-]+$" ]]; then
+    echo "ERROR: Invalid characters in KEYWORD" >&2
+    exit 1
+fi
+
+# Sanitize user input for safe interpolation into Python heredoc strings
+KEYWORD="${KEYWORD//\\/\\\\}"; KEYWORD="${KEYWORD//\"/\\\"}"
+
 case "$ACTION" in
   suggest)
     [ -f "$REGISTRY" ] || { echo "  No registry found"; exit 1; }

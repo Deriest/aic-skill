@@ -13,6 +13,20 @@ ID="${2:-}"
 PROJECT="${3:-}"
 RELATIONSHIP="${4:-}"
 
+# Validate inputs: prevent injection
+for _v in ID PROJECT RELATIONSHIP; do
+    eval "_val="$_v""
+    if [[ -n "$_val" && ! "$_val" =~ ^[a-zA-Z0-9._:\ /@+-]+$ ]]; then
+        echo "ERROR: Invalid characters in $_v" >&2
+        exit 1
+    fi
+done
+
+# Sanitize user input for safe interpolation into Python heredoc strings
+ID="${ID//\\/\\\\}"; ID="${ID//\"/\\\"}"
+PROJECT="${PROJECT//\\/\\\\}"; PROJECT="${PROJECT//\"/\\\"}"
+RELATIONSHIP="${RELATIONSHIP//\\/\\\\}"; RELATIONSHIP="${RELATIONSHIP//\"/\\\"}"
+
 case "$ACTION" in
   add)
     [ -z "$PROJECT" ] && { echo "  Missing target project"; exit 1; }
