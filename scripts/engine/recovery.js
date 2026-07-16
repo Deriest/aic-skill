@@ -45,6 +45,37 @@ function reconcileOnStartup(state, tasksDir, workerIds) {
     }
   }
 
+  // D-08 fix: prune leases belonging to terminal tasks on startup
+  // Preserves leases for non-terminal tasks (resume-able)
+  if (state.engine?.leases) {
+    const terminalStates = new Set(['COMPLETE', 'CANCELLED', 'BLOCKED']);
+    for (const [lid, l] of Object.entries(state.engine.leases)) {
+      const leaseTaskId = l.taskId;
+      if (!leaseTaskId) {
+        delete state.engine.leases[lid];
+        notes.push(`pruned orphan lease (no taskId): ${lid}`);
+        continue;
+      }
+      // Check if the task is terminal via checkpoint
+      const cpPath = path.join(tasksDir, leaseTaskId, 'engine.json');
+      if (fs.existsSync(cpPath)) {
+        try {
+          const cp = JSON.parse(fs.readFileSync(cpPath, 'utf8'));
+          if (terminalStates.has(cp.pipelineState)) {
+            delete state.engine.leases[lid];
+            notes.push(`pruned stale lease: ${lid} (task ${leaseTaskId} is ${cp.pipelineState})`);
+          }
+        } catch (err) {
+          // If checkpoint unreadable, leave lease alone — safer than deleting
+        }
+      } else {
+        // No checkpoint file — task dir likely cleaned up, prune
+        delete state.engine.leases[lid];
+        notes.push(`pruned orphan lease (no checkpoint): ${lid} (task ${leaseTaskId})`);
+      }
+    }
+  }
+
   return notes;
 }
 
