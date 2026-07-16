@@ -284,7 +284,7 @@ function createPhaseRunner(ctx) {
     if (Object.keys(artifacts).length < 2) return { hasConflicts: false };
 
     // Call consistency-checker.py
-    const { spawnBash } = require('./helpers');
+    
     const ccScript = path.join(scriptDir, 'consistency-checker.py');
     if (!fs.existsSync(ccScript)) return { hasConflicts: false };
 

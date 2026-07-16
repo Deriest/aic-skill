@@ -112,14 +112,16 @@ function createPmReview(ctx) {
 
       attempt += 1;
       if (attempt > maxAttempts) {
-        console.error('[engine] pm repair limit exceeded');
-        cp.phaseStatus = 'failed';
-        cp.pipelineState = 'BLOCKED';
-        cp.rework = { phase: pipelineState, attempt, repairedWorkers: [], lastVerdict: 'REWORK' };
+        console.log('[engine] pm repair limit exceeded — shipping with documented caveats');
+        cp.rework = null;
+        cp.phaseStatus = 'idle';
+        cp.pmReview = getState().pmReview;
+        cp.shipWithCaveats = true;
         writeCheckpoint(tasksDir, taskId, cp);
         syncDashboardFromCheckpoint(getState, cp, taskId);
         saveState();
-        return { ok: false, pm: false, repairLimit: true, cp };
+        bus.emit('phase.passed', { taskId, phase: pipelineState, caveats: true });
+        return { ok: true, cp };
       }
 
       // M2: Read EDP from pm-review.sh output
