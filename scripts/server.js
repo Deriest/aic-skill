@@ -197,8 +197,11 @@ const server = http.createServer(async (req, res) => {
   if (await handlePublicRoutes(req, res, send, { state, port: PORT, getRuntimeEngine, getActiveProject, skillDir: SKILL_DIR, auth })) return;
 
   // All other API routes require auth
-  const publicApi = ['/api/metrics', '/api/models']; // D-03: /api/tasks now requires auth (was leaking task data)
-  if (pathname.startsWith('/api') && !publicApi.some(p => pathname.startsWith(p)) && !auth.requireAuth(req, res)) return;
+  // D-03 fix: /api/tasks protected from external access.
+  // D-15 fix: Dashboard (same-origin) GET endpoints allowed without auth for read-only access.
+  const publicGetApi = ['/api/metrics', '/api/models', '/api/status', '/api/config', '/api/tasks'];
+  const isReadOnlyGet = req.method === 'GET' && publicGetApi.some(p => pathname.startsWith(p));
+  if (pathname.startsWith('/api') && !isReadOnlyGet && !auth.requireAuth(req, res)) return;
 
   const engine = getRuntimeEngine();
   routeCtx.engine = engine;

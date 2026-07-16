@@ -42,14 +42,17 @@ function createPipeline(ctx) {
     cp.phaseBarrier = clearBarrier();
     writeCheckpoint(tasksDir, taskId, cp);
 
-    state.currentPhase = 'Complete';
-    if (state.currentTask) {
-      state.currentTask.pipelineState = 'COMPLETE';
-      state.currentTask.phaseStatus = 'idle';
-    }
+    state.currentPhase = null;
+    state.currentTask = null;
     state.phaseBarrier = null;
     state.runtimeGate = null;
-    state.currentTask = null;
+
+    // D-08: Prune all leases for this completed task
+    const leases = state.engine?.leases || {};
+    for (const [lid, l] of Object.entries(leases)) {
+      if (l.taskId === taskId) delete leases[lid];
+    }
+
     saveState();
     bus.emit('task.completed', { taskId });
     triggerKnowledgeAsync(taskId);

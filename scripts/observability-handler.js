@@ -35,8 +35,7 @@ function createObservabilityHandler(opts) {
 
     // GET /api/observability/events
     if (req.method === 'GET' && pathname === '/api/observability/events') {
-      const qIdx = req.url.indexOf('?');
-      const params = new URLSearchParams(qIdx >= 0 ? req.url.slice(qIdx + 1) : '');
+      const params = req.url.searchParams;
       const limit = parseInt(params.get('limit') || '50', 10);
       const taskId = params.get('taskId') || undefined;
       const phase = params.get('phase') || undefined;

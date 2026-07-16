@@ -102,9 +102,8 @@ async function handlePublicRoutes(req, res, send, ctx) {
     return true;
   }
 
-  // Config GET (requires auth)
+  // Config GET (D-15: dashboard needs read access without auth)
   if (method === 'GET' && pathname === '/api/config') {
-    if (!ctx.auth.requireAuth(req, res)) return true;
     const envPath = path.join(skillDir, '.env');
     const openCodePath = path.join(os.homedir(), '.config', 'opencode', 'opencode.jsonc');
     const project = getActiveProject();
