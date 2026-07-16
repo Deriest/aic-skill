@@ -29,7 +29,7 @@ const WORKERS = [
 // Lifecycle enforcement — phase → allowed workers
 const PHASE_ALLOWED = {
   investigate:    ['pm', 'research'],
-  planning:       ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra'],
+  planning:       ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra', 'designer'],
   implementation: ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra', 'designer', 'frontend', 'backend'],
   verification:   ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra', 'designer', 'frontend', 'backend', 'qa', 'perf'],
   closeout:       ['pm', 'research', 'architect', 'data', 'integration', 'security', 'infra', 'designer', 'frontend', 'backend', 'qa', 'perf', 'documentation', 'governor'],
