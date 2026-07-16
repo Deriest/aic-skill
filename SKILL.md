@@ -1,7 +1,7 @@
 ---
 name: aic
 description: "AI Engineering Company — 15-worker orchestration system for software development. Dispatch, classify, and route tasks to specialized workers following a structured workflow with Runtime Gates and PM Review."
-version: 3.4.1
+version: 3.4.2
 author: TVD
 platforms: [linux, macos, windows]
 metadata:
@@ -161,6 +161,9 @@ IF /api/metrics crash / searchParams undefined / req.url rewrite → pitfall: se
 IF /api/tasks exposed without auth / publicApi allowlist → pitfall: security information disclosure. TWO auth gates to fix: (1) `server.js:200` publicApi list for requireAuth, AND (2) `server.js:224` isPublic list for RBAC. Removing from publicApi alone still leaves /api/tasks in isPublic, skipping RBAC for viewer-role keys. See `references/validation-stabilization-gotchas.md` "server.js isPublic second auth bypass" section.
 IF opencode content-blocked / agent_router_api_error / UnknownError / err_XXXXX → pitfall: TRANSIENT provider error. Re-run 2-3 times before escalating. See `references/validation-stabilization-gotchas.md` "Transient provider errors" section. Do NOT declare ARCHITECTURAL ESCALATION on a single failure.
 IF spawn-worker lease failed but opencode exit 0 / extraction exit 0 / reports empty → pitfall: `spawn-worker.sh` uses `printf "%b"` in awk to prepend YAML frontmatter — mawk (Linux default) does NOT support `%b` and crashes silently (`2>/dev/null` hides it). Fix: `printf "%s"` (3 locations). See `references/validation-stabilization-gotchas.md` "spawn-worker.sh awk %b format crash" section.
+IF observability-handler.js crash / /api/observability/events 000 / server dies on obs request → pitfall: same req.url string-method class as D-01. `observability-handler.js:38` called `req.url.indexOf('?')` but `req.url` is a URL object after D-01 fix. Fix: use `req.url.searchParams` directly. D-13. After fixing server.js for D-01, grep ALL .js files for `req.url.indexOf`, `req.url.slice`, `req.url.match`, `req.url.split` — any string method on req.url will crash.
+IF dashboard "Failed to fetch config" / config page 401 / dashboard cannot read any API → pitfall: D-03 fix made /api/config and /api/tasks require auth, but dashboard fetch calls send NO X-API-Key header (same-origin). Fix: allow GET (read-only) without auth for dashboard endpoints in both server.js (publicGetApi list) AND public-routes.js (remove `requireAuth` from config GET handler). POST still requires auth. D-15.
+IF stale currentPhase="Complete" with no currentTask / state shows phase after task done → pitfall: `completeTask()` in pipeline.js set `currentPhase='Complete'` then `currentTask=null` but never cleared `currentPhase`. Fix: set `currentPhase=null` on completion. D-14.
 
 ### Documentation Consolidation & Release
 IF user issues PM FINAL INVESTIGATION ORDER or PM FINAL RELEASE ORDER → load `references/pm-orders-response-format.md`

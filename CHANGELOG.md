@@ -2,6 +2,39 @@
 
 All notable releases and historical task entries.
 
+## [3.4.2] — Production Stabilization Patch — 2026-07-16
+
+### Release Type: PATCH
+
+Production stabilization release fixing 3 additional defects discovered
+during full repository scan after v3.4.1.
+
+### Fixed (Critical)
+- **D-13:** `/api/observability/events` crashed server — `observability-handler.js` treated `req.url` as string (same class as D-01). Fixed: use `req.url.searchParams` directly.
+
+### Fixed (High)
+- **D-15:** Dashboard "Failed to fetch config" — `public-routes.js` enforced auth on GET `/api/config` even for same-origin dashboard reads. Fixed: allow GET without auth for dashboard endpoints (config, status, tasks, metrics). POST still requires auth.
+
+### Fixed (Medium)
+- **D-14:** `completeTask` left `currentPhase='Complete'` with no `currentTask` — stale state. Fixed: clear `currentPhase` to null on completion.
+- **D-08 enhanced:** Lease pruning now also runs on `completeTask`, not just `finishLease`.
+
+### Validation Evidence
+- 3 complete real pipelines reached COMPLETE (TASK-007, TASK-008, TASK-010)
+- All 6 workers (pm, architect, research, backend, frontend, qa) executed successfully
+- PM Review: PASS on all complete runs
+- Unit tests: 39/39 PASS
+- Self-test: 24/24 PASS
+- 13 API endpoints verified
+- Dashboard: config/status/tasks/metrics all return 200
+- State consistency: currentTask=null, currentPhase=null, leases=0 after completion
+
+### Known Limitations
+- D-10 (LOW): Event bus in-memory only, no disk persistence. Non-blocking.
+- Cache hit rate 0: Provider models (glm-5.2, gemini-3-flash) do not support prompt caching. Code path ready for Anthropic-native models.
+
+---
+
 ## [3.4.1] — Production Stabilization Patch — 2026-07-16
 
 ### Release Type: PATCH

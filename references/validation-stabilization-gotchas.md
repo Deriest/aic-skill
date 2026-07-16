@@ -117,3 +117,75 @@ requireAuth gate, but #2 still marks /api/tasks as public for RBAC purposes.
 An authenticated key with viewer role can read /api/tasks even after the
 publicApi fix, because isPublic skips RBAC for that path.
 To fully close the auth gap, remove /api/tasks from BOTH lists.
+
+## D-13: observability-handler.js req.url crash (RESOLVED)
+Same class as D-01. After fixing server.js to preserve `req.url` as a URL
+object, ANY code that treats `req.url` as a string will crash. The
+observability-handler.js called `req.url.indexOf('?')` and `req.url.slice()`
+to parse query params. This crashed the ENTIRE server (uncaught TypeError)
+on any request to `/api/observability/events`.
+
+**Lesson:** After changing `req.url` from string to URL object, grep ALL .js
+files for string methods on `req.url`: `indexOf`, `slice`, `match`, `replace`,
+`split`. Every one is a latent crash. Fix: use `req.url.searchParams` directly.
+
+```bash
+grep -rn 'req\.url\.indexOf\|req\.url\.slice\|req\.url\.match\|req\.url\.replace\|req\.url\.split' scripts/ --include='*.js'
+```
+
+## D-14: stale currentPhase after task completion (RESOLVED)
+`completeTask()` in `pipeline.js` set `state.currentPhase = 'Complete'` then
+`state.currentTask = null` — leaving `currentPhase` pointing at a phase with
+no task. The dashboard showed stale phase info. Fix: `state.currentPhase = null`.
+
+Also enhanced D-08: prune leases in `completeTask()`, not just `finishLease()`.
+When a task completes, ALL its leases should be purged — not just individual
+ones as they finish.
+
+## D-15: dashboard "Failed to fetch config" (RESOLVED)
+After D-03 made `/api/config` and `/api/tasks` require auth, the dashboard
+broke because its fetch calls (`dashboard/src/api/index.ts`) send NO
+`X-API-Key` header — they're same-origin requests from the built static files.
+
+**Root cause:** Two layers of auth enforcement:
+1. `server.js:200` — publicApi list controls `requireAuth()` gate
+2. `public-routes.js:107` — config GET handler calls `auth.requireAuth()` internally
+
+Even after adding `/api/config` to the server.js publicGetApi list, the
+handler in public-routes.js independently enforced auth.
+
+**Fix:** Allow GET (read-only) without auth for dashboard endpoints:
+- `server.js`: `publicGetApi = ['/api/metrics', '/api/models', '/api/status', '/api/config', '/api/tasks']`
+  Only allow GET method: `const isReadOnlyGet = req.method === 'GET' && publicGetApi.some(p => pathname.startsWith(p))`
+- `public-routes.js`: remove `if (!ctx.auth.requireAuth(req, res)) return true;` from config GET handler
+- POST (mutations) still requires auth — verified 401 without key
+
+**Key insight:** When adding auth enforcement to endpoints, check if the
+dashboard (same-origin, no auth header) calls them. Either add auth headers
+to dashboard fetch calls, or allow GET without auth for same-origin reads.
+
+## Cache hit 0% — provider-dependent, not a bug
+When cache hit rate shows 0% in metrics, check what models the AIC proxy
+actually routes to. The opencode config maps Opus/Sonnet/Haiku to provider
+model IDs, and the proxy may route to non-Anthropic models (e.g. glm-5.2,
+gemini-3-flash) that do NOT support prompt caching. The metrics pipeline
+(`opencode-token-extract.py` → `spawn-worker.sh` → `metrics-routes.js`)
+already extracts `cacheRead`/`cacheWrite` fields via deep-collect from
+NDJSON — but if the provider response has no cache fields, the data is 0.
+
+**Verification steps:**
+1. `curl -s -H "Authorization: Bearer $KEY" https://api.aicompany.biz.id/v1/models`
+2. Check if routed models are Anthropic-native (claude-*) or proxied to other vendors
+3. If non-Anthropic: cache hit 0% is expected, not a defect
+4. If Anthropic-native: check `opencode-token-extract.py` field names match provider response
+
+**Key insight:** The AIC proxy (vansrouter/9router) may silently remap model
+names. `AIC/Opus` → `glm-5.2`, `AIC/Sonnet` → `gemini-3-flash`, etc. The
+opencode config shows `Opus` but the proxy decides the actual backend.
+
+## Mechanical validation gate word-count threshold
+`validate-framework-invariants.sh` requires 50+ words per worker report.
+Workers producing thin output (e.g., frontend at 45 words for a trivial task)
+get BLOCKED by the gate. This is the gate working correctly — not a code
+defect. The pipeline going to BLOCKED on thin worker output is expected
+behavior. Do not try to "fix" this — it's a quality guardrail.
