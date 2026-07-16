@@ -1,7 +1,7 @@
 ---
 name: aic
 description: "AI Engineering Company — 15-worker orchestration system for software development. Dispatch, classify, and route tasks to specialized workers following a structured workflow with Runtime Gates and PM Review."
-version: 3.4.0
+version: 3.4.1
 author: TVD
 platforms: [linux, macos, windows]
 metadata:
@@ -147,6 +147,20 @@ IF EIP-2 architecture audit / module boundaries / dependency graph / configurati
 IF EIP-1 reliability audit / api-auth broken string / non-atomic state writes / FSM canAdvance bug / lease completion suppressed / RBAC fail-open / exit code semantics → load `references/eip1-reliability-audit-2026-07-16.md`
 IF EIP execution / running EIP phases / implementing engineering improvements / master verification / vitest setup / input validation middleware / shell injection fix → load `references/eip-execution-pattern.md`
 IF all EIP investigation findings consolidated → load `references/eip-consolidated.md`
+IF E2E validation / system validation / production readiness audit / endpoint matrix / component matrix → load `references/e2e-validation-findings.md`
+IF pipeline silent failure / empty reports / project dir missing / opencode no output → pitfall: pipeline-orchestrator.sh does NOT create projectDir before spawning workers; opencode fails silently when cwd doesn't exist. DEFECT-07. Fix: mkdir -p PROJECT_DIR before task-start, or fail-fast with clear error.
+IF stale leases / lease accumulation / state file growing / memory leak → pitfall: cancelled tasks do NOT prune leases from state.engine.leases. 28+ leases accumulate across runs. DEFECT-08.
+IF RBAC 403 on all admin endpoints / viewer role / no role in auth.json → load `references/validation-stabilization-gotchas.md`. TWO-PART fix: (1) add `"role":"admin"` to auth.json apiKeys entry, AND (2) server.js RBAC block must call `auth.loadCredentials()` (reads auth.json) NOT config's `loadCredentials()` (reads a different file `credentials.json`) — adding the role alone leaves 403 because the RBAC check reads the wrong file. DEFECT-02.
+IF /api/metrics crash / searchParams undefined / req.url rewrite → pitfall: server.js req.url = {...url, pathname} loses getters (searchParams). DEFECT-01.
+IF /api/tasks exposed without auth / publicApi allowlist → pitfall: /api/tasks in publicApi list means no auth required. DEFECT-03.
+IF version mismatch / API returns 3.1.3 / hardcoded version → pitfall: public-routes.js:63 has hardcoded "3.1.3". DEFECT-04.
+IF fresh pipeline dies at INVESTIGATE with empty reports / opencode silent fail / fresh run stuck at CREATED / new task.start no-ops while a stale failed currentTask holds the slot / a "failed" task that was actually manually cancelled mid-run → load `references/validation-stabilization-gotchas.md`. D-07: pipeline-orchestrator.sh must `mkdir -p "$PROJECT_DIR"` before task-start (opencode fails silently on missing cwd). D-12: clear/cancel stale currentTask before starting a new one — a leftover failed task blocks task.start.
+IF E2E validation / system validation / production readiness audit / endpoint matrix / component matrix → load `references/e2e-validation-findings.md`
+IF RBAC 403 on all admin endpoints / viewer role / no role in auth.json → pitfall: add `"role":"admin"` to auth.json apiKeys entry
+IF /api/metrics crash / searchParams undefined / req.url rewrite → pitfall: server.js req.url = {...url, pathname} loses getters
+IF /api/tasks exposed without auth / publicApi allowlist → pitfall: security information disclosure. TWO auth gates to fix: (1) `server.js:200` publicApi list for requireAuth, AND (2) `server.js:224` isPublic list for RBAC. Removing from publicApi alone still leaves /api/tasks in isPublic, skipping RBAC for viewer-role keys. See `references/validation-stabilization-gotchas.md` "server.js isPublic second auth bypass" section.
+IF opencode content-blocked / agent_router_api_error / UnknownError / err_XXXXX → pitfall: TRANSIENT provider error. Re-run 2-3 times before escalating. See `references/validation-stabilization-gotchas.md` "Transient provider errors" section. Do NOT declare ARCHITECTURAL ESCALATION on a single failure.
+IF spawn-worker lease failed but opencode exit 0 / extraction exit 0 / reports empty → pitfall: `spawn-worker.sh` uses `printf "%b"` in awk to prepend YAML frontmatter — mawk (Linux default) does NOT support `%b` and crashes silently (`2>/dev/null` hides it). Fix: `printf "%s"` (3 locations). See `references/validation-stabilization-gotchas.md` "spawn-worker.sh awk %b format crash" section.
 
 ### Documentation Consolidation & Release
 IF user issues PM FINAL INVESTIGATION ORDER or PM FINAL RELEASE ORDER → load `references/pm-orders-response-format.md`
@@ -300,6 +314,12 @@ Dashboard OAT and Runtime OAT are different things. Do NOT conflate them.
 **Pitfall**: **Direct opencode bypass when pipeline stuck** — When barrier completion tracking bugs + PM timeout loops + state corruption make `spawn-worker.sh` unusable, pipe prompt directly to opencode: `cat prompt.md | opencode run --auto --format json`. This bypasses lease checks in `spawn-worker.sh`. Valid **emergency escape hatch** when pipeline is non-functional, but: (1) no lease is recorded, (2) no WECP validation runs, (3) no automatic artifact extraction to `reports/`. Manual `write_file` needed for artifacts. Use only when user explicitly says to proceed despite pipeline issues. See `references/direct-opencode-bypass-pattern.md`.
 
 **Pitfall**: **PM Review tool permission rejection → exit 3 / server crash** — When opencode PM Review session encounters a file read that triggers tool permission rejection (e.g., trying to read `qa-output.md`), `pm-review.sh` exits with code 3 and the server process can die. The error looks like: `"The user rejected permission to use this specific tool call."` + `=== PM Review: UNKNOWN ===` + `=== PM Review complete (exit 3) ===`. **Fix:** Restart server, ensure review prompt only references files that exist and are accessible. Do not include stale report paths from prior runs in PM Review context. **Also see:** `references/smart-approval-security-scan-pitfalls.md` Section 5 — Smart Approval blocks READ operations in headless opencode sessions at a layer ABOVE `--auto`.
+
+**Pitfall**: **RBAC default role blocks all admin endpoints** — When `.aic/auth.json` apiKeys have no `role` field, `middleware.js` checkAccess defaults to `viewer` role which only allows `status.read`, `metrics.read`, `health.read`. All 9 admin endpoints (`/api/agent-status`, `/api/state`, `/api/history`, `/api/knowledge`, `/api/workers`, `/api/logs`, `/api/context/current`, `/api/latency`, `/api/queue`) return 403. **Fix:** Add `"role": "admin"` to the apiKey entry in `.aic/auth.json`, or update `addApiKey()` in `auth.js` to accept/store a role parameter. Discovered during E2E validation 2026-07-16.
+
+**Pitfall**: **`/api/metrics` crash from req.url rewrite** — `server.js` line 196 sets `req.url = { ...url, pathname }` which creates a plain object losing URL `searchParams` (a getter, not enumerable). Any route handler calling `url.searchParams.get()` crashes with `Cannot read properties of undefined (reading 'get')`. `metrics-routes.js` hits this on every GET `/api/metrics`. **Fix:** Preserve the original URL object or spread all needed properties including searchParams. Discovered during E2E validation 2026-07-16.
+
+**Pitfall**: **`/api/tasks` publicly accessible** — `server.js:200` defines `publicApi = ['/api/tasks', '/api/metrics', '/api/models']` which exempts these from auth. Task descriptions may expose sensitive project details. Validated: GET `/api/tasks` returns 200 with no auth, bad key, and empty key. Consider removing from publicApi or adding read-only auth gate. Discovered during E2E validation 2026-07-16.
 
 **Pitfall**: **Mechanical Validation Gate bash edge case** — `wc -w` and `grep -c` return output with trailing whitespace/newline on empty files. In `validate-framework-invariants.sh` comparisons like `[[ "$X" -lt 50 ]]`, this causes "syntax error in expression (error token is '0')". Fix: pipe through `tr -d '[:space:]'` and default `${VAR:-0}`. See `references/v330-implementation-proven-patches.md`.
 

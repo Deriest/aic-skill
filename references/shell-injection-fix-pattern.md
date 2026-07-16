@@ -35,10 +35,12 @@ RELATIONSHIP="${RELATIONSHIP//\\/\\\\}"; RELATIONSHIP="${RELATIONSHIP//\"/\\\"}"
 ### Pattern 2: Allowlist Validation (command arguments)
 
 ```bash
-if [[ -n "$ID" && ! "$ID" =~ ^[a-zA-Z0-9._:-]+$ ]]; then
+if [[ -n "$ID" && ! "$ID" =~ "^[a-zA-Z0-9._:-]+$" ]]; then
     echo "ERROR: Invalid characters in artifact ID"; exit 1
 fi
 ```
+
+**Pitfall: Unquoted regex with hyphen near `]`.** `[[ "$X" =~ ^[a-zA-Z0-9._:/@ -]+$ ]]` causes bash syntax error (`syntax error in conditional expression`) because `-]+$` confuses the parser — `]` closes `[[` context. **Fix:** ALWAYS quote the regex pattern: `[[ "$X" =~ "^[a-zA-Z0-9._:/@ -]+$" ]]`. Alternatively, place `-` at the very end before `]` or escape with `\ -`. In this session, 4 scripts failed with the unquoted form and all passed after quoting.
 
 **When to use:** Variable is a structured identifier (artifact ID, key name) passed as a command-line argument to another script, not interpolated into a string.
 

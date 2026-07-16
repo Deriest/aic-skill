@@ -17,6 +17,9 @@ log "=== AIC Pipeline (Runtime Engine) ==="
 log "Task: $TASK_DESC"
 log "Project: $PROJECT_DIR"
 
+# D-07: ensure project dir exists before workers spawn (opencode fails silently on missing cwd)
+mkdir -p "$PROJECT_DIR" || fail "cannot create project dir: $PROJECT_DIR"
+
 export _AIC_TASK_DESC="$TASK_DESC"
 export _AIC_PROJECT_DIR="$PROJECT_DIR"
 TASK_JSON=$(python3 << 'PYEOF'

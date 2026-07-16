@@ -2,6 +2,60 @@
 
 All notable releases and historical task entries.
 
+## [3.4.1] — Production Stabilization Patch — 2026-07-16
+
+### Release Type: PATCH
+
+Production stabilization release fixing 7 defects across critical pipeline,
+worker execution, RBAC, authentication, and lease lifecycle subsystems.
+
+### Fixed (Critical)
+- **D-01:** `/api/metrics` crashed on every request — `server.js` rebuilt `req.url` as plain object via spread, losing the `searchParams` getter. Fixed: assign URL object directly.
+- **D-07:** Pipeline failed silently when project directory didn't exist — `pipeline-orchestrator.sh` never created it. Fixed: `mkdir -p` before task-start.
+- **D-12:** All workers failed artifact extraction — `spawn-worker.sh` used `printf "%b"` in awk, which mawk doesn't support. Fixed: `printf "%s"` (3 locations). Root cause blocking every pipeline from reaching COMPLETE.
+
+### Fixed (High/Medium)
+- **D-02:** RBAC blocked all admin endpoints — `server.js` used `config.loadCredentials()` (reads `credentials.json`, no role field) instead of `auth.loadCredentials()` (reads `auth.json` with role). Fixed: use `auth.loadCredentials()`. Added `role: "admin"` to `auth.json`.
+- **D-03:** `/api/tasks` accessible without authentication. Fixed: removed from public API allowlist.
+- **D-04:** `/api/version` returned `3.1.3`. Fixed: version string updated to match baseline.
+- **D-08:** Leases from cancelled/completed tasks accumulated forever. Fixed: prune non-current-task leases after each `finishLease`.
+
+### Validation Evidence
+- 2 complete real pipelines reached COMPLETE (TASK-007, TASK-008)
+- All 6 workers (pm, architect, research, backend, frontend, qa) executed successfully
+- PM Review: PASS on both runs
+- Unit tests: 39/39 PASS
+- Self-test: 24/24 PASS
+- Syntax validation: ALL OK
+- No regressions introduced
+
+### Known Limitations
+- D-10 (LOW): Event bus in-memory only, no disk persistence. Non-blocking.
+
+---
+
+## [3.4.0] — Production Stabilization — 2026-07-16
+
+### Fixed (Critical)
+- **D-01:** `/api/metrics` crashed on every request — `server.js` rebuilt `req.url` as plain object via spread, losing the `searchParams` getter. Fixed: assign URL object directly.
+- **D-07:** Pipeline failed silently when project directory didn't exist — `pipeline-orchestrator.sh` never created it. Fixed: `mkdir -p` before task-start.
+- **D-12:** All workers failed artifact extraction — `spawn-worker.sh` used `printf "%b"` in awk, which mawk doesn't support. Fixed: `printf "%s"` (3 locations). This was the root cause blocking every pipeline from reaching COMPLETE.
+
+### Fixed (High/Medium)
+- **D-02:** RBAC blocked all admin endpoints — `server.js` used `config.loadCredentials()` (reads `credentials.json`, no role field) instead of `auth.loadCredentials()` (reads `auth.json` with role). Fixed: use `auth.loadCredentials()`. Added `role: "admin"` to `auth.json`.
+- **D-03:** `/api/tasks` and `/api/tasks/:id` were accessible without authentication. Fixed: removed from public API allowlist.
+- **D-04:** `/api/version` returned `3.1.3` instead of `3.4.0`. Fixed: hardcoded version in `public-routes.js`.
+- **D-08:** Leases from cancelled/completed tasks accumulated in state forever (38+ stale). Fixed: prune non-current-task leases after each `finishLease`.
+
+### Validation
+- 2 complete real pipelines reached COMPLETE (TASK-007, TASK-008)
+- All 6 workers (pm, architect, research, backend, frontend, qa) executed successfully
+- PM Review: PASS on both runs
+- Unit tests: 39/39 PASS
+- Self-test: 24/24 PASS
+
+---
+
 ## [3.2.0] — Runtime Observability Platform (WP-80) — 2026-07-15
 
 ### Added

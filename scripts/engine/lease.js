@@ -117,6 +117,18 @@ function createLease(ctx) {
     }
     saveState();
     bus.emit('worker.completed', { leaseId, worker: w, taskId: lease.taskId });
+
+    // D-08: Prune leases from non-current tasks to prevent unbounded growth
+    const currentId = state.currentTask?.id;
+    if (currentId) {
+      const leases = state.engine?.leases || {};
+      for (const [lid, l] of Object.entries(leases)) {
+        if (l.taskId !== currentId && (l.status === 'complete' || l.status === 'failed')) {
+          delete leases[lid];
+        }
+      }
+    }
+
     return { ok: true };
   }
 

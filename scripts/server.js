@@ -193,11 +193,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Public endpoints (no auth)
-  req.url = { ...url, pathname };
+  req.url = url; // D-01: keep URL object so searchParams getter survives (spread dropped it)
   if (await handlePublicRoutes(req, res, send, { state, port: PORT, getRuntimeEngine, getActiveProject, skillDir: SKILL_DIR, auth })) return;
 
   // All other API routes require auth
-  const publicApi = ['/api/tasks', '/api/metrics', '/api/models'];
+  const publicApi = ['/api/metrics', '/api/models']; // D-03: /api/tasks now requires auth (was leaking task data)
   if (pathname.startsWith('/api') && !publicApi.some(p => pathname.startsWith(p)) && !auth.requireAuth(req, res)) return;
 
   const engine = getRuntimeEngine();
@@ -227,7 +227,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (!isPublic && pathname.startsWith('/api/')) {
       const rbacKey = req.headers['x-api-key'] || '';
-      const creds = loadCredentials();
+      const creds = auth.loadCredentials(); // D-02: use auth.json (has role), not config's credentials.json
       const apiKeyData = (creds.apiKeys || []).find(k => k.key === rbacKey);
       const rbacRole = apiKeyData?.role || 'viewer';
       const parts = pathname.split('/').filter(Boolean);

@@ -60,7 +60,7 @@ async function handlePublicRoutes(req, res, send, ctx) {
 
   // Version (no auth)
   if (method === 'GET' && pathname === '/api/version') {
-    send(res, 200, { version: '3.1.3', milestone: 'J' });
+    send(res, 200, { version: '3.4.1', milestone: 'J' }); // D-04: match SKILL.md baseline
     return true;
   }
 

@@ -165,6 +165,17 @@ Attempting to write the token to `~/.git-credentials` or using `git config --glo
 ### 3. SSH Key Missing
 Do not blindly switch to `git@github.com:...` if HTTPS fails. Check if the user has a token available first. SSH often requires manual setup that isn't present in the automated environment.
 
+### 4. Incomplete Version Bump (Edit Without Commit)
+Editing version strings in files (README, SKILL.md, package.json) is NOT the same as releasing. The Release Management phase in EIP edited 12 version references but never committed, pushed, or tagged. A subsequent audit found the GitHub repo still at the old version. **Verification checklist:**
+- `git diff --stat` shows the version files as changed
+- `git commit` has been executed with the version bump
+- `git push origin main` has succeeded
+- `git tag -a vX.Y.Z` exists and is pushed
+- `git log --oneline origin/main..HEAD` returns empty (everything pushed)
+- `git tag -l 'vX.*'` includes the new tag
+
+**Also update SKILL.md decision tree context lines** — entries like `IF v3.3.0 master plan...` contain the version string and must be updated to the new version. Use `replace_all=true` when patching.
+
 ---
 
 ## Source: `release-global-version-alignment-v3.1.3.md`

@@ -1,0 +1,1 @@
+Analyze the Investigate phase outputs and produce the Canonical Specification for this task. Include technology choices, architectural constraints, and directory structures. Output ONLY the canonical-spec.md format.

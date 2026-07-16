@@ -173,7 +173,7 @@ NODESCRIPT
     fi
     FRONTMATTER="${FRONTMATTER}---\n"
 
-if ! python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" | awk -v fm="$FRONTMATTER" 'NR==1{printf "%b\n", fm} 1' > "$ARTIFACT_PATH" 2>/dev/null; then
+if ! python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" | awk -v fm="$FRONTMATTER" 'NR==1{printf "%s\n", fm} 1' > "$ARTIFACT_PATH" 2>/dev/null; then
       # IMP-024-B: Strategy B parity for legacy runner
       SID=$(python3 "$SCRIPT_DIR/legacy-extract-sid.py" "$OUTPUT_FILE" 2>/dev/null || true)
       if [[ -n "$SID" ]]; then
@@ -202,7 +202,7 @@ try {
 CONTJS
         node "$CONT_RUNNER" "$CONT_MSG" "$MODEL" "$PROJECT_DIR" "$TIMEOUT" "$CONT_FILE" "$SID" 2>/dev/null || true
         if [[ -f "$CONT_FILE" && -s "$CONT_FILE" ]]; then
-          if python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$CONT_FILE" | awk -v fm="$FRONTMATTER" 'NR==1{printf "%b\n", fm} 1' > "$ARTIFACT_PATH" 2>/dev/null; then
+          if python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$CONT_FILE" | awk -v fm="$FRONTMATTER" 'NR==1{printf "%s\n", fm} 1' > "$ARTIFACT_PATH" 2>/dev/null; then
             echo "=== LEGACY: Strategy B PASS ===" >&2
             EXIT_CODE=0
             rm -f "$OUTPUT_FILE"
@@ -234,7 +234,7 @@ CONTJS
             echo "=== FIX-019: planning gate FAIL — one regeneration ===" >&2
             node "$NODE_RUNNER" "$PROMPT_FILE" "$MODEL" "$PROJECT_DIR" "$TIMEOUT" "$OUTPUT_FILE" || true
             if [[ -f "$OUTPUT_FILE" ]]; then
-              if ! python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" | awk -v fm="$FRONTMATTER" 'NR==1{printf "%b\n", fm} 1' > "$ARTIFACT_PATH" 2>/dev/null; then
+              if ! python3 "$SCRIPT_DIR/opencode-json-to-md.py" "$OUTPUT_FILE" | awk -v fm="$FRONTMATTER" 'NR==1{printf "%s\n", fm} 1' > "$ARTIFACT_PATH" 2>/dev/null; then
                 echo "=== LEGACY: extraction failed on regen — failing worker ===" >&2
                 rm -f "$ARTIFACT_PATH" 2>/dev/null || true
                 ARTIFACT_PATH=""
