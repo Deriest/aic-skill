@@ -84,7 +84,12 @@ function createPmReview(ctx) {
   }
 
   async function pmRepairLoop(taskId, pipelineState, projectDir, plan, phaseLabel, cp) {
-    const maxAttempts = 3;
+    const {
+      recordCycle, evaluateProgress, selectStrategy,
+      getStrategyAction, summarizeRecovery, STRATEGIES,
+    } = require('./recovery-strategy');
+
+    const maxCycles = STRATEGIES.length + 2; // Hard ceiling: strategies + grace
     let attempt = cp.rework?.attempt || 0;
 
     while (true) {
@@ -97,6 +102,7 @@ function createPmReview(ctx) {
         writeCheckpoint(tasksDir, taskId, cp);
         syncDashboardFromCheckpoint(getState, cp, taskId);
         saveState();
+        console.log(`[engine] PM PASS after ${attempt} recovery cycles`);
         return { ok: true, cp };
       }
 
@@ -111,18 +117,6 @@ function createPmReview(ctx) {
       }
 
       attempt += 1;
-      if (attempt > maxAttempts) {
-        console.log('[engine] pm repair limit exceeded — shipping with documented caveats');
-        cp.rework = null;
-        cp.phaseStatus = 'idle';
-        cp.pmReview = getState().pmReview;
-        cp.shipWithCaveats = true;
-        writeCheckpoint(tasksDir, taskId, cp);
-        syncDashboardFromCheckpoint(getState, cp, taskId);
-        saveState();
-        bus.emit('phase.passed', { taskId, phase: pipelineState, caveats: true });
-        return { ok: true, cp };
-      }
 
       // M2: Read EDP from pm-review.sh output
       let edp = null;
@@ -139,30 +133,134 @@ function createPmReview(ctx) {
       }
 
       const pkg = edp.decision_package || {};
+
+      // ── Recovery Strategy Engine ──
+      const strategy = selectStrategy(cp, edp, attempt);
+      const { action, envExtras } = getStrategyAction(strategy, edp, cp);
+
       const owner = String(pkg.owner || '').toLowerCase();
       let targets = [];
       if (owner) {
         const allowed = plan.map(p => String(p.worker).toLowerCase());
-        // Handle slash-separated owners like "Architect/Research"
         const ownerParts = owner.split('/').map(s => s.trim()).filter(Boolean);
         for (const part of ownerParts) {
           if (allowed.includes(part)) targets.push(part);
         }
-        // Fallback to all workers if no individual owner matched
         if (!targets.length) targets = allowed;
       } else {
         targets = plan.map(p => String(p.worker).toLowerCase());
       }
 
+      // Record cycle
+      recordCycle(cp, {
+        attempt, strategy, targets,
+        rootCause: pkg.root_cause || '',
+        verdict: 'REWORK',
+      });
+
+      // Evaluate progress
+      const progress = evaluateProgress(cp);
+      console.log(`[engine] Recovery cycle ${attempt}: strategy=${strategy} progress=${progress.hasProgress} (${progress.reason})`);
+
+      // ── Strategy Actions ──
+
+      if (action === 'ship') {
+        console.log('[engine] Recovery exhausted — shipping with documented caveats');
+        cp.rework = null;
+        cp.phaseStatus = 'idle';
+        cp.pmReview = getState().pmReview;
+        cp.shipWithCaveats = true;
+        writeCheckpoint(tasksDir, taskId, cp);
+        syncDashboardFromCheckpoint(getState, cp, taskId);
+        saveState();
+        bus.emit('phase.passed', { taskId, phase: pipelineState, caveats: true });
+        return { ok: true, cp };
+      }
+
+      if (action === 'refine_plan') {
+        console.log('[engine] Strategy: execution plan refinement — spawning PM to rewrite plan');
+        // Delete current execution plan, spawn PM to rewrite
+        const planPath = path.join(tasksDir, taskId, 'reports', 'execution-plan.md');
+        try { fs.unlinkSync(planPath); } catch {}
+        // Spawn only PM with instruction to refine
+        const pmEntry = plan.find(p => p.worker === 'pm');
+        if (pmEntry) {
+          const refineEnv = {
+            ...envExtras,
+            AIC_PM_REPAIR: '1',
+            AIC_PM_VERDICT_FILE: path.join(tasksDir, taskId, 'reports', '.pm-last-verdict.txt'),
+            AIC_PM_REPAIR_WORKERS: 'pm',
+            AIC_CONTEXT_FILE: path.join(tasksDir, taskId, 'context.json'),
+            AIC_EDP_OBJECTIVE: pkg.engineering_objective || '',
+            AIC_EDP_ROOT_CAUSE: pkg.root_cause || '',
+            AIC_REPAIR_ATTEMPT: String(attempt),
+            AIC_PLAN_REFINEMENT: '1',
+          };
+          const refineResult = await ctx.spawnWorkersForPhase(
+            taskId, pipelineState, projectDir, [pmEntry], cp, refineEnv
+          );
+          if (refineResult.ok) {
+            cp = refineResult.cp;
+            // Now spawn downstream with refined plan
+            const downstream = plan.filter(p => p.worker !== 'pm');
+            if (downstream.length) {
+              const dsResult = await ctx.spawnWorkersForPhase(
+                taskId, pipelineState, projectDir, downstream, cp,
+                { AIC_EXECUTION_PLAN: '1', ...envExtras }
+              );
+              if (dsResult.ok) cp = dsResult.cp;
+            }
+          }
+        }
+        // Continue loop — next iteration will review
+        cp.rework.phase = pipelineState;
+        cp.phaseStatus = 'spawning';
+        writeCheckpoint(tasksDir, taskId, cp);
+        syncDashboardFromCheckpoint(getState, cp, taskId);
+        saveState();
+        continue;
+      }
+
+      if (action === 'pm_author') {
+        console.log('[engine] Strategy: PM authoring — PM will directly produce problematic artifact');
+        // Spawn PM as the sole worker for the problematic role
+        const pmEntry = plan.find(p => p.worker === 'pm');
+        if (pmEntry) {
+          const authorEnv = {
+            ...envExtras,
+            AIC_PM_REPAIR: '1',
+            AIC_PM_VERDICT_FILE: path.join(tasksDir, taskId, 'reports', '.pm-last-verdict.txt'),
+            AIC_PM_REPAIR_WORKERS: targets.join(','),
+            AIC_CONTEXT_FILE: path.join(tasksDir, taskId, 'context.json'),
+            AIC_EDP_OBJECTIVE: pkg.engineering_objective || '',
+            AIC_EDP_ROOT_CAUSE: pkg.root_cause || '',
+            AIC_REPAIR_ATTEMPT: String(attempt),
+            AIC_PM_AUTHORING: '1',
+            AIC_PM_AUTHOR_TARGETS: targets.join(','),
+          };
+          const authorResult = await ctx.spawnWorkersForPhase(
+            taskId, pipelineState, projectDir, [pmEntry], cp, authorEnv
+          );
+          if (authorResult.ok) cp = authorResult.cp;
+        }
+        cp.rework.phase = pipelineState;
+        cp.phaseStatus = 'spawning';
+        writeCheckpoint(tasksDir, taskId, cp);
+        syncDashboardFromCheckpoint(getState, cp, taskId);
+        saveState();
+        continue;
+      }
+
+      // ── Default: repair (targeted or collaborative) ──
       const repairSpawnPlan = plan.filter(p => targets.includes(String(p.worker).toLowerCase()));
 
-      cp.rework = { phase: pipelineState, attempt, repairedWorkers: targets, lastVerdict: 'REWORK' };
+      cp.rework = { phase: pipelineState, attempt, repairedWorkers: targets, lastVerdict: 'REWORK', strategy };
       cp.phaseStatus = 'pm_repair';
       resetWorkersForRepair(cp.phaseBarrier, targets);
       writeCheckpoint(tasksDir, taskId, cp);
       syncDashboardFromCheckpoint(getState, cp, taskId);
       saveState();
-      bus.emit('pm.repair.started', { taskId, phase: pipelineState, attempt, targets });
+      bus.emit('pm.repair.started', { taskId, phase: pipelineState, attempt, targets, strategy });
 
       const verdictPath = path.join(tasksDir, taskId, 'reports', '.pm-last-verdict.txt');
       const ctxPath = path.join(tasksDir, taskId, 'context.json');
@@ -183,6 +281,7 @@ function createPmReview(ctx) {
         AIC_EDP_OBJECTIVE: pkg.engineering_objective || '',
         AIC_EDP_ROOT_CAUSE: pkg.root_cause || '',
         AIC_REPAIR_ATTEMPT: String(attempt),
+        ...envExtras,
       };
 
       cp.phaseStatus = 'spawning';
@@ -191,6 +290,7 @@ function createPmReview(ctx) {
         taskId, pipelineState, projectDir, repairSpawnPlan, cp, repairEnv
       );
       if (!spawnResult.ok) {
+        console.error(`[engine] Recovery spawn failed (strategy=${strategy})`);
         cp.pipelineState = 'BLOCKED';
         writeCheckpoint(tasksDir, taskId, cp);
         syncDashboardFromCheckpoint(getState, cp, taskId);
