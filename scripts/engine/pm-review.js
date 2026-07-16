@@ -180,6 +180,7 @@ function createPmReview(ctx) {
         AIC_CONTEXT_FILE: ctxPath,
         AIC_EDP_OBJECTIVE: pkg.engineering_objective || '',
         AIC_EDP_ROOT_CAUSE: pkg.root_cause || '',
+        AIC_REPAIR_ATTEMPT: String(attempt),
       };
 
       cp.phaseStatus = 'spawning';

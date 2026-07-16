@@ -49,7 +49,7 @@ if (args[0] === 'delete-artifacts' && args.length >= 4) {
       d.toLowerCase().includes(workerLower)
     ).map(d => '- ' + d).join('\n');
 
-    let block = `\n=== PM REPAIR FEEDBACK (attempt ${edp.attempt || '?'}) ===\n`;
+    let block = `\n=== PM REPAIR FEEDBACK (attempt ${process.env.AIC_REPAIR_ATTEMPT || edp.attempt || '?'}) ===\n`;
     block += `YOUR PREVIOUS OUTPUT WAS REJECTED BY PM REVIEW.\n\n`;
     if (rootCause) block += `Root Cause:\n${rootCause}\n\n`;
     if (objective) block += `Engineering Objective:\n${objective}\n\n`;

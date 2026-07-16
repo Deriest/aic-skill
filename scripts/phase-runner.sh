@@ -27,10 +27,11 @@ export AIC_PM_REPAIR="${AIC_PM_REPAIR:-}"
 export AIC_PM_VERDICT_FILE="${AIC_PM_VERDICT_FILE:-}"
 export AIC_PM_REPAIR_WORKERS="${AIC_PM_REPAIR_WORKERS:-}"
 export AIC_CONTEXT_FILE="${AIC_CONTEXT_FILE:-}"
+export AIC_REPAIR_ATTEMPT="${AIC_REPAIR_ATTEMPT:-}"
 
 # M3 WP-3.1: Canonical Spec injection for Planning phase
 CANONICAL_SPEC_BLOCK=""
-if [[ "${PHASE,,}" == "planning" && "${AIC_PM_REPAIR:-}" != "1" && "${AIC_SKIP_SPEC:-0}" != "1" ]]; then
+if [[ "${PHASE,,}" == "planning" && "${AIC_SKIP_SPEC:-0}" != "1" ]]; then
   SPEC_ARTIFACT="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports/spec-output.md"
   if [[ -f "$SPEC_ARTIFACT" ]]; then
     SPEC_WORDS=$(wc -w < "$SPEC_ARTIFACT" 2>/dev/null || echo 0)
@@ -119,7 +120,7 @@ for worker_arg in "$@"; do
   PM_REPAIR_BLOCK=""
   if [[ "${AIC_PM_REPAIR:-}" == "1" && -n "${AIC_PM_VERDICT_FILE:-}" && -f "${AIC_PM_VERDICT_FILE}" ]]; then
     if [[ ",${AIC_PM_REPAIR_WORKERS:-}," == *",${worker},"* ]]; then
-      PM_REPAIR_BLOCK=$(node "$SCRIPT_DIR/pm-repair-respawn.js" repair-block "$worker" "$AIC_PM_VERDICT_FILE" "${CTX:-${AIC_CONTEXT_FILE:-}}" 2>/dev/null || true)
+      PM_REPAIR_BLOCK=$(node "$SCRIPT_DIR/pm-repair-respawn.js" repair-block "$worker" "$AIC_PM_VERDICT_FILE" "${CTX:-${AIC_CONTEXT_FILE:-}}" || true)
     fi
   fi
   RESEARCH_PLANNING_BLOCK=""
