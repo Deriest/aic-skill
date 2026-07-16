@@ -18,6 +18,7 @@ const PHASE_PLANS = {
     { worker: 'pm', tier: 'thinker' },
     { worker: 'architect', tier: 'thinker' },
     { worker: 'research', tier: 'thinker' },
+    { worker: 'designer', tier: 'thinker' },
   ],
   IMPLEMENTATION: [
     { worker: 'backend', tier: 'crafter' },

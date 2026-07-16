@@ -154,6 +154,16 @@ function createIntent(ctx) {
         state.currentPhase = null;
         for (const w of workerIds) {
           state.workers[w].status = 'idle';
+          state.workers[w].currentTask = null;
+          state.workers[w].leaseId = null;
+        }
+        // D-08 fix: prune leases belonging to the cancelled task
+        if (taskId && state.engine?.leases) {
+          for (const [lid, l] of Object.entries(state.engine.leases)) {
+            if (l.taskId === taskId) {
+              delete state.engine.leases[lid];
+            }
+          }
         }
         saveState();
         bus.emit('task.cancelled', { taskId });
