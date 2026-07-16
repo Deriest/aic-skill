@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const path = require('path');
 const { writeJsonSafe } = require('../atomic-write');
 const { percentile, readBody } = require('../utils');
 
@@ -118,6 +119,36 @@ function handleMetricsRoutes(req, res, send, ctx) {
         send(res, 500, { error: err.message }); return true;
       }
     })();
+  }
+
+  // GET /api/engineering-metrics
+  if (method === 'GET' && pathname === '/api/engineering-metrics') {
+    const emPath = path.join(ctx.skillDir, '.aic', 'engineering-metrics.json');
+    if (fs.existsSync(emPath)) {
+      send(res, 200, JSON.parse(fs.readFileSync(emPath, 'utf8'))); return true;
+    }
+    send(res, 200, { pipeline: {}, worker: {}, consistency: {}, execution_plan: {}, artifacts: {}, history: [] }); return true;
+  }
+
+  // GET /api/engineering-patterns
+  if (method === 'GET' && pathname === '/api/engineering-patterns') {
+    const epPath = path.join(ctx.skillDir, '.aic', 'engineering-patterns.json');
+    if (fs.existsSync(epPath)) {
+      send(res, 200, JSON.parse(fs.readFileSync(epPath, 'utf8'))); return true;
+    }
+    send(res, 200, []); return true;
+  }
+
+  // GET /api/postmortem/:taskId
+  if (method === 'GET' && pathname.startsWith('/api/postmortem/')) {
+    const taskId = pathname.split('/api/postmortem/')[1];
+    if (taskId) {
+      const pmPath = path.join(ctx.skillDir, '.aic', 'tasks', taskId, 'reports', 'postmortem-report.md');
+      if (fs.existsSync(pmPath)) {
+        send(res, 200, { task_id: taskId, report: fs.readFileSync(pmPath, 'utf8') }); return true;
+      }
+      send(res, 404, { error: 'postmortem not found' }); return true;
+    }
   }
 
   return false;

@@ -56,7 +56,38 @@ function createPipeline(ctx) {
     saveState();
     bus.emit('task.completed', { taskId });
     triggerKnowledgeAsync(taskId);
+    triggerPostmortemAsync(taskId);
     return { ok: true };
+  }
+
+  function triggerPostmortemAsync(taskId) {
+    const { spawn } = require('child_process');
+    bus.emit('postmortem.started', { taskId });
+    try {
+      const script = path.join(scriptDir, 'postmortem.py');
+      if (!fs.existsSync(script)) return;
+      const child = spawn('python3', [script, skillDir, taskId], {
+        stdio: 'pipe', timeout: 120000
+      });
+      let stdout = '';
+      child.stdout.on('data', (d) => stdout += d);
+      child.on('close', (code) => {
+        if (code === 0) {
+          console.log(`[engine] postmortem complete for ${taskId}`);
+          bus.emit('postmortem.completed', { taskId, output: stdout.trim() });
+        } else {
+          console.error(`[engine] postmortem failed for ${taskId} (exit ${code})`);
+          bus.emit('postmortem.completed', { taskId, error: stdout.trim() });
+        }
+      });
+      child.on('error', (err) => {
+        console.error(`[engine] postmortem spawn error for ${taskId}:`, err.message);
+        bus.emit('postmortem.completed', { taskId, error: err.message });
+      });
+    } catch (err) {
+      console.error(`[engine] postmortem error for ${taskId}:`, err.message);
+      bus.emit('postmortem.completed', { taskId, error: err.message });
+    }
   }
 
   async function runPipeline(taskId, projectDir, startFromPhase) {
