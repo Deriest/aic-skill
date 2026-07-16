@@ -1,7 +1,7 @@
 ---
 name: aic
 description: "AI Engineering Company — 15-worker orchestration system for software development. Dispatch, classify, and route tasks to specialized workers following a structured workflow with Runtime Gates and PM Review."
-version: 3.4.2
+version: 3.5.0
 author: TVD
 platforms: [linux, macos, windows]
 metadata:
@@ -32,7 +32,9 @@ AKEY=$(python3 -c "import json; print(json.load(open('<skill_dir>/.aic/auth.json
 curl -s -H "X-API-Key: $AKEY" http://localhost:6868/api/task-start ...
 ```
 
-**Stale task cleanup:** Before starting a new task, check for orphaned "active" tasks with `GET /api/tasks`. If stale tasks exist (e.g., from prior sessions), cancel them first with `POST /api/runtime/intent` `{"intent":"task.cancel","taskId":"..."}` each. Stale tasks accumulate when sessions end without clean shutdown. Pipeline is idle when `currentTask: none` and no processes running.
+**Stale task cleanup:** Before starting a new task, check for orphaned "active" tasks with `GET /api/tasks`. If stale tasks exist (e.g., from prior sessions), cancel them first with `POST /api/runtime/intent` `{"intent":"task.cancel","taskId":"..."}` each. Pipeline is idle when `currentTask: none` and no processes running. (D-08 fix in engine/intent.js now auto-prunes leases on cancel — no manual lease cleanup needed.)
+
+**Website design-brief preflight:** For website/landing tasks, Dispatcher MUST create a design brief at `.aic/prompts/<TASK-ID>-design-brief.md` BEFORE task-start. Use `templates/promo-design-brief.md`. Also verify `templates/website-task-description.md` is filled with explicit tech stack versions, directory structure, color palette, and 3D element count. Vague prompts → worker divergence → PM REWORK loop (TASK-20260715-009, TASK-20260716-011).
 
 **Cold start (no user task yet):** Do **not** resume a prior thread, milestone, freeze doc, OAT, or draft report unless the user's **first message in this session** names it. `/aic` alone is not a task. Wrong pattern: user only invoked `/aic` → Dispatcher delivers a long freeze/OAT/verify report. User correction: *"lah laporan itu untuk apa saya baru start aic saja?"* See `references/dispatcher-cold-start-activation.md`.
 
@@ -59,7 +61,7 @@ See `dispatcher-discipline-aic` for complete behavioral policy.
 ## Decision Tree
 
 ### Setup & Lifecycle
-IF user only started `/aic` or gave project path without a task → load `references/dispatcher-cold-start-activation.md`
+IF user only started `/aic` or gave project path without a task → load `references/archive/pitfalls/dispatcher-cold-start-activation.md`
 IF first time setup → load `references/dispatcher-setup.md`
 IF understanding workflow → load `references/dispatcher-lifecycle.md`
 IF understanding architecture → load `references/architect-rules.md`
@@ -115,6 +117,7 @@ IF Implementation PM REWORK / Exploring|Reading preamble before H1 / WECP PASS b
 IF Planning PM REWORK / three-artifact drift vs context.json (037, IMP-013) → load `references/runtime-oat-planning-artifact-alignment.md`, `references/runtime-fix015-planning-task-authority.md`
 IF Planning research off-scope / Router SOTA while pm+architect aligned (038) → load `references/runtime-fix016-planning-research-scope.md`
 IF IMP-015 PM repair loop / REWORK without immediate BLOCKED / maxPmRepairAttempts → load `references/runtime-imp015-pm-repair-loop.md`
+IF PM REWORK infinite loop / workers respawn with identical prompt / repair-block missing / owner slash parsing / canonical spec during repair / EDP attempt field / stderr hidden → load `references/pm-repair-feedback-injection.md`
 IF Implementation WECP FAILED_AFTER_REPAIR / MISSING_SECTION ×7 / no reports/*-output.md (040, IMP-016) → load `references/imp016-wecp-implementation-missing-section.md`, `references/runtime-fix017-implementation-skeleton-lock.md`
 IF Closeout PM REWORK / synthetic phase inventory / qa absent on disk / planning-output.md cited but missing / IMP-015 N/A while rework in engine.json (041, IMP-017) → load `references/imp017-closeout-artifact-resolution.md`, `references/runtime-fix018-closeout-manifest.md`
 IF Verification REWORK respawns Implementation then BLOCKED/spawning (046, IMP-019) → load `references/imp019-verification-cross-phase-repair.md`, `references/runtime-fix021-cross-phase-reentry.md` (FIX-021 shipped: `runPhase` re-entry)
@@ -146,14 +149,23 @@ IF EIP investigation / engineering performance audit / performance findings / se
 IF EIP-2 architecture audit / module boundaries / dependency graph / configuration management / code duplication / script responsibilities / internal contracts / reference document organization / God Object / circular state coupling / PHASE_PLANS drift → load `references/eip2-architecture-audit-2026-07-16.md`
 IF EIP-1 reliability audit / api-auth broken string / non-atomic state writes / FSM canAdvance bug / lease completion suppressed / RBAC fail-open / exit code semantics → load `references/eip1-reliability-audit-2026-07-16.md`
 IF EIP execution / running EIP phases / implementing engineering improvements / master verification / vitest setup / input validation middleware / shell injection fix → load `references/eip-execution-pattern.md`
+IF postmortem / engineering metrics / engineering feedback loop / pattern discovery / continuous improvement → load `references/continuous-engineering-feedback-loop.md`
+IF recovery strategy engine / adaptive recovery / strategy ladder / progress evaluation / evidence-based recovery / pm-authoring / execution-plan-refinement → load `references/recovery-strategy-engine.md`. v3.6.0 replaced `maxAttempts=3` with recovery-strategy.js.
+IF production qualification / production readiness audit / quality gates / defect register → load `references/production-qualification-report.md`
 IF all EIP investigation findings consolidated → load `references/eip-consolidated.md`
 IF E2E validation / system validation / production readiness audit / endpoint matrix / component matrix → load `references/e2e-validation-findings.md`
 IF pipeline silent failure / empty reports / project dir missing / opencode no output → pitfall: pipeline-orchestrator.sh does NOT create projectDir before spawning workers; opencode fails silently when cwd doesn't exist. DEFECT-07. Fix: mkdir -p PROJECT_DIR before task-start, or fail-fast with clear error.
-IF stale leases / lease accumulation / state file growing / memory leak → pitfall: cancelled tasks do NOT prune leases from state.engine.leases. 28+ leases accumulate across runs. DEFECT-08.
+IF stale leases / lease accumulation / state file growing / memory leak / Investigate phase immediately fails with empty reports and no worker spawn → pitfall: cancelled tasks do NOT prune leases from state.engine.leases. Leases accumulate across runs. DEFECT-08. Symptom: new task-start returns ok but phaseStatus goes straight to `failed` — leases dir and reports dir are empty, PM worker never spawns. Root cause: orphaned leases from prior cancelled tasks corrupt the state. Detection: check `state.engine.leases` for leases with `taskId` not matching current task. **FIXED (three-layer defense):** (a) `engine/intent.js` `task.cancel` handler — deletes all leases where `taskId === cancelledTaskId` and resets worker `currentTask`/`leaseId` to null — commit `a3ee680`. (b) `engine/lease.js` `finishLease` — already pruned non-current terminal leases (existing). (c) `engine/recovery.js` `reconcileOnStartup` — auto-prunes leases belonging to terminal tasks (COMPLETE/CANCELLED/BLOCKED) on server boot; preserves non-terminal leases for resume; covers crash-without-cancel — commit `a2bd202`. Manual escape hatch (pre-fix or if fix regresses): kill server → `state.engine.leases = {}` + reset all workers idle + `currentTask = null` → restart server. Confirmed 2026-07-16: TASK-011 cancelled but 6 leases persisted, TASK-012 Investigate failed instantly, engine fix resolved. Commits: `a3ee680`, `a2bd202`.
 IF RBAC 403 on all admin endpoints / viewer role / no role in auth.json → load `references/validation-stabilization-gotchas.md`. TWO-PART fix: (1) add `"role":"admin"` to auth.json apiKeys entry, AND (2) server.js RBAC block must call `auth.loadCredentials()` (reads auth.json) NOT config's `loadCredentials()` (reads a different file `credentials.json`) — adding the role alone leaves 403 because the RBAC check reads the wrong file. DEFECT-02.
 IF /api/metrics crash / searchParams undefined / req.url rewrite → pitfall: server.js req.url = {...url, pathname} loses getters (searchParams). DEFECT-01.
 IF /api/tasks exposed without auth / publicApi allowlist → pitfall: /api/tasks in publicApi list means no auth required. DEFECT-03.
 IF version mismatch / API returns 3.1.3 / hardcoded version → pitfall: public-routes.js:63 has hardcoded "3.1.3". DEFECT-04.
+IF new route handler crashes with ERR_INVALID_ARG_TYPE on path.join / ctx.skillDir undefined → pitfall: `routeCtx` in `server.js` defines the context object passed to ALL route handlers (`handleMetricsRoutes`, `handleTaskRoutes`, etc.). When adding new route handlers that reference `ctx.skillDir`, `ctx.tasksDir`, or other context fields, verify the field exists in `routeCtx` (line ~149 in server.js). The crash manifests as server dying on first request to the new endpoint — `TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string. Received undefined` at `Object.join (node:path)`. **Fix:** add missing field to `routeCtx` object. Example: `skillDir: SKILL_DIR` was missing when engineering-metrics/patterns/postmortem endpoints were added (commit `72ce012`). **Detection:** server starts fine, existing endpoints work, but the new endpoint crashes the process. **Prevention:** when adding a new route file, check that every `ctx.*` reference used in the handler exists in the `routeCtx` definition. (D-20)
+IF recovery strategy while(true) infinite loop / maxCycles never enforced / hard ceiling missing → pitfall: `pmRepairLoop` in `pm-review.js` has `const maxCycles = STRATEGIES.length + 2` but the original code never checked `attempt > maxCycles` inside the while loop. If `selectStrategy` never returned `ship_with_caveats`, the loop runs forever. **Fix:** add explicit `if (attempt > maxCycles) { ship with caveats; return }` guard AFTER `attempt += 1` and BEFORE EDP parsing. Commit `c7e6378`. (D-18)
+IF Promise closure scope bug / variable inside Promise vs result object → pitfall: referencing a local variable captured by a Promise closure (e.g., `let stdout = ''`) outside the Promise references the outer-scope binding, NOT the resolved value. The resolved data is on `result.stdout`. Example: `_runConsistencyChecker` had `return { report: stdout }` but `stdout` was inside the Promise — should be `result.stdout`. Commit `c7e6378`. (D-19)
+IF corrupted JSON file crashes Python postmortem / load_json returns None → pitfall: `load_json()` returns `None` on parse error (malformed JSON, file locked, encoding issue). Code that does `metrics['pipeline']['total_tasks'] += 1` after `load_json(metrics_path)` crashes with `TypeError: 'NoneType' not subscriptable`. **Fix:** always chain with fallback: `metrics = load_json(metrics_path) or _init_metrics()`. Same pattern for any JSON file that may be corrupted by concurrent writes or interrupted saves. Commit `a2aa120`. (D-21)
+IF PM spawns twice on execution-plan fallback / duplicate worker invocation → pitfall: When PM-first execution plan flow runs PM, then falls back because `execution-plan.md` doesn't exist, the original code fell through to normal parallel spawn which includes PM again — PM runs twice, writes to same artifact file, wastes tokens. **Fix:** after PM-first spawn, fallback must spawn ONLY downstream workers (minus PM which already ran). Commit `a2aa120`. (D-22)
+IF reworkHistory lost on spawnResult.cp overwrite / checkpoint mutation → pitfall: `spawnWorkersForPhase` returns a fresh checkpoint object (`spawnResult.cp`) that replaces the local `cp` reference. If `cp.reworkHistory` was mutated before the spawn call but the spawn result creates a new cp object, the history is lost. **Fix:** save `reworkHistory` reference before spawn, restore after: `cp.reworkHistory = cp.reworkHistory || savedHistory`. Also sync `savedHistory` after each `recordCycle()` call. Commit `a2aa120`. (D-25)
 IF fresh pipeline dies at INVESTIGATE with empty reports / opencode silent fail / fresh run stuck at CREATED / new task.start no-ops while a stale failed currentTask holds the slot / a "failed" task that was actually manually cancelled mid-run → load `references/validation-stabilization-gotchas.md`. D-07: pipeline-orchestrator.sh must `mkdir -p "$PROJECT_DIR"` before task-start (opencode fails silently on missing cwd). D-12: clear/cancel stale currentTask before starting a new one — a leftover failed task blocks task.start.
 IF E2E validation / system validation / production readiness audit / endpoint matrix / component matrix → load `references/e2e-validation-findings.md`
 IF RBAC 403 on all admin endpoints / viewer role / no role in auth.json → pitfall: add `"role":"admin"` to auth.json apiKeys entry
@@ -256,7 +268,13 @@ Dashboard OAT and Runtime OAT are different things. Do NOT conflate them.
 
 **Pitfall**: Skipping **Investigate** after PM failure and spawning Implementation (Frontend) to "deliver anyway." User: *"ga boleh donk di lewati"*. Kill wrong spawn, retry PM, PM Review before build. See `dispatcher-discipline-aic` → `references/dispatcher-phase-skip-investigate.md`.
 
-**Pitfall**: **Architect-only Planning** for a website, then Frontend — no **Designer** artifact. User: *"kita ga pakai designer ? kan ini website"*. Spawn Luna in Planning; PM Review must include `design-spec.md`. See `references/dispatcher-planning-designer-website.md`.
+**Pitfall:** **Architect-only Planning** for a website, then Frontend — no **Designer** artifact. User: *"kita ga pakai designer ? kan ini website"*. Spawn Luna in Planning; PM Review must include `design-spec.md`. See `references/archive/dispatcher-planning-designer-website.md`.
+
+**Root cause / fix (TWO files, not one):**
+1. `scripts/engine/fsm.js` `PHASE_PLANS.PLANNING` — this is the **spawn list** (which workers actually get launched). Designer was MISSING here. Fixed: added `{ worker: 'designer', tier: 'thinker' }`.
+2. `scripts/config.js` `PHASE_ALLOWED.planning` — this is the **validation list** (which workers may be issued leases). Designer was also MISSING here. Fixed: added `'designer'` to the array.
+
+**Critical distinction:** `PHASE_PLANS` (fsm.js) controls spawning. `PHASE_ALLOWED` (config.js) controls lease issuance. Both must include a worker for it to function. Adding to config.js alone does NOT cause the engine to spawn the worker — PHASE_PLANS is the authoritative source. Conversely, adding to fsm.js alone fails at lease validation. **Both must be updated together.** Confirmed 2026-07-16: config.js patch alone did not fix spawning; fsm.js patch was the real fix. Commits: `0f681e9` (config.js), `a3ee680` (fsm.js + intent.js).
 
 **Pitfall**: **`pm-review.sh` exit code ≠ verdict** — exit `1` (`xargs`) or exit **3** when raw shows `**VERDICT: PASS**` → false **BLOCKED** (TASK-20260713-019). Fix **parser** in `pm-review.sh`, not engine FSM. See `references/pm-review-exit-code-pitfall.md`.
 
@@ -291,6 +309,137 @@ Dashboard OAT and Runtime OAT are different things. Do NOT conflate them.
 **Pitfall**: **Focused smoke keeps running** — `task-start` runs full pipeline; boundary smoke PASS ≠ COMPLETE. Cancel with `POST /api/runtime/intent` `{"intent":"task.cancel","taskId":"..."}` when deliverable met (`references/runtime-stop-all-tasks.md`, `imp024-milestone-worker-layer.md`). User: *kenapa oat masih running* — not intentional; stop frees `currentTask`.
 
 **Pitfall**: **IMP-015 repair without feedback** (pre-FIX-019) — same prompt + stale `reports/*-output.md` → PM REWORK repeats (042: pm still 040, research TASK-002 / integration topic). **FIX-019** deletes repaired artifacts, injects PM verdict excerpt, Planning `planning-post-gen-gate.py` + one regen. Restart server after engine/spawn patch. See `references/imp018-planning-research-drift.md`, `references/runtime-fix019-pm-repair-respawn.md`.
+
+**Pitfall**: **PM REWORK loop — repair-block action never implemented** (TASK-20260716-015) — `phase-runner.sh` line 120-124 has plumbing to call `pm-repair-respawn.js repair-block` and inject PM feedback into worker prompts, but `pm-repair-respawn.js` only had `delete-artifacts`. The `repair-block` action was documented as shipped (FIX-019, v3.4.0) but **never actually implemented in code**. Result: workers respawn with identical prompts → identical output → PM reject → infinite loop until maxAttempts (3), then BLOCKED. **Fix:** Implement `repair-block` action in `pm-repair-respawn.js` — reads `.pm-last-edp.json`, extracts root_cause/engineering_objective/completion_criteria/expected_deliverables, filters deliverables per worker, outputs feedback block. **Verify:** `node pm-repair-respawn.js repair-block architect /path/.pm-last-verdict.txt /path/context.json` should output structured feedback. Commit `6e9d5c2`. **Lesson:** never trust a skill entry that says "shipped" — verify the action exists in the actual script before relying on it.
+
+**Pitfall**: **Owner slash parsing in PM EDP** — PM Review returns `decision_package.owner: "Architect/Research"` (multiple owners separated by `/`) but `pm-review.js` did exact string match (`allowed.includes("architect/research")`) which never matches individual worker names. Result: fallback to respawning ALL 4 workers including those that passed (pm, designer), wasting tokens and time. **Fix:** Split owner on `/`, trim whitespace, match each part individually against allowed workers. If no individual match, fallback to all. Commit `6e9d5c2`.
+
+**Pitfall**: **Canonical spec skipped during repair** — `phase-runner.sh` condition `AIC_PM_REPAIR != '1'` excluded canonical spec from repair worker prompts. `spec-output.md` is dead code (no worker or pipeline step generates it — M3 WP-3.1 not implemented), but the condition was wrong regardless: when canonical spec eventually exists, repair workers MUST also get the same frozen reference. **Fix:** Remove `AIC_PM_REPAIR != '1'` from the condition. Commit `280fe22`. **Investigation:** grep for `spec-output.md` across all scripts/templates/engine → zero generators found. The file has never existed in any task.
+
+**Pitfall**: **`2>/dev/null` hides repair-block errors** — `phase-runner.sh` line 122 redirected repair-block stderr to `/dev/null`. If `pm-repair-respawn.js repair-block` fails (malformed EDP, missing verdict file, parse error), no error visible in server logs — silent failure, PM_REPAIR_BLOCK empty, workers get no feedback. **Fix:** Remove the redirect, let stderr flow to server logs. Commit `280fe22`.
+
+**Pitfall**: **EDP attempt field missing in repair feedback** — `pm-repair-respawn.js repair-block` reads `edp.attempt` for display, but `pm-review.sh` never writes `attempt` to the EDP JSON. `pm-review.js` tracks attempt in `cp.rework.attempt` (engine state) but doesn't pass it through to the file. **Fix:** Pass `AIC_REPAIR_ATTEMPT` env var from `pm-review.js` through `phase-runner.sh` export to `pm-repair-respawn.js` (reads `process.env.AIC_REPAIR_ATTEMPT`, falls back to `edp.attempt`). Commit `280fe22`.
+
+### Execution Plan (v3.5.0 — commit `d2b8dd0`)
+
+PLANNING phase now has two sub-phases:
+1. **PM sequential** — PM spawns first, produces `execution-plan.md` as single source of truth
+2. **Downstream parallel** — architect, research, designer spawn after PM, each receives execution plan in prompt
+
+Flow:
+```
+runPhase(PLANNING) → isPlanningFirstRun?
+  YES → spawn [pm] → verify execution-plan.md exists & >50 bytes
+    → spawn [architect, research, designer] with AIC_EXECUTION_PLAN=1
+    → consistency checker → PM Review
+  NO (fallback) → normal parallel spawn
+```
+
+Key code locations:
+- `phase-runner.js` `_spawnAndBarrier()` — reusable spawn+barrier helper
+- `phase-runner.js` `runPhase()` — PM-first split at `isPlanningFirstRun`
+- `phase-runner.sh` — `PM_EXECUTION_PLAN_BLOCK` (prompt for PM to produce plan)
+- `phase-runner.sh` — `EXECUTION_PLAN_BLOCK` (injection for downstream workers)
+- Fallback: if PM doesn't produce `execution-plan.md` (>50 bytes), falls back to parallel spawn
+
+### Collaborative Repair (v3.5.0 — commit `d2b8dd0`)
+
+During PLANNING repair runs (`AIC_PM_REPAIR=1`), workers now receive sibling artifacts in their prompt. This enables workers to see what peers wrote and resolve conflicts explicitly.
+
+Flow:
+```
+PM REWORK → respawn affected workers
+  → for each worker in PLANNING:
+      → for each sibling in [architect, research, designer]:
+          if sibling != worker and sibling-output.md exists (>50 bytes):
+            inject "SIBLING ARTIFACT: <sibling>-output.md" into prompt
+```
+
+Key code: `phase-runner.sh` sibling artifact loop inside worker spawn loop. Only active when both `AIC_PM_REPAIR=1` and `PHASE=planning`.
+
+### Consistency Checker (v3.5.0 — commit `d2b8dd0`)
+
+Script (NOT a worker). Hermes executes after barrier, before PM Review for PLANNING phase.
+
+- `scripts/consistency-checker.py` — compares planning artifacts (architect, research, designer)
+- Detects: contradictions (keyword opposition patterns), missing cross-references
+- Outputs: `consistency-report.md` in task reports dir
+- Exit codes: 0 = no conflicts, 1 = error, 2 = conflicts found
+- Injected into PM review context via `pm-review.sh`
+- Hermes owns this — Hermes SHALL NOT rewrite artifacts or resolve conflicts
+
+Detection uses regex opposition pairs:
+- "no bugs" vs "found N bugs"
+- "no risk" vs "high risk/critical risk/blocker"
+- "complete/finished" vs "incomplete/missing"
+- etc.
+
+ponytail: keyword matching, upgrade to LLM-based comparison for precision.
+
+### Ship with Caveats (v3.5.0 — commit `33fe1b3`)
+
+PM no longer BLOCKED after maxAttempts. Instead: ship with `cp.shipWithCaveats=true`.
+
+```javascript
+// pm-review.js pmRepairLoop — after maxAttempts exceeded:
+cp.rework = null;
+cp.phaseStatus = 'idle';
+cp.shipWithCaveats = true;
+return { ok: true, cp };  // pipeline continues
+```
+
+Principle: PM never gives up. PM delivers product, gaps are tracked not blocked. Similar to real-life PM — ship with documented caveats rather than block indefinitely.
+
+**User:** *"pm itu ga boleh menyerah harus bisa deliver product"*
+
+The three remaining BLOCKED paths (exit code 2, infrastructure failure, EDP parse failure) are HARD failures — those are genuine infrastructure issues, not content quality disagreements. Content quality → ship with caveats.
+
+### Recovery Strategy Engine (v3.6.0 — commit `8a1199b`)
+
+Replaces fixed retry counter (`maxAttempts=3`) with engineering evidence-driven recovery. Recovery decisions no longer depend on attempt count.
+
+**Strategy Ladder (escalation order):**
+1. `targeted_repair` — repair only affected workers + PM feedback
+2. `collaborative_repair` — repair with sibling artifacts injected (`AIC_COLLABORATIVE_REPAIR=1`)
+3. `execution_plan_refinement` — PM rewrites `execution-plan.md`, then downstream re-executes
+4. `pm_authoring` — PM directly writes the problematic artifact (`AIC_PM_AUTHORING=1`)
+5. `ship_with_caveats` — deliver product, document gaps
+
+**Progress Evaluation (after every cycle):**
+- Root cause shifted → progress (issue changed)
+- Scope narrowed (fewer targeted workers) → progress
+- Targets shifted → progress
+- Same root cause + same targets + same strategy → STALLED
+- Same root cause + same targets + different strategy → progress (if not previously tried)
+
+**Strategy Selection:**
+- First cycle: always `targeted_repair`
+- Progress exists with current strategy: keep it
+- Progress stalled: escalate to next strategy in ladder
+- Hard ceiling: `strategies.length + 2` cycles (7 max)
+
+**Cycle Recording:** `cp.reworkHistory` array in checkpoint (last 20 cycles). Each entry: `{attempt, strategy, targets, rootCause, verdict, timestamp}`.
+
+**Key code:**
+- `scripts/engine/recovery-strategy.js` — strategy ladder, progress evaluation, strategy selection, cycle recording
+- `scripts/engine/pm-review.js` `pmRepairLoop()` — rewritten to use recovery strategy engine
+- `refine_plan` action: deletes `execution-plan.md`, spawns PM to rewrite, then spawns downstream
+- `pm_author` action: spawns PM as sole worker with `AIC_PM_AUTHOR_TARGETS` to write artifact directly
+
+**User principle:** *"PM ga boleh menyerah harus bisa deliver product"* — PM never gives up. Ship with caveats rather than block indefinitely. Content quality → ship with gaps tracked. Infrastructure failures (exit 2, parse errors) are the only true BLOCKED paths.
+
+### Continuous Engineering Feedback Loop (v3.6.0)
+
+After every COMPLETE task, `postmortem.py` runs automatically (non-blocking async). Collects evidence, analyzes execution quality, updates cumulative engineering metrics, discovers recurring patterns, generates evidence-based recommendations. Postmortem NEVER modifies the completed task. See `references/continuous-engineering-feedback-loop.md` for full architecture including Recovery Strategy Engine integration.
+
+API endpoints:
+- `GET /api/engineering-metrics` — cumulative pipeline, worker, consistency, execution plan, artifact metrics
+- `GET /api/engineering-patterns` — discovered recurring problems (frequent repairs, recurring conflicts, poor plans, frequent caveats)
+- `GET /api/postmortem/:taskId` — postmortem report for specific task
+
+Key files: `scripts/postmortem.py`, `scripts/engine/pipeline.js` (`triggerPostmortemAsync`), `scripts/routes/metrics-routes.js`
+
+**User preference (investigate before coding):** When diagnosing pipeline issues, ALWAYS investigate root cause first — read artifacts, trace the code flow, identify the actual failure point — before writing any fix. User: *"jangan langsung mulai coding tapi cari tau dulu solusinya"*. Don't jump to "let me fix this" without understanding WHY it failed. Read the actual error output, check what the PM verdict says, trace the code path that led to failure, and identify which component is broken before writing code. Also: never start a new task without explicit user instruction — user: *"jangan langsung mulai task"*. When user gives a design/implementation directive, investigate the full picture before acting — user: *"kalau kamu review ga pernah cek lagi dan ga pernah investigasi lagi jadi ga error lagi"* (don't just apply a fix without re-checking the surrounding code for the same pattern).
 
 **Pitfall**: **BLOCKED on wrong task (cross-task checkpoint sync)** — OAT task **A** can show BLOCKED with empty `reports/` when overlapping pipeline on **B** finishes PM REWORK. One active pipeline; see `references/runtime-checkpoint-task-isolation.md`.
 
@@ -468,6 +617,8 @@ Phases: investigate → planning → implementation → verification → closeou
 
 **Pitfall:** Thinker tier (Opus) workers occasionally timeout at 180s. This is a model availability issue, not a pipeline defect. Sprinter/Crafter tiers are more reliable for testing.
 
+**Pitfall:** **Designer (Luna) tier must be `crafter`, not `thinker`** — Designer at thinker tier timed out producing only 236 bytes (frontmatter + one sentence). The designer prompt is complex (design-spec.md with tokens, sections, 3D, responsive breakpoints) but doesn't require Opus-level reasoning. Crafter tier completed successfully with full output (97 words in ~90s). Fixed in `engine/fsm.js` PHASE_PLANS.PLANNING: changed `designer` tier from `thinker` to `crafter` — commit `b4882fb`.
+
 ### Self-Check ≠ Official Verification (CRITICAL)
 
 Implementation self-validation is NOT Official Verification. They are separate lifecycle stages. User correction: *"Verification belum dimulai secara resmi. Hasil ad-hoc yang sudah kamu jalankan hanya sebagai self-check implementasi. Jangan gunakan hasil tersebut sebagai Verification resmi."*
@@ -632,7 +783,7 @@ IF dashboard specification → load `references/dashboard-specification.md`
 
 1. **Always load:** This router (you're reading it now)
 2. **Behavior policy:** `dispatcher-discipline-aic` is referenced as a related skill but may not exist as a standalone installed skill. Its rules are embedded in this router's Pitfalls and Rules sections. If it exists as a separate skill, load it; if not, rely on the rules already in this SKILL.md.
-3. **Conditionally load:** References via `skill_view("aic", file_path="references/xxx.md")`
+3. **Conditionally load:** References via `skill_view("aic", file_path="references/xxx.md")`. **If a reference path returns "File not found", check `references/archive/` (including `references/archive/pitfalls/`) — many references were consolidated/moved during v3.4.x.** Do NOT give up on the first 404; the content likely exists under archive/.
 4. **Never load:** All references at once — load only what the current task needs
 
 ## Completion Rules
