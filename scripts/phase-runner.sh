@@ -237,18 +237,19 @@ CRITICAL — FILE GENERATION:
 You MUST create actual project files. Do NOT just write a report describing what files should exist.
 
 For EVERY file you need to create, include a fenced code block with the EXACT file path:
-    ```tsx src/components/MyComponent.tsx
+    BACKTICK-BACKTICK-BACKTICKtsx src/components/MyComponent.tsx
     // actual code here
-    ```
+    BACKTICK-BACKTICK-BACKTICK
 
-    ```html index.html
+    BACKTICK-BACKTICK-BACKTICKhtml index.html
     <!DOCTYPE html>
-    ```
+    BACKTICK-BACKTICK-BACKTICK
 
-    ```css src/index.css
+    BACKTICK-BACKTICK-BACKTICKcss src/index.css
     body { ... }
-    ```
+    BACKTICK-BACKTICK-BACKTICK
 
+Replace BACKTICK-BACKTICK-BACKTICK with three backtick characters (code fence).
 Rules:
 - File path MUST be on the same line as the opening backticks (after the language tag)
 - Use RELATIVE paths from the project directory (e.g. src/App.tsx, NOT /home/tvd/AIC-WEB/src/App.tsx)
