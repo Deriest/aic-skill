@@ -230,7 +230,32 @@ Forbidden:
 - Planning / architect / research content unrelated to code changes in this task
 - Tool transcripts or session dumps
 
-Populate every section with real {label.lower()} work for the current task scope.''')
+Populate every section with real {label.lower()} work for the current task scope.
+
+CRITICAL — FILE GENERATION:
+
+You MUST create actual project files. Do NOT just write a report describing what files should exist.
+
+For EVERY file you need to create, include a fenced code block with the EXACT file path:
+    ```tsx src/components/MyComponent.tsx
+    // actual code here
+    ```
+
+    ```html index.html
+    <!DOCTYPE html>
+    ```
+
+    ```css src/index.css
+    body { ... }
+    ```
+
+Rules:
+- File path MUST be on the same line as the opening backticks (after the language tag)
+- Use RELATIVE paths from the project directory (e.g. src/App.tsx, NOT /home/tvd/AIC-WEB/src/App.tsx)
+- Generate COMPLETE files — no placeholders, no "...", no truncation
+- Every file referenced in imports MUST be generated
+- package.json, tsconfig.json, vite.config.ts, index.html — generate ALL config files needed
+- The system will extract these code blocks into actual files automatically''')
 " "$SKILL_DIR" "$worker" 2>/dev/null || true)
   fi
   CLOSEOUT_CONTEXT_BLOCK=""
@@ -333,6 +358,30 @@ for pid in "${!PIDS[@]}"; do
 done
 
 if [[ ${#FAILED_WORKERS[@]} -eq 0 ]]; then
+  # ── Post-barrier: Extract code blocks from implementation workers ──
+  if [[ "${PHASE,,}" == "implementation" && -n "${AIC_TASK_ID:-}" ]]; then
+    REPORT_DIR="$SKILL_DIR/.aic/tasks/$AIC_TASK_ID/reports"
+    EXTRACT_SCRIPT="$SCRIPT_DIR/extract-code-blocks.py"
+    if [[ -x "$EXTRACT_SCRIPT" ]] || [[ -f "$EXTRACT_SCRIPT" ]]; then
+      TOTAL_EXTRACTED=0
+      for worker_arg in "$@"; do
+        IFS=',' read -r worker tier <<< "$worker_arg"
+        ARTIFACT="$REPORT_DIR/${worker}-output.md"
+        if [[ -f "$ARTIFACT" ]]; then
+          EXTRACTED=$(python3 "$EXTRACT_SCRIPT" "$ARTIFACT" "$PROJECT_DIR" 2>&1)
+          RC=$?
+          if [[ $RC -eq 0 ]]; then
+            echo "$EXTRACTED"
+            COUNT=$(echo "$EXTRACTED" | grep -c "Extracted:" || true)
+            TOTAL_EXTRACTED=$((TOTAL_EXTRACTED + COUNT))
+          fi
+        fi
+      done
+      if [[ $TOTAL_EXTRACTED -gt 0 ]]; then
+        echo "[extract] Total: $TOTAL_EXTRACTED file(s) extracted to $PROJECT_DIR"
+      fi
+    fi
+  fi
   echo "=== Phase $PHASE: ALL WORKERS PASSED ==="
   exit 0
 fi
