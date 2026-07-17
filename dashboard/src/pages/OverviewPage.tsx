@@ -46,9 +46,10 @@ function PerfPanel() {
 export function OverviewPage() {
   const { state } = useDashboardContext();
 
-  // Progress Bar logic (excludes Global/Dispatcher)
+  // Progress Bar logic
+  const pipelineComplete = state.currentTask?.pipelineState === 'COMPLETE' || state.runtimeGate?.status === 'complete';
   const required = WORKERS.filter(w => w.phase !== 'Global');
-  const completeRequired = required.filter(w => { const ws = state.workers?.[w.id]; return ws?.status === 'complete' && (!ws?.subWorkers || ws.subWorkers.every(s => s.status === 'complete')) && state.pmReview?.phase !== w.phase; }).length;
+  const completeRequired = pipelineComplete ? required.length : required.filter(w => { const ws = state.workers?.[w.id]; return ws?.status === 'complete' && (!ws?.subWorkers || ws.subWorkers.every(s => s.status === 'complete')) && state.pmReview?.phase !== w.phase; }).length;
   const pct = required.length > 0 ? Math.round(completeRequired / required.length * 100) : 0;
 
   // Worker Statistics logic (includes all 15 Head Workers)

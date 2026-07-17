@@ -56,6 +56,7 @@ function createEngine(opts) {
       connected: true,
       workers: state.workers,
       currentTask: state.currentTask,
+      lastCompletedTask: state.lastCompletedTask || null,
       currentPhase: state.currentPhase,
       runtimeGate: state.runtimeGate,
       phaseBarrier: state.phaseBarrier,

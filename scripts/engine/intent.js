@@ -84,6 +84,7 @@ function createIntent(ctx) {
         const descCheck = validateTaskDescription(taskCtx?.description);
         if (!descCheck.ok) return descCheck;
 
+        state.lastCompletedTask = null;
         state.currentTask = {
           id: taskId,
           title: body.title || readTaskContext(tasksDir, taskId)?.title || 'Task',

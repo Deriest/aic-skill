@@ -17,7 +17,7 @@ function ensureTaskDir(taskId, tasksDir) {
 }
 
 function getTaskIds(tasksDir) {
-  try { return fs.readdirSync(tasksDir).filter(d => d.startsWith('TASK-')); }
+  try { return fs.readdirSync(tasksDir).filter(d => d.startsWith('TASK-')).sort().reverse(); }
   catch { return []; }
 }
 

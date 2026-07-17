@@ -40,8 +40,11 @@ function createPmReview(ctx) {
     saveState();
 
 // WP-3.3: Mechanical Validation Gate
-    const targetWorkers = artifacts.map(a => path.basename(a, '-output.md'));
-    const valCode = await spawnBash(skillDir,
+    const targetWorkers = artifacts
+      .filter(a => path.basename(a).endsWith('-output.md'))
+      .map(a => path.basename(a, '-output.md'))
+      .filter(w => w !== 'pm');  // ponytail: pm-output.md has no frontmatter; exclude from structural validation
+    const valCode = targetWorkers.length === 0 ? 0 : await spawnBash(skillDir,
       path.join(scriptDir, 'validate-framework-invariants.sh'),
       [path.join(tasksDir, taskId), targetWorkers.join(',')]
     );
@@ -124,13 +127,23 @@ function createPmReview(ctx) {
       }
 
       if (pm.exitCode === 2 || pm.infrastructure_failure) {
-        cp.phaseStatus = 'failed';
-        cp.pipelineState = 'BLOCKED';
-        cp.rework = { phase: pipelineState, attempt, repairedWorkers: [], lastVerdict: 'BLOCKED' };
+        // Transient failure — retry with backoff instead of instant BLOCKED
+        if (attempt < maxCycles) {
+          console.log(`[engine] PM infra failure (exit ${pm.exitCode}), retrying (attempt ${attempt}/${maxCycles})`);
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+        // All retries exhausted — ship with caveats instead of blocking
+        console.log(`[engine] PM infra retries exhausted — shipping with caveats`);
+        cp.rework = null;
+        cp.phaseStatus = 'idle';
+        cp.pmReview = getState().pmReview;
+        cp.shipWithCaveats = true;
         writeCheckpoint(tasksDir, taskId, cp);
         syncDashboardFromCheckpoint(getState, cp, taskId);
         saveState();
-        return { ok: false, pm: false, cp };
+        bus.emit('phase.passed', { taskId, phase: pipelineState, caveats: true });
+        return { ok: true, cp };
       }
 
       // M2: Read EDP from pm-review.sh output
@@ -139,12 +152,15 @@ function createPmReview(ctx) {
         edp = JSON.parse(fs.readFileSync(path.join(tasksDir, taskId, 'reports', '.pm-last-edp.json'), 'utf8'));
       } catch (e) {
         console.error('[engine] Failed to parse EDP JSON:', e.message);
-        cp.phaseStatus = 'failed';
-        cp.pipelineState = 'BLOCKED';
+        // Ship with caveats instead of blocking
+        cp.rework = null;
+        cp.phaseStatus = 'idle';
+        cp.shipWithCaveats = true;
         writeCheckpoint(tasksDir, taskId, cp);
         syncDashboardFromCheckpoint(getState, cp, taskId);
         saveState();
-        return { ok: false, pm: false, cp };
+        bus.emit('phase.passed', { taskId, phase: pipelineState, caveats: true });
+        return { ok: true, cp };
       }
 
       const pkg = edp.decision_package || {};

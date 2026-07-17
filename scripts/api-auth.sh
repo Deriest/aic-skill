@@ -28,14 +28,13 @@ _aic_get_api_key() {
 }
 
 curl_api() {
-  local key
-  key=$(_aic_get_api_key) || true
-  local http_status body_file auth_flag
+  local apikey
+  apikey=$(_aic_get_api_key) || true
+  local http_status body_file
   body_file=$(mktemp)
   trap "rm -f '$body_file'" RETURN
-  if [ -n "$key" ]; then
-    auth_flag="X-API-Key: $key"
-    http_status=$(curl -s -o "$body_file" -w "%{http_code}" -H "$auth_flag" "$@")
+  if [ -n "$apikey" ]; then
+    http_status=$(curl -s -o "$body_file" -w "%{http_code}" -H "X-API-Key: $apikey" "$@")
   else
     http_status=$(curl -s -o "$body_file" -w "%{http_code}" "$@")
   fi

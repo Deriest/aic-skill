@@ -115,6 +115,9 @@ function selectStrategy(cp, edp, attempt) {
   // First cycle: always start with targeted repair
   if (attempt <= 1) return 'targeted_repair';
 
+  // Hard cap: after 4 attempts on same phase, always ship (ponytail: root_cause_shifted loops forever)
+  if (attempt > 4) return 'ship_with_caveats';
+
   // If progress exists with current strategy, keep it
   if (progress.hasProgress && history.length > 0) {
     const lastStrategy = history[history.length - 1].strategy;

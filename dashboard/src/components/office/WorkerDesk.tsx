@@ -15,9 +15,9 @@ interface WorkerDeskProps {
 }
 
 const anim: Record<string, any> = {
-  idle: { y: [0, -3, 0], rotate: 0, transition: { y: { repeat: Infinity, duration: 1, ease: 'easeInOut' } } },
-  working: { y: [0, -2, 0], rotate: [-2, 2, -2], transition: { y: { repeat: Infinity, duration: 0.3 }, rotate: { repeat: Infinity, duration: 0.4 } } },
-  complete: { y: 0, rotate: [0, 5, -5, 0], transition: { rotate: { repeat: Infinity, duration: 1.5, delay: 1 } } },
+  idle: { y: 0, rotate: 0 },
+  working: { y: [0, -4, 0], rotate: [-3, 3, -3], transition: { y: { repeat: Infinity, duration: 0.2 }, rotate: { repeat: Infinity, duration: 0.25 } } },
+  complete: { y: 0, rotate: [0, 3, -3, 0], transition: { rotate: { repeat: Infinity, duration: 2, delay: 1 } } },
   waiting_pm: { y: [0, -1, 0], rotate: 0, transition: { y: { repeat: Infinity, duration: 2 } } },
   error: { x: [-2, 2, -2, 2, 0], transition: { repeat: Infinity, duration: 0.5 } },
   blocked: { opacity: [1, 0.7, 1], transition: { repeat: Infinity, duration: 1.5 } },

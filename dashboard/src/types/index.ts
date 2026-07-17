@@ -72,6 +72,11 @@ export interface DashboardState {
     pipelineState?: string;
     phaseStatus?: string;
   } | null;
+  lastCompletedTask?: {
+    id: string;
+    title: string;
+    completedAt: string;
+  } | null;
   currentPhase: string | null;
   runtimeGate: RuntimeGate | null;
   phaseBarrier: PhaseBarrier | null;

@@ -48,7 +48,7 @@ Do not contradict the execution plan. If you disagree, explain why in a dedicate
 $(cat "$EXECUTION_PLAN_PATH")
 EPEOF
 )
-      echo "=== Execution Plan injected into $worker prompt ($EP_WORDS words) ==="
+      echo "=== Execution Plan ready for downstream workers ($EP_WORDS words) ==="
     fi
   fi
 fi

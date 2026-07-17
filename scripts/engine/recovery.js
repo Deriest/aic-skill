@@ -28,8 +28,17 @@ function reconcileOnStartup(state, tasksDir, workerIds) {
         const terminalStates = new Set(['COMPLETE', 'CANCELLED', 'BLOCKED']);
         if (terminalStates.has(cp.pipelineState)) {
           notes.push(`clearing terminal task from state: ${state.currentTask.id} (${cp.pipelineState})`);
-          state.currentTask = null;
-          state.currentPhase = null;
+          if (cp.pipelineState === 'COMPLETE') {
+            // Keep visible on dashboard like live completeTask()
+            state.currentTask.pipelineState = 'COMPLETE';
+            state.currentTask.phaseStatus = 'idle';
+            state.currentPhase = 'Closeout';
+            state.runtimeGate = { type: 'complete', owner: 'pipeline', target: state.currentTask.id, status: 'complete', startedAt: Date.now(), metadata: {} };
+            state.lastCompletedTask = { id: state.currentTask.id, title: state.currentTask.title || 'Untitled', completedAt: new Date().toISOString() };
+          } else {
+            state.currentTask = null;
+            state.currentPhase = null;
+          }
         } else {
           const nonInterruptable = new Set(['idle', 'interrupted', 'failed']);
           if (!nonInterruptable.has(cp.phaseStatus)) {

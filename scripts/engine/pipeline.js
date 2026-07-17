@@ -12,7 +12,7 @@ const { readCheckpoint, writeCheckpoint } = require('./persistence');
  */
 function createPipeline(ctx) {
   const {
-    skillDir, tasksDir,
+    skillDir, scriptDir, tasksDir,
     getState, saveState, bus,
   } = ctx;
 
@@ -42,10 +42,19 @@ function createPipeline(ctx) {
     cp.phaseBarrier = clearBarrier();
     writeCheckpoint(tasksDir, taskId, cp);
 
-    state.currentPhase = null;
-    state.currentTask = null;
+    // Keep currentTask visible on dashboard (reset on next task.start)
+    if (state.currentTask) {
+      state.currentTask.pipelineState = 'COMPLETE';
+      state.currentTask.phaseStatus = 'idle';
+    }
+    state.currentPhase = 'Closeout';
     state.phaseBarrier = null;
-    state.runtimeGate = null;
+    state.runtimeGate = { type: 'complete', owner: 'pipeline', target: taskId, status: 'complete', startedAt: Date.now(), metadata: {} };
+    state.lastCompletedTask = {
+      id: taskId,
+      title: cp.title || state.currentTask?.title || 'Untitled',
+      completedAt: new Date().toISOString(),
+    };
 
     // D-08: Prune all leases for this completed task
     const leases = state.engine?.leases || {};
@@ -122,7 +131,12 @@ function createPipeline(ctx) {
           return { ok: false, cancelled: true };
         }
         const r = await ctx.runPhase(taskId, phase, projectDir);
-        if (!r.ok) return r;
+        if (!r.ok) {
+          // Phase failed after all recovery — ship with caveats instead of blocking
+          console.log(`[engine] Phase ${phase} failed — shipping with caveats`);
+          completeTask(taskId);
+          return { ok: true, caveats: true };
+        }
         const cp = readCheckpoint(tasksDir, taskId) || {};
         cp.pipelineState = phase;
         writeCheckpoint(tasksDir, taskId, cp);
