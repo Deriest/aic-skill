@@ -74,7 +74,7 @@ export function PipelineTracker({ state, taskProgress }: { state: DashboardState
     if (reworkActive) return { label: 'RECOVERING', color: 'text-red-400' };
     if (state.pmReview && pmTotal > 0 && pmRework > 0) return { label: 'RECOVERING', color: 'text-red-400' };
     if (state.pmReview && pmTotal > 0) return { label: 'WAITING APPROVAL', color: 'text-aic-yellow' };
-    if (state.runtimeGate) { const s = state.runtimeGate.status; return { label: s==='blocked'||s==='rework' ? 'RECOVERING' : 'WAITING APPROVAL', color: s==='passed'||s==='complete' ? 'text-aic-green' : s==='blocked'||s==='rework' ? 'text-red-400' : 'text-aic-yellow' }; }
+    if (state.runtimeGate) { const s = state.runtimeGate.status; return { label: s==='blocked'||s==='rework' ? 'RECOVERING' : s==='complete'||s==='passed' ? 'COMPLETE' : 'WAITING APPROVAL', color: s==='passed'||s==='complete' ? 'text-aic-green' : s==='blocked'||s==='rework' ? 'text-red-400' : 'text-aic-yellow' }; }
     if (state.phaseBarrier?.active && barrierDone < barrierTotal) return { label: 'MONITORING', color: 'text-aic-yellow' };
     if (hasActiveWorkers) return { label: 'DISPATCHING', color: 'text-aic-cyan' };
     if (state.currentPhase) return { label: 'MONITORING', color: 'text-aic-yellow' };
@@ -82,6 +82,7 @@ export function PipelineTracker({ state, taskProgress }: { state: DashboardState
   })();
 
   const next = (() => {
+    if (state.currentTask?.pipelineState === 'COMPLETE' || state.runtimeGate?.status === 'complete') return 'Pipeline Complete';
     if (reworkActive) return `Respawn: ${state.rework?.failedWorkers?.join(', ')}`;
     if (state.pmReview && pmTotal > 0) return pmRework > 0 ? `PM: ${pmRework} REWORK` : pmPass === pmTotal ? 'Dispatcher Gate' : 'Waiting PM';
     if (state.phaseBarrier?.active) return barrierDone === barrierTotal ? 'Invoke PM Review' : `Waiting ${barrierTotal - barrierDone} workers`;
