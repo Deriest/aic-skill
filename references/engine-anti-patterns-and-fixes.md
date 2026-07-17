@@ -1,6 +1,6 @@
 # AIC Engine Anti-Patterns and Fixes
 
-Session: 2026-07-17. 14+ task failures analyzed. These are the root causes and their fixes.
+Session: 2026-07-17. 15+ task failures analyzed. These are the root causes and their fixes.
 
 ## 1. Pipeline BLOCKED forever — PM REWORK loop
 
@@ -121,7 +121,7 @@ if (!r.ok) {
 
 **Symptom:** All pixel characters on dashboard are completely static regardless of status.
 
-**Root cause:** `usePixelCanvas` calls `drawPixelCharacter` once on mount. No animation loop. `drawPixelCharacter` has `isWorking` boolean but only changes arm position, not animated.
+**Root cause:** `usePixelCanvas` calls `drawPixelCharacter` once on mount. No animation loop.
 
 **Fix:** 
 - `pixelRenderer.ts`: Add `frame` and `eyeFrame` parameters for arm positions and blink
@@ -131,7 +131,7 @@ if (!r.ok) {
 
 ## 12. Worker animation speed wrong
 
-**Symptom:** Idle worker bounces (y: [0,-3,0]). User expects: idle=diam, working=cepat, complete=santai.
+**Symptom:** Idle worker bounces. User expects: idle=diam, working=cepat, complete=santai.
 
 **Fix:** `WorkerDesk.tsx` anim variants:
 - `idle: { y: 0, rotate: 0 }` (diam)
@@ -144,23 +144,36 @@ if (!r.ok) {
 
 **Symptom:** `validate-framework-invariants.sh` fails because it receives `consistency-report.md` which has no YAML frontmatter.
 
-**Root cause:** `pm-review.js` filter for artifacts includes all `.md` files.
-
 **Fix:** Filter to `*-output.md` only, exclude `pm` from validation workers, skip validation when `targetWorkers` is empty.
 
 **File:** `scripts/engine/pm-review.js`
 
 ## 14. Empty project directory after pipeline COMPLETE
 
-**Symptom:** Pipeline completes all phases → dashboard shows COMPLETE → but project directory is empty. Workers wrote reports describing code but never created actual files.
+**Symptom:** Pipeline completes all phases → dashboard shows COMPLETE → but project directory is empty.
 
-**Root cause:** Workers are LLM calls that produce markdown reports (`backend-output.md`, `frontend-output.md`). They describe what files SHOULD exist but have no file-writing capability.
+**Root cause:** Workers are LLM calls that produce markdown reports. They describe what files SHOULD exist but have no file-writing capability.
 
-**Fix:** Extract code blocks from worker reports. Workers embed fenced code blocks with file paths in their reports. Post-process script (`scripts/extract-code-blocks.py`) parses these and writes actual files. Runs in `phase-runner.sh` after barrier for IMPLEMENTATION phase.
+**Fix:** Extract code blocks from worker reports via `scripts/extract-code-blocks.py`. Runs in `phase-runner.sh` after barrier for IMPLEMENTATION phase.
 
 **Files:** `scripts/extract-code-blocks.py`, `scripts/phase-runner.sh`
 
 **See:** `references/code-generation-pipeline.md` for full details.
+
+## 15. Dashboard gate label shows "WAITING APPROVAL" when pipeline COMPLETE
+
+**Symptom:** Pipeline is COMPLETE but Runtime Gate shows "WAITING APPROVAL" in yellow instead of "COMPLETE" in green.
+
+**Root cause:** Gate logic order in `PipelineTracker.tsx`:
+1. `pipelineState === 'COMPLETE'` → returns COMPLETE ✅
+2. `pmReview && pmTotal > 0` → returns WAITING APPROVAL (catches COMPLETE tasks because pmReview persists)
+3. `runtimeGate.status === 'complete'` → was mapped to 'WAITING APPROVAL' instead of 'COMPLETE'
+
+**Fix:** 
+- runtimeGate check: `s==='complete'` → label `'COMPLETE'` (not `'WAITING APPROVAL'`)
+- Add `next` label: `if (pipelineState === 'COMPLETE') return 'Pipeline Complete'`
+
+**File:** `dashboard/src/components/new_layout/PipelineTracker.tsx`
 
 ## Key Principle
 

@@ -30,6 +30,7 @@ Monitor → Detect Issue → Investigate → Root Cause → Fix → Validate →
 - **Server restart required** after code changes — Node caches modules at startup
 - **Hermes blocks `vite build`** — use `background=true` + `notify_on_complete`
 - **Smart Approval destroys `$key` to `***`** — use `$apikey` variable name in shell scripts
+- **vite serve** — use `npx serve dist -l tcp://0.0.0.0:3000` (NOT `--host` flag)
 
 ## Monitor Script Pattern
 
@@ -77,6 +78,43 @@ sleep 5
 curl -s http://localhost:6868/health
 ```
 
+## Post-Delivery Verification
+
+After pipeline COMPLETE, ALWAYS verify:
+
+```bash
+# 1. Check source files exist (not just reports)
+find /home/tvd/AIC-WEB/src -name "*.tsx" -o -name "*.ts" | wc -l
+# Should be > 0
+
+# 2. Check TypeScript passes
+cd /home/tvd/AIC-WEB && npx tsc --noEmit; echo EXIT:$?
+
+# 3. Check dist/ built
+ls -la /home/tvd/AIC-WEB/dist/
+
+# 4. Verify dashboard state
+curl -s http://localhost:6868/api/status | python3 -c "
+import json,sys
+d=json.loads(sys.stdin.read())
+assert d['currentTask']['pipelineState'] == 'COMPLETE'
+assert d['runtimeGate']['status'] == 'complete'
+assert d['lastCompletedTask'] is not None
+print('Dashboard state: OK')
+"
+```
+
+**Common failure:** Workers write reports but don't create code files. The extract-code-blocks.py pipeline (v3.7.0+) fixes this, but ALWAYS verify files exist after COMPLETE.
+
+## Serving Static Files
+
+```bash
+# serve package (npx) — correct syntax
+cd /home/tvd/AIC-WEB && npx serve dist -l tcp://0.0.0.0:3000
+
+# NOT --host flag (serve doesn't support it)
+```
+
 ## Task Resume After Fix
 
 ```bash
@@ -85,3 +123,13 @@ curl -s -X POST -H "X-API-Key: $AKEY" -H "Content-Type: application/json" \
   -d '{"intent":"task.resume","taskId":"TASK-xxx"}' \
   http://localhost:6868/api/runtime/intent
 ```
+
+## User Communication Rules (TVD)
+
+- **"gimana?"** = user wants status update NOW. Report current phase, what's happening, ETA.
+- **"langsung aja"** = just do it, don't ask for confirmation
+- **User expects active supervision** — background monitor + auto-notify is correct
+- **Don't poll manually** — use background monitor. Only check when user asks or notification arrives.
+- **Server uses in-memory state** — file edits require restart. `state.json` is read only at startup via `loadState()`.
+- **Dashboard is at dash.aicompany.biz.id** — user views on iPad/other devices, NOT localhost
+- **User is Indonesian** — respond in Indonesian when user writes Indonesian
