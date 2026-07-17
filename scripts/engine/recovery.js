@@ -42,10 +42,20 @@ function reconcileOnStartup(state, tasksDir, workerIds) {
         } else {
           const nonInterruptable = new Set(['idle', 'interrupted', 'failed']);
           if (!nonInterruptable.has(cp.phaseStatus)) {
-            cp.phaseStatus = 'interrupted';
-            cp.interruptedAt = Date.now();
+            // If barrier was complete, mark as barrier_wait (ready for PM review) not interrupted
+            const barrier = cp.phaseBarrier;
+            const barrierDone = barrier && barrier.active === false &&
+              barrier.workers && barrier.workers.length > 0 &&
+              barrier.workers.every(w => barrier.completed[w] === 'complete');
+            if (barrierDone) {
+              cp.phaseStatus = 'barrier_wait';
+              notes.push(`barrier was complete on ${state.currentTask.id}, resuming at PM review`);
+            } else {
+              cp.phaseStatus = 'interrupted';
+              cp.interruptedAt = Date.now();
+              notes.push(`checkpoint interrupted: ${state.currentTask.id}`);
+            }
             writeJsonSafe(cpPath, cp);
-            notes.push(`checkpoint interrupted: ${state.currentTask.id}`);
           }
         }
       } catch (err) {
