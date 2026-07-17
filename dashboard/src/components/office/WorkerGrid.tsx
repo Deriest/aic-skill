@@ -25,7 +25,7 @@ export function WorkerGrid() {
                 if (worker.id === 'dispatcher' && state.connected) uiStatus = 'working';
                 else if (uiStatus === 'working' || activeSubs > 0) uiStatus = 'working';
                 else if (state.rework?.failedWorkers?.includes(worker.id)) uiStatus = 'rework';
-                else if (uiStatus === 'complete' && state.pmReview?.phase === worker.phase) uiStatus = 'waiting_pm';
+                else if (uiStatus === 'complete' && state.pmReview?.phase === worker.phase && state.currentTask?.pipelineState !== 'COMPLETE' && state.runtimeGate?.status !== 'complete') uiStatus = 'waiting_pm';
                 return (
                   <div key={worker.id} className="w-[175px]">
                     <WorkerDesk worker={worker} status={uiStatus} engine={ws?.engine}
