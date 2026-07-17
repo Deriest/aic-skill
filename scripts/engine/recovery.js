@@ -42,13 +42,21 @@ function reconcileOnStartup(state, tasksDir, workerIds) {
         } else {
           const nonInterruptable = new Set(['idle', 'interrupted', 'failed']);
           if (!nonInterruptable.has(cp.phaseStatus)) {
-            // If barrier was complete, mark as barrier_wait (ready for PM review) not interrupted
+            // If barrier was complete or reports exist, mark as barrier_wait (ready for PM review)
             const barrier = cp.phaseBarrier;
+            const reportDir = path.join(tasksDir, state.currentTask.id, 'reports');
             const barrierDone = barrier && barrier.active === false &&
               barrier.workers && barrier.workers.length > 0 &&
               barrier.workers.every(w => barrier.completed[w] === 'complete');
-            if (barrierDone) {
+            // Also check: barrier active but reports exist (server died between worker complete and barrier update)
+            const reportsExist = barrier && barrier.workers && barrier.workers.length > 0 &&
+              barrier.workers.every(w => {
+                const reportPath = path.join(reportDir, `${w}-output.md`);
+                return fs.existsSync(reportPath) && fs.statSync(reportPath).size > 50;
+              });
+            if (barrierDone || reportsExist) {
               cp.phaseStatus = 'barrier_wait';
+              if (barrier) barrier.active = false;
               notes.push(`barrier was complete on ${state.currentTask.id}, resuming at PM review`);
             } else {
               cp.phaseStatus = 'interrupted';
