@@ -10,6 +10,9 @@ metadata:
     related_skills: [hermes-agent, dispatcher-discipline-aic]
 references:
   - references/engine-anti-patterns-and-fixes.md
+  - references/supervisor-pattern.md
+  - references/dashboard-completion-display.md
+  - references/dashboard-pixel-animation.md
 ---
 
 # AI Engineering Company — Router

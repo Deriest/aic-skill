@@ -150,6 +150,18 @@ if (!r.ok) {
 
 **File:** `scripts/engine/pm-review.js`
 
+## 14. Empty project directory after pipeline COMPLETE
+
+**Symptom:** Pipeline completes all phases → dashboard shows COMPLETE → but project directory is empty. Workers wrote reports describing code but never created actual files.
+
+**Root cause:** Workers are LLM calls that produce markdown reports (`backend-output.md`, `frontend-output.md`). They describe what files SHOULD exist but have no file-writing capability.
+
+**Fix:** Extract code blocks from worker reports. Workers embed fenced code blocks with file paths in their reports. Post-process script (`scripts/extract-code-blocks.py`) parses these and writes actual files. Runs in `phase-runner.sh` after barrier for IMPLEMENTATION phase.
+
+**Files:** `scripts/extract-code-blocks.py`, `scripts/phase-runner.sh`
+
+**See:** `references/code-generation-pipeline.md` for full details.
+
 ## Key Principle
 
 **Never return `{ ok: false }` from `pmRepairLoop` without first attempting ship_with_caveats.** Every `{ ok: false }` propagates to `runPipeline` which stops the entire pipeline. The pipeline MUST reach `completeTask()` to show COMPLETE on dashboard.

@@ -2,32 +2,42 @@
   "version": "1.0",
   "updated_at": null,
   "pipeline": {
-    "total_tasks": 1,
-    "successful_tasks": 1,
+    "total_tasks": 3,
+    "successful_tasks": 3,
     "tasks_with_repairs": 0,
     "total_repair_iterations": 0,
     "caveat_shipments": 0
   },
   "worker": {
     "agreement_samples": [
+      1.0,
+      1.0,
       1.0
     ]
   },
   "consistency": {
-    "total_reports": 1,
+    "total_reports": 2,
     "reports_with_conflicts": 0
   },
   "execution_plan": {
-    "total_plans": 1,
+    "total_plans": 2,
     "quality_samples": [
+      100,
       100
     ],
     "missing_section_count": 0
   },
   "artifacts": {
-    "total": 8,
-    "with_issues": 8,
+    "total": 15,
+    "with_issues": 15,
     "quality_samples": [
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
       80,
       80,
       80,
@@ -42,6 +52,24 @@
     {
       "task_id": "TASK-20260717-018",
       "timestamp": "2026-07-17T10:26:29.753407+00:00",
+      "repair_attempts": 0,
+      "worker_agreement": 1.0,
+      "consistency_conflicts": false,
+      "execution_plan_quality": 100,
+      "caveats": false
+    },
+    {
+      "task_id": "TASK-20260717-019",
+      "timestamp": "2026-07-17T10:50:11.490662+00:00",
+      "repair_attempts": 0,
+      "worker_agreement": 1.0,
+      "consistency_conflicts": null,
+      "execution_plan_quality": 0,
+      "caveats": false
+    },
+    {
+      "task_id": "TASK-20260717-020",
+      "timestamp": "2026-07-17T11:14:08.332890+00:00",
       "repair_attempts": 0,
       "worker_agreement": 1.0,
       "consistency_conflicts": false,
