@@ -93,7 +93,14 @@ cd /home/tvd/AIC-WEB && npx tsc --noEmit; echo EXIT:$?
 # 3. Check dist/ built
 ls -la /home/tvd/AIC-WEB/dist/
 
-# 4. Verify dashboard state
+# 4. Check R3F version compatibility (React 19 needs R3F v9+)
+cd /home/tvd/AIC-WEB && node -e "console.log('r3f:', require('@react-three/fiber/package.json').version)"
+# Should be >=9.0.0 for React 19
+
+# 5. Check missing devDeps
+cd /home/tvd/AIC-WEB && ls node_modules/@tailwindcss/postcss 2>/dev/null || npm install -D @tailwindcss/postcss --legacy-peer-deps
+
+# 6. Verify dashboard state
 curl -s http://localhost:6868/api/status | python3 -c "
 import json,sys
 d=json.loads(sys.stdin.read())
@@ -105,6 +112,10 @@ print('Dashboard state: OK')
 ```
 
 **Common failure:** Workers write reports but don't create code files. The extract-code-blocks.py pipeline (v3.7.0+) fixes this, but ALWAYS verify files exist after COMPLETE.
+
+**CRITICAL PRINCIPLE:** Never return `{ ok: false }` from `runPipeline` without calling `completeTask()` first. Every `{ ok: false }` from `pmRepairLoop` propagates to `runPipeline` → stops at `if (!r.ok) return r` → pipeline never reaches `completeTask()` → dashboard shows stuck task forever. The fix at every failure point: ship with caveats instead of blocking.
+
+**15 known engine bugs** are documented in `references/engine-anti-patterns-and-fixes.md`. Review after any pipeline failure to check if it's a known issue.
 
 ## Serving Static Files
 

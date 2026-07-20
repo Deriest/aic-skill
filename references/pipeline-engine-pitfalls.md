@@ -132,5 +132,16 @@ const completeRequired = pipelineComplete ? required.length : required.filter(..
 **Bug:** Server restart → sees COMPLETE checkpoint → clears `currentTask` from state → dashboard shows "WAITING FOR TASK" instead of completed task.
 **Fix:** When checkpoint is COMPLETE, keep `currentTask` visible with `pipelineState='COMPLETE'`, set `runtimeGate` and `lastCompletedTask`. Only clear for CANCELLED/BLOCKED.
 
+## 17. Workers show WAITING PM after pipeline COMPLETE
+**File:** `dashboard/src/components/office/WorkerGrid.tsx` (~line 28)
+**Bug:** `pmReview.phase` persists as `'Planning'` after pipeline COMPLETE. Workers with `phase='Planning'` (architect, research, designer) match `state.pmReview?.phase === worker.phase` → UI overrides their status to `waiting_pm` even though pipeline is done.
+**Fix:** Add pipeline complete check before `waiting_pm` override:
+```tsx
+else if (uiStatus === 'complete' && state.pmReview?.phase === worker.phase
+  && state.currentTask?.pipelineState !== 'COMPLETE'
+  && state.runtimeGate?.status !== 'complete') uiStatus = 'waiting_pm';
+```
+
 ---
+
 **KEY PRINCIPLE:** NEVER return `{ ok: false }` from `pmRepairLoop` or `runPipeline` without first attempting `ship_with_caveats`. Every `{ ok: false }` propagates up and stops the entire pipeline without calling `completeTask()`. The pipeline MUST reach `completeTask()` to show COMPLETE on dashboard.

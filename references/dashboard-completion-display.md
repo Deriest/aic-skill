@@ -47,3 +47,24 @@ lastCompletedTask?: { id: string; title: string; completedAt: string } | null;
 3. **`lastCompletedTask` is redundant when `currentTask` is present** — it's a fallback for edge cases where `currentTask` gets cleared (e.g., forced cancel then manual state repair). Dashboard shows `currentTask` data when available, falls back to `lastCompletedTask`.
 
 4. **Clear on new task** — `lastCompletedTask` is set to `null` in `task.create` intent so the previous completion doesn't bleed into the new task.
+
+5. **Gate label for `runtimeGate.status='complete'`** — was incorrectly mapped to `WAITING APPROVAL` in the ternary. Must return `COMPLETE` with green color. Fix in `PipelineTracker.tsx`:
+   ```tsx
+   // WRONG — complete falls through to default WAITING APPROVAL
+   label: s==='blocked'||s==='rework' ? 'RECOVERING' : 'WAITING APPROVAL'
+   
+   // CORRECT
+   label: s==='blocked'||s==='rework' ? 'RECOVERING' : s==='complete'||s==='passed' ? 'COMPLETE' : 'WAITING APPROVAL'
+   ```
+
+6. **`next` label shows "Dispatcher Gate" instead of "Pipeline Complete"** — the `next` IIFE checks `pmReview` before checking COMPLETE. Add COMPLETE check first:
+   ```tsx
+   if (state.currentTask?.pipelineState === 'COMPLETE' || state.runtimeGate?.status === 'complete') return 'Pipeline Complete';
+   ```
+
+7. **Workers show `waiting_pm` after pipeline COMPLETE** — `WorkerGrid.tsx` overrides `complete` → `waiting_pm` when `pmReview.phase === worker.phase`. But `pmReview.phase` persists as `'Planning'` after COMPLETE. Fix: skip override when COMPLETE:
+   ```tsx
+   else if (uiStatus === 'complete' && state.pmReview?.phase === worker.phase 
+     && state.currentTask?.pipelineState !== 'COMPLETE' 
+     && state.runtimeGate?.status !== 'complete') uiStatus = 'waiting_pm';
+   ```

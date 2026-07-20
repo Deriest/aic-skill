@@ -2,8 +2,8 @@
   "version": "1.0",
   "updated_at": null,
   "pipeline": {
-    "total_tasks": 4,
-    "successful_tasks": 4,
+    "total_tasks": 6,
+    "successful_tasks": 6,
     "tasks_with_repairs": 0,
     "total_repair_iterations": 0,
     "caveat_shipments": 0
@@ -13,16 +13,19 @@
       1.0,
       1.0,
       1.0,
-      1.0
+      1.0,
+      0.0
     ]
   },
   "consistency": {
-    "total_reports": 3,
-    "reports_with_conflicts": 0
+    "total_reports": 4,
+    "reports_with_conflicts": 1
   },
   "execution_plan": {
-    "total_plans": 3,
+    "total_plans": 5,
     "quality_samples": [
+      100,
+      100,
       100,
       100,
       100
@@ -30,9 +33,22 @@
     "missing_section_count": 0
   },
   "artifacts": {
-    "total": 21,
-    "with_issues": 21,
+    "total": 34,
+    "with_issues": 34,
     "quality_samples": [
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
       80,
       80,
       80,
@@ -90,6 +106,24 @@
       "repair_attempts": 0,
       "worker_agreement": 1.0,
       "consistency_conflicts": false,
+      "execution_plan_quality": 100,
+      "caveats": false
+    },
+    {
+      "task_id": "TASK-20260717-022",
+      "timestamp": "2026-07-17T13:58:24.160776+00:00",
+      "repair_attempts": 0,
+      "worker_agreement": 0.0,
+      "consistency_conflicts": true,
+      "execution_plan_quality": 100,
+      "caveats": false
+    },
+    {
+      "task_id": "TASK-20260717-023",
+      "timestamp": "2026-07-17T14:47:38.855758+00:00",
+      "repair_attempts": 0,
+      "worker_agreement": null,
+      "consistency_conflicts": null,
       "execution_plan_quality": 100,
       "caveats": false
     }
