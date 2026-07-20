@@ -37,7 +37,12 @@ function handleRuntimeRoutes(req, res, send, ctx) {
   if (method === 'POST' && leaseComplete) {
     return (async () => {
       const data = await readBody(req);
-      const result = await engine.finishLease(leaseComplete[1], {
+      // D-dispatcher-05: validate lease ID format
+      const leaseId = leaseComplete[1];
+      if (!/^lease-[a-f0-9]{16}$/.test(leaseId)) {
+        send(res, 400, { ok: false, error: 'invalid lease ID format' }); return true;
+      }
+      const result = await engine.finishLease(leaseId, {
         exitCode: data.exitCode ?? 1,
         artifactPath: data.artifactPath,
       });

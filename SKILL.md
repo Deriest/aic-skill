@@ -1,7 +1,7 @@
 ---
 name: aic
 description: "AI Engineering Company — 15-worker orchestration system for software development. Dispatch, classify, and route tasks to specialized workers following a structured workflow with Runtime Gates and PM Review."
-version: 4.0.0
+version: 4.0.1
 author: TVD
 platforms: [linux, macos, windows]
 metadata:

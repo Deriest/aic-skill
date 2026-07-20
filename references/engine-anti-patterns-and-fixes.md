@@ -11,9 +11,13 @@ npm install @react-three/fiber@^9.0.0 @react-three/drei@^10.0.0 three@^0.170.0 @
 
 . Always verify React + R3F compatibility. React 19 requires R3F v9+.
 
+## Compliance Audit (v4.0.0)
+
+See `references/compliance-hardening-v4.md` for the full compliance hardening report — barrier timeout fix, enforcement matrix, adversarial test suite, and remaining prompt-only gaps.
+
 ## Core Rules
 
-- **Never return `{ok:false}` from runPipeline's phase loop** — always call `completeTask()` + ship_with_caveats.
+- **Phase failure in runPipeline MUST return `{ok:false}` and set BLOCKED** — do NOT call `completeTask()` on failure. See references/compliance-hardening-patterns.md Pattern 5.
 - **Never use literal backticks in bash heredoc prompts** — use placeholder strings.
 - **Never assume `pmReview.phase` will clear after COMPLETE** — always check `pipelineState === 'COMPLETE'` in UI logic.
 - **Server SIGTERM during active task is expected** — barrier recovery (reports-on-disk detection) handles it.

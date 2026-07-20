@@ -41,8 +41,8 @@ function createMiddleware({ allowedOrigins, skillDir }) {
 
   const RBAC_MATRIX = {
     admin: ['*'],
-    lead: ['project.*', 'worker.*', 'audit.*', 'knowledge.*', 'dispatchers.*', 'pipeline.*'],
-    member: ['task.*', 'artifact.*', 'knowledge.read', 'queue.*'],
+    lead: ['project.*', 'worker.*', 'audit.*', 'knowledge.*', 'dispatchers.*', 'pipeline.*', 'runtime.*', 'task.*'],
+    member: ['task.read', 'artifact.*', 'knowledge.read', 'queue.*', 'status.read', 'metrics.read'],
     viewer: ['status.read', 'metrics.read', 'health.read'],
   };
 

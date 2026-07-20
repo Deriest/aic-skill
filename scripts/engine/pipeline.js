@@ -132,10 +132,19 @@ function createPipeline(ctx) {
         }
         const r = await ctx.runPhase(taskId, phase, projectDir);
         if (!r.ok) {
-          // Phase failed after all recovery — ship with caveats instead of blocking
-          console.log(`[engine] Phase ${phase} failed — shipping with caveats`);
-          completeTask(taskId);
-          return { ok: true, caveats: true };
+          // Phase failed after all recovery — mark BLOCKED (fail-closed)
+          console.error(`[engine] Phase ${phase} failed — BLOCKING task (was: ship_with_caveats)`);
+          const cpBlocked = readCheckpoint(tasksDir, taskId) || {};
+          cpBlocked.pipelineState = 'BLOCKED';
+          cpBlocked.phaseStatus = 'failed';
+          cpBlocked.failedPhase = phase;
+          cpBlocked.blockedAt = new Date().toISOString();
+          writeCheckpoint(tasksDir, taskId, cpBlocked);
+          syncDashboardFromCheckpoint(getState, cpBlocked, taskId);
+          state.runtimeGate = { type: 'blocked', owner: 'pipeline', target: taskId, status: 'blocked', startedAt: Date.now(), metadata: { failedPhase: phase } };
+          saveState();
+          bus.emit('task.blocked', { taskId, phase });
+          return { ok: false, error: 'phase_failed', failedPhase: phase };
         }
         const cp = readCheckpoint(tasksDir, taskId) || {};
         cp.pipelineState = phase;

@@ -176,9 +176,18 @@ function createIntent(ctx) {
         const taskId = body.taskId || state.currentTask?.id;
         const cp = readCheckpoint(tasksDir, taskId);
         if (cp && cp.pipelineState === 'BLOCKED') {
-          cp.pipelineState = body.phase
-            ? normalizePhase(body.phase)
-            : 'INVESTIGATE';
+          // Validate phase against known order to prevent arbitrary phase injection
+          const { PHASE_ORDER } = require('./fsm');
+          const requestedPhase = body.phase ? normalizePhase(body.phase) : 'INVESTIGATE';
+          if (!PHASE_ORDER.includes(requestedPhase)) {
+            return { ok: false, error: 'invalid_phase', message: `Phase '${requestedPhase}' is not in PHASE_ORDER` };
+          }
+          // Only allow retry from non-terminal active phases (not COMPLETE/CANCELLED/BLOCKED/CREATED)
+          const nonRetryable = new Set(['CREATED', 'COMPLETE', 'CANCELLED']);
+          if (nonRetryable.has(requestedPhase)) {
+            return { ok: false, error: 'invalid_retry_phase', message: `Cannot retry from terminal/inactive phase '${requestedPhase}'` };
+          }
+          cp.pipelineState = requestedPhase;
           cp.phaseStatus = 'idle';
           writeCheckpoint(tasksDir, taskId, cp);
         }

@@ -13,6 +13,21 @@ function fetchUpstreamModelsJson(baseURL, apiKey) {
   const base = raw.endsWith('/') ? raw.slice(0, -1) : raw;
   const modelsUrl = `${base}/models`;
   const u = new URL(modelsUrl);
+  // D-dispatcher-06: SSRF protection — block internal/private addresses
+  const hostname = u.hostname.toLowerCase();
+  const isPrivate = (
+    hostname === 'localhost' ||
+    hostname === '0.0.0.0' ||
+    hostname === '::1' ||
+    hostname === '127.0.0.1' ||
+    hostname.startsWith('10.') ||
+    hostname.startsWith('192.168.') ||
+    (hostname.startsWith('172.') && (() => { const o = parseInt(hostname.split('.')[1], 10); return o >= 16 && o <= 31; })()) ||
+    hostname.startsWith('169.254.') ||
+    hostname.startsWith('fc00:') ||
+    hostname.startsWith('fe80:')
+  );
+  if (isPrivate) return Promise.reject(new Error('baseURL cannot target internal/private addresses'));
   const lib = u.protocol === 'https:' ? https : http;
   const headers = { Accept: 'application/json' };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
@@ -60,7 +75,7 @@ async function handlePublicRoutes(req, res, send, ctx) {
 
   // Version (no auth)
   if (method === 'GET' && pathname === '/api/version') {
-    send(res, 200, { version: '3.5.0', milestone: 'K' }); // D-04: match SKILL.md baseline
+    send(res, 200, { version: '4.0.1', milestone: 'K' }); // D-04: match SKILL.md baseline
     return true;
   }
 

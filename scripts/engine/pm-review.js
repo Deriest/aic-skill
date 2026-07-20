@@ -24,7 +24,11 @@ function createPmReview(ctx) {
         if (f.endsWith('.md')) artifacts.push(path.join(reportDir, f));
       }
     }
-    if (!artifacts.length) return { allPass: true, skipped: true };
+    // Fail-closed: empty artifacts must NOT auto-pass PM review
+    if (!artifacts.length) {
+      console.error(`[engine] PM review: no artifacts found for ${taskId}/${phase} — FAIL-CLOSED`);
+      return { allPass: false, exitCode: 1, reason: 'no_artifacts' };
+    }
 
     artifacts = filterPmArtifacts(skillDir, phase, artifacts);
 

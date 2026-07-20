@@ -19,11 +19,12 @@ function startBarrier(workers) {
 
 function barrierSatisfied(barrier) {
   if (!barrier || !barrier.active) return false;
-  // Enforce barrier timeout — if expired, treat as satisfied (fail-open for timeout)
+  // Fail-closed: timed-out barriers must NOT auto-satisfy.
+  // Callers must explicitly handle timedOut flag.
   if (Date.now() - barrier.startedAt > barrier.timeout) {
     barrier.active = false;
     barrier.timedOut = true;
-    return true;
+    return false;
   }
   const required = barrier.workers || [];
   if (required.length === 0) return true;

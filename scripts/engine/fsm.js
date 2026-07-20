@@ -28,8 +28,16 @@ const PHASE_PLANS = {
   CLOSEOUT: [{ worker: 'pm', tier: 'thinker' }],
 };
 
+const PHASES = new Set([...PHASE_ORDER, ...TERMINAL]);
+
 function normalizePhase(pipelineState) {
   return String(pipelineState || '').toUpperCase();
+}
+
+/** Strict phase validation: returns normalized phase if valid, null if unknown. */
+function validatePhase(input) {
+  const p = normalizePhase(input);
+  return PHASES.has(p) ? p : null;
 }
 
 function nextPhase(pipelineState) {
@@ -66,8 +74,10 @@ function isTerminal(pipelineState) {
 module.exports = {
   PHASE_ORDER,
   PHASE_PLANS,
+  PHASES,
   TERMINAL,
   normalizePhase,
+  validatePhase,
   nextPhase,
   canAdvance,
   phaseToCurrentPhase,

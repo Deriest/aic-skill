@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const path = require('path');
 const { syncDashboardFromCheckpoint } = require('./helpers');
-const { normalizePhase, PHASE_PLANS } = require('./fsm');
+const { normalizePhase, PHASE_PLANS, validatePhase } = require('./fsm');
 const { markWorkerComplete } = require('./barrier');
 const { readCheckpoint, writeCheckpoint } = require('./persistence');
 const {
@@ -28,12 +28,22 @@ function createLease(ctx) {
     if (!cp || !state.currentTask || state.currentTask.id !== taskId) {
       return { ok: false, error: 'invalid task' };
     }
-    const phase = normalizePhase(cp.pipelineState);
+    // D-dispatcher-02: validate phase against known FSM states
+    const phase = validatePhase(cp.pipelineState);
+    if (!phase) {
+      return { ok: false, error: `invalid checkpoint phase: ${cp.pipelineState}` };
+    }
     const plan = PHASE_PLANS[phase] || [];
     const allowed = plan.map((p) => p.worker);
     const w = String(worker).toLowerCase();
     if (!allowed.includes(w)) {
       return { ok: false, error: `worker ${w} not in phase ${phase}` };
+    }
+    // D-dispatcher-03: validate tier matches PHASE_PLANS (prevent tier injection)
+    const planEntry = plan.find((p) => p.worker === w);
+    const expectedTier = planEntry?.tier;
+    if (expectedTier && tier && tier !== expectedTier) {
+      return { ok: false, error: `tier mismatch for ${w} in ${phase}: expected ${expectedTier}, got ${tier}` };
     }
     if (state.engine?.paused) {
       return { ok: false, error: 'runtime paused' };
@@ -66,6 +76,10 @@ function createLease(ctx) {
     const state = getState();
     const lease = state.engine?.leases?.[leaseId];
     if (!lease) return { ok: false, error: 'unknown lease' };
+    // D-dispatcher-04: prevent double-finish on same lease (TOCTOU guard)
+    if (lease.status !== 'active') {
+      return { ok: false, error: `lease already ${lease.status}` };
+    }
 
     const w = lease.worker;
     const taskDir = path.join(tasksDir, lease.taskId);

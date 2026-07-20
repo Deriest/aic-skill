@@ -207,7 +207,28 @@ const server = http.createServer(async (req, res) => {
   const engine = getRuntimeEngine();
   routeCtx.engine = engine;
 
-  // Delegate to route modules
+  // RBAC enforcement MUST happen BEFORE route dispatch (D-dispatcher-01)
+  // Previously RBAC ran after routes, making it advisory-only
+  const isPublic = pathname === '/health' || pathname === '/api/status'
+    || pathname === '/api/tasks' || pathname === '/api/metrics' || pathname === '/api/models'
+    || pathname === '/' || pathname.startsWith('/dashboard') || pathname.startsWith('/assets');
+  try {
+    if (!isPublic && pathname.startsWith('/api/')) {
+      const rbacKey = req.headers['x-api-key'] || '';
+      const creds = auth.loadCredentials();
+      const apiKeyData = (creds.apiKeys || []).find(k => k.key === rbacKey);
+      const rbacRole = apiKeyData?.role || 'viewer';
+      const parts = pathname.split('/').filter(Boolean);
+      const resource = parts[1] || 'unknown';
+      const action = req.method === 'GET' ? 'read' : (req.method === 'POST' ? 'write' : req.method.toLowerCase());
+      if (!mw.checkAccess(rbacRole, resource, action)) {
+        auditEvent('RBAC_DENIED', 'role=' + rbacRole + ' resource=' + resource + ' action=' + action);
+        return send(res, 403, { error: 'Forbidden: insufficient permissions' });
+      }
+    }
+  } catch(rbacErr) { return send(res, 500, { error: 'Internal error' }); }
+
+  // Delegate to route modules (RBAC already enforced above)
   if (await handleRuntimeRoutes(req, res, send, routeCtx)) return;
   if (await handleTaskRoutes(req, res, send, routeCtx)) return;
   if (await handleAgentRoutes(req, res, send, routeCtx)) return;
@@ -223,26 +244,6 @@ const server = http.createServer(async (req, res) => {
   // Enterprise / Ops
   if (await handleEnterpriseEndpoint(req, res, send, require('./utils').readBody, { ...state, port: PORT })) return;
   if (await handleOpsEndpoint(req, res, send, require('./utils').readBody, { ...state, port: PORT })) return;
-
-  // RBAC enforcement on remaining API routes
-  const isPublic = pathname === '/health' || pathname === '/api/status'
-    || pathname === '/api/tasks' || pathname === '/api/metrics' || pathname === '/api/models'
-    || pathname === '/' || pathname.startsWith('/dashboard') || pathname.startsWith('/assets');
-  try {
-    if (!isPublic && pathname.startsWith('/api/')) {
-      const rbacKey = req.headers['x-api-key'] || '';
-      const creds = auth.loadCredentials(); // D-02: use auth.json (has role), not config's credentials.json
-      const apiKeyData = (creds.apiKeys || []).find(k => k.key === rbacKey);
-      const rbacRole = apiKeyData?.role || 'viewer';
-      const parts = pathname.split('/').filter(Boolean);
-      const resource = parts[1] || 'unknown';
-      const action = req.method === 'GET' ? 'read' : (req.method === 'POST' ? 'write' : req.method.toLowerCase());
-      if (!mw.checkAccess(rbacRole, resource, action)) {
-        auditEvent('RBAC_DENIED', 'role=' + rbacRole + ' resource=' + resource + ' action=' + action);
-        return send(res, 403, { error: 'Forbidden: insufficient permissions' });
-      }
-    }
-  } catch(rbacErr) { return send(res, 500, { error: 'Internal error' }); }
 
   // Static files
   if (req.method === 'GET' && !pathname.startsWith('/api/')) {
